@@ -100,6 +100,47 @@ const Sidebar = () => {
                     Talent<br />Orbit
                 </div>
 
+                {/* User avatar + name */}
+                {user && (
+                    <div
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '0 24px 20px', borderBottom: '1px solid var(--border-light)',
+                            marginBottom: '8px', cursor: 'pointer',
+                        }}
+                        onClick={() => { navigate(user.role === 'COMPANY' ? '/company/profile' : '/profile'); setMobileOpen(false); }}
+                    >
+                        <div style={{
+                            width: '36px', height: '36px', borderRadius: '50%',
+                            border: '1px solid var(--border-light)', overflow: 'hidden',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'rgba(255,255,255,0.08)', flexShrink: 0,
+                            fontSize: '14px', fontFamily: 'var(--font-serif)', fontWeight: 700,
+                            color: 'var(--text-white)', textTransform: 'uppercase',
+                        }}>
+                            {user.avatar ? (
+                                <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (user.full_name || user.email || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ overflow: 'hidden' }}>
+                            <div style={{
+                                fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700,
+                                color: 'var(--text-white)', textTransform: 'uppercase', letterSpacing: '1px',
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>
+                                {user.full_name || 'User'}
+                            </div>
+                            <div style={{
+                                fontFamily: 'var(--font-sans)', fontSize: '10px',
+                                color: 'var(--text-white)', opacity: 0.5,
+                                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>
+                                {user.role === 'COMPANY' ? 'Company' : user.role === 'ADMIN' ? 'Admin' : 'Talent'}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     {activeNav && activeNav.map((group, gIndex) => (
                         <nav key={gIndex} className="nav-group">

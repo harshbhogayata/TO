@@ -8,7 +8,7 @@ import usePageTitle from '../hooks/usePageTitle';
 import './UserProfile.css';
 
 const UserProfile = () => {
-    const { user } = useAuthStore();
+    const { user, setUser } = useAuthStore();
     const { addToast } = useToast();
     usePageTitle('My Profile');
     const [profile, setProfile] = useState(null);
@@ -16,8 +16,24 @@ const UserProfile = () => {
     const [skills, setSkills] = useState([]);
     const [skillInput, setSkillInput] = useState('');
     const [resumeFile, setResumeFile] = useState(null);
+    const [avatarFile, setAvatarFile] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [saveMsg, setSaveMsg] = useState('');
+
+    const handleAvatarChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+            addToast('Image must be under 2 MB.', 'error');
+            return;
+        }
+        setAvatarFile(file);
+        setAvatarPreview(URL.createObjectURL(file));
+    };
+
+    const currentAvatarUrl = avatarPreview || user?.avatar || null;
+    const initials = (user?.full_name || user?.email || '?').charAt(0).toUpperCase();
 
     useEffect(() => {
         authService.getMe().then(({ data }) => {
@@ -51,8 +67,14 @@ const UserProfile = () => {
             Object.entries(form).forEach(([k, v]) => v && fd.append(k, v));
             fd.append('skills', JSON.stringify(skills));
             if (resumeFile) fd.append('resume', resumeFile);
+            if (avatarFile) fd.append('avatar', avatarFile);
             const { data } = await authService.updateTalentProfile(fd);
             setProfile(data);
+            // Refresh user in auth store so avatar shows everywhere
+            try {
+                const meRes = await authService.getMe();
+                setUser(meRes.data);
+            } catch { /* non-critical */ }
             setSaveMsg('Profile updated.');
         } catch (err) {
             setSaveMsg(getApiErrorMessage(err, 'Save failed. Please try again.'));
@@ -86,6 +108,45 @@ const UserProfile = () => {
             <form onSubmit={handleSave} style={{ display: 'contents' }}>
                 <div className="settings-grid">
                     <div className="section-column border-right">
+                        {/* Avatar Upload */}
+                        <div className="list-header"><h2>Profile Photo</h2></div>
+                        <div className="form-section" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                            <div
+                                onClick={() => document.getElementById('avatar-input').click()}
+                                style={{
+                                    width: '80px', height: '80px', borderRadius: '50%',
+                                    border: '2px solid var(--border-color)', overflow: 'hidden',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer', background: '#f5f5f5', flexShrink: 0,
+                                    fontSize: '28px', fontFamily: 'var(--font-serif)', fontWeight: 700,
+                                    color: '#999', textTransform: 'uppercase',
+                                }}
+                                title="Click to change photo"
+                            >
+                                {currentAvatarUrl ? (
+                                    <img src={currentAvatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : initials}
+                            </div>
+                            <input id="avatar-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
+                            <div>
+                                <button
+                                    type="button"
+                                    onClick={() => document.getElementById('avatar-input').click()}
+                                    style={{
+                                        background: 'transparent', border: '1px solid var(--border-color)',
+                                        padding: '8px 20px', fontFamily: 'var(--font-sans)', fontSize: '11px',
+                                        fontWeight: 700, textTransform: 'uppercase', cursor: 'pointer',
+                                        letterSpacing: '1px',
+                                    }}
+                                >
+                                    {currentAvatarUrl ? 'Change Photo' : 'Upload Photo'}
+                                </button>
+                                <p style={{ fontSize: '11px', fontFamily: 'var(--font-sans)', opacity: 0.5, marginTop: '8px' }}>
+                                    JPG, PNG — max 2 MB
+                                </p>
+                            </div>
+                        </div>
+
                         <div className="list-header"><h2>Personal Info</h2></div>
                         <div className="form-section">
                             <div className="form-row">

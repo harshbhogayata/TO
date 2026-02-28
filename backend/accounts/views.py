@@ -108,6 +108,7 @@ class TalentProfileView(generics.RetrieveUpdateAPIView):
     """GET/PATCH /api/profile/talent — Retrieve or update Talent profile."""
     serializer_class = TalentProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_object(self):
         if not self.request.user.is_talent:
@@ -116,11 +117,27 @@ class TalentProfileView(generics.RetrieveUpdateAPIView):
         profile, _ = TalentProfile.objects.get_or_create(user=self.request.user)
         return profile
 
+    def perform_update(self, serializer):
+        # Handle avatar upload — it lives on the User model, not TalentProfile
+        avatar = self.request.FILES.get('avatar')
+        full_name = self.request.data.get('full_name')
+        user_changed = False
+        if avatar:
+            self.request.user.avatar = avatar
+            user_changed = True
+        if full_name:
+            self.request.user.full_name = full_name
+            user_changed = True
+        if user_changed:
+            self.request.user.save()
+        serializer.save()
+
 
 class CompanyProfileView(generics.RetrieveUpdateAPIView):
     """GET/PATCH /api/profile/company — Retrieve or update Company profile."""
     serializer_class = CompanyProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get_object(self):
         if not self.request.user.is_company:
@@ -128,6 +145,13 @@ class CompanyProfileView(generics.RetrieveUpdateAPIView):
             raise PermissionDenied('Only company accounts can access this profile.')
         profile, _ = CompanyProfile.objects.get_or_create(user=self.request.user)
         return profile
+
+    def perform_update(self, serializer):
+        avatar = self.request.FILES.get('avatar')
+        if avatar:
+            self.request.user.avatar = avatar
+            self.request.user.save()
+        serializer.save()
 
 
 @api_view(['POST'])

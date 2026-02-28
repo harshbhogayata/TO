@@ -116,11 +116,14 @@ COURSES = [
 class Command(BaseCommand):
     help = 'Seeds the database with realistic demo data for all models.'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--force', action='store_true', help='Allow seeding in production')
+
     def handle(self, *args, **kwargs):
-        if not settings.DEBUG:
+        if not settings.DEBUG and not kwargs.get('force'):
             self.stderr.write(
                 'ERROR: Refusing to seed in production (DEBUG is False). '
-                'Set DEBUG=True in .env if you really want to seed.\n'
+                'Use --force to override.\n'
             )
             return
         self.stdout.write('Seeding database...\n')
@@ -154,6 +157,11 @@ class Command(BaseCommand):
             {'name': 'Global Brands', 'industry': 'Marketing & Advertising', 'hq': 'London, UK'},
             {'name': 'Studio Arktos', 'industry': 'Product Design', 'hq': 'Berlin, DE'},
             {'name': 'Nexus Media', 'industry': 'Digital Media', 'hq': 'Toronto, CA'},
+            {'name': 'Axiom Labs', 'industry': 'AI & Machine Learning', 'hq': 'Seattle, WA'},
+            {'name': 'Vanguard Finance', 'industry': 'Financial Technology', 'hq': 'Chicago, IL'},
+            {'name': 'ShieldSec', 'industry': 'Cybersecurity', 'hq': 'Austin, TX'},
+            {'name': 'Pixel Republic', 'industry': 'Gaming & Entertainment', 'hq': 'Los Angeles, CA'},
+            {'name': 'CloudScale', 'industry': 'Cloud Infrastructure', 'hq': 'Remote'},
         ]
 
         companies = []
@@ -223,16 +231,70 @@ class Command(BaseCommand):
         # 3. Job posts
         # ──────────────────────────────────────────────
         job_templates = [
-            {'title': 'Senior Frontend Developer', 'desc': 'Build modern, performant user interfaces with React and TypeScript. Collaborate closely with designers to deliver pixel-perfect experiences.', 'reqs': '4+ years React experience. Strong TypeScript skills. Eye for design.', 'resp': 'Lead front-end architecture. Mentor junior devs. Code review.', 'skills': ['React', 'TypeScript', 'CSS', 'Figma']},
-            {'title': 'UX/UI Designer', 'desc': 'Shape the user experience across web and mobile products. Conduct research, create wireframes, and build design systems.', 'reqs': '3+ years product design. Proficiency in Figma.', 'resp': 'User research. Wireframing. Design system maintenance.', 'skills': ['Figma', 'UI/UX', 'User Research', 'Sketch']},
-            {'title': 'Backend Systems Engineer', 'desc': 'Design and implement scalable microservices. Optimize database queries and ensure 99.9% uptime.', 'reqs': '5+ years backend development. Python or Go.', 'resp': 'API design. Database optimization. Monitoring.', 'skills': ['Python', 'Django', 'PostgreSQL', 'Docker']},
-            {'title': 'Product Manager', 'desc': 'Drive product strategy from ideation to launch. Work cross-functionally with engineering, design, and marketing.', 'reqs': '3+ years PM experience in SaaS.', 'resp': 'Roadmap planning. Sprint management. Stakeholder communication.', 'skills': ['Agile', 'Roadmapping', 'Analytics']},
-            {'title': 'Creative Director', 'desc': 'Lead the creative vision for campaigns and brand identity. Manage a team of designers and copywriters.', 'reqs': '7+ years in creative/design leadership.', 'resp': 'Brand strategy. Team leadership. Client presentations.', 'skills': ['Figma', 'Marketing', 'Copywriting']},
-            {'title': 'DevOps Specialist', 'desc': 'Automate CI/CD pipelines, manage cloud infrastructure, and improve developer productivity.', 'reqs': '3+ years DevOps/SRE. AWS or GCP experience.', 'resp': 'Infrastructure as code. Monitoring. Incident response.', 'skills': ['AWS', 'Docker', 'Kubernetes', 'Terraform']},
-            {'title': 'Full Stack Developer', 'desc': 'Work across the entire stack — from database design to responsive UIs. Ship features end-to-end.', 'reqs': '3+ years full-stack development.', 'resp': 'Feature development. API integration. Testing.', 'skills': ['React', 'Node.js', 'Python', 'SQL']},
-            {'title': 'Marketing Lead', 'desc': 'Own the growth marketing strategy. Plan campaigns, optimize funnels, and analyze performance metrics.', 'reqs': '4+ years digital marketing. B2B SaaS preferred.', 'resp': 'Campaign strategy. SEO/SEM. Analytics reporting.', 'skills': ['SEO', 'Marketing', 'Analytics', 'Copywriting']},
-            {'title': 'Data Scientist', 'desc': 'Extract insights from large datasets. Build predictive models and communicate findings to stakeholders.', 'reqs': '3+ years data science. Strong Python and SQL.', 'resp': 'Model building. Data pipeline design. Reporting.', 'skills': ['Python', 'TensorFlow', 'SQL', 'Data Science']},
-            {'title': 'Brand Strategist', 'desc': 'Develop and execute brand strategies that resonate with target audiences across digital channels.', 'reqs': '3+ years brand/marketing strategy.', 'resp': 'Brand positioning. Market research. Content strategy.', 'skills': ['Marketing', 'Copywriting', 'Analytics']},
+            # ── Software Engineering ──
+            {'title': 'Senior Frontend Developer', 'desc': 'Build modern, performant user interfaces with React and TypeScript. Collaborate closely with designers to deliver pixel-perfect experiences.', 'reqs': '4+ years React experience. Strong TypeScript skills. Eye for design.', 'resp': 'Lead front-end architecture. Mentor junior devs. Code review.', 'skills': ['React', 'TypeScript', 'CSS', 'JavaScript', 'HTML']},
+            {'title': 'Backend Systems Engineer', 'desc': 'Design and implement scalable microservices. Optimize database queries and ensure 99.9% uptime.', 'reqs': '5+ years backend development. Python or Go.', 'resp': 'API design. Database optimization. Monitoring.', 'skills': ['Python', 'Django', 'PostgreSQL', 'Docker', 'REST API']},
+            {'title': 'Full Stack Developer', 'desc': 'Work across the entire stack — from database design to responsive UIs. Ship features end-to-end.', 'reqs': '3+ years full-stack development.', 'resp': 'Feature development. API integration. Testing.', 'skills': ['React', 'Node.js', 'Python', 'SQL', 'MongoDB']},
+            {'title': 'Mobile App Developer', 'desc': 'Build and maintain cross-platform mobile applications with a focus on performance and beautiful UI.', 'reqs': '3+ years mobile development. React Native or Flutter.', 'resp': 'Mobile feature development. App store releases. Performance optimization.', 'skills': ['React Native', 'Flutter', 'Swift', 'Kotlin', 'Mobile Development']},
+            {'title': 'Junior Web Developer', 'desc': 'Join our engineering team and grow your skills building real-world web applications.', 'reqs': 'Basic knowledge of HTML, CSS, and JavaScript. Eagerness to learn.', 'resp': 'Bug fixes. Small feature implementation. Writing tests.', 'skills': ['HTML', 'CSS', 'JavaScript', 'Git', 'React']},
+            {'title': 'Golang Microservices Engineer', 'desc': 'Design high-throughput distributed systems in Go. Own services from design through production monitoring.', 'reqs': '3+ years Go development. Experience with gRPC or message queues.', 'resp': 'Service design. Performance tuning. On-call rotation.', 'skills': ['Go', 'gRPC', 'Kafka', 'Microservices', 'Docker']},
+            {'title': 'Ruby on Rails Developer', 'desc': 'Maintain and extend our core platform built on Rails. Ship clean, well-tested code.', 'reqs': '2+ years Ruby on Rails. Strong testing habits.', 'resp': 'Feature development. Database migrations. Code review.', 'skills': ['Ruby', 'Rails', 'PostgreSQL', 'Redis', 'RSpec']},
+            {'title': 'Java Platform Engineer', 'desc': 'Build enterprise-grade backend services with Spring Boot. Ensure reliability at scale.', 'reqs': '4+ years Java. Spring ecosystem experience.', 'resp': 'Service development. Performance monitoring. API design.', 'skills': ['Java', 'Spring Boot', 'Maven', 'MySQL', 'REST API']},
+            {'title': 'C++ Systems Developer', 'desc': 'Work on performance-critical systems software including real-time processing and embedded applications.', 'reqs': '5+ years C/C++. Experience with low-latency or embedded systems.', 'resp': 'Core library development. Performance profiling. Code review.', 'skills': ['C++', 'C', 'Linux', 'Embedded Systems', 'Multithreading']},
+            {'title': 'PHP Laravel Developer', 'desc': 'Build and maintain web applications using the Laravel framework. Deliver clean, scalable code.', 'reqs': '2+ years PHP/Laravel development.', 'resp': 'Feature development. Database design. API integration.', 'skills': ['PHP', 'Laravel', 'MySQL', 'Vue.js', 'REST API']},
+            # ── DevOps / Cloud / Infra ──
+            {'title': 'DevOps Engineer', 'desc': 'Automate CI/CD pipelines, manage cloud infrastructure, and improve developer productivity.', 'reqs': '3+ years DevOps/SRE. AWS or GCP experience.', 'resp': 'Infrastructure as code. Monitoring. Incident response.', 'skills': ['AWS', 'Docker', 'Kubernetes', 'Terraform', 'CI/CD']},
+            {'title': 'Cloud Solutions Architect', 'desc': 'Design cloud-native architectures on AWS/Azure/GCP. Lead migration projects and optimize costs.', 'reqs': '5+ years cloud architecture. Certification preferred.', 'resp': 'Architecture design. Cost optimization. Team enablement.', 'skills': ['AWS', 'Azure', 'GCP', 'Cloud Architecture', 'Networking']},
+            {'title': 'Site Reliability Engineer', 'desc': 'Keep our platform running at 99.99% uptime. Build self-healing infrastructure and monitoring.', 'reqs': '3+ years SRE or infrastructure engineering.', 'resp': 'Incident management. Capacity planning. Automation.', 'skills': ['Linux', 'Prometheus', 'Grafana', 'Kubernetes', 'Python']},
+            # ── Data & AI/ML ──
+            {'title': 'Data Scientist', 'desc': 'Extract insights from large datasets. Build predictive models and communicate findings to stakeholders.', 'reqs': '3+ years data science. Strong Python and SQL.', 'resp': 'Model building. Data pipeline design. Reporting.', 'skills': ['Python', 'TensorFlow', 'SQL', 'Data Science', 'Pandas']},
+            {'title': 'Machine Learning Engineer', 'desc': 'Deploy and scale ML models in production. Build feature pipelines and model monitoring.', 'reqs': '3+ years ML engineering. PyTorch or TensorFlow.', 'resp': 'Model deployment. Feature engineering. A/B testing.', 'skills': ['Python', 'PyTorch', 'TensorFlow', 'MLOps', 'AWS']},
+            {'title': 'Data Engineer', 'desc': 'Build and maintain robust data pipelines that power analytics and ML across the organization.', 'reqs': '3+ years data engineering. SQL and Python fluency.', 'resp': 'ETL pipeline development. Data warehouse management. Quality monitoring.', 'skills': ['Python', 'SQL', 'Spark', 'Airflow', 'Snowflake']},
+            {'title': 'AI Research Scientist', 'desc': 'Push the boundaries of applied AI. Publish research and prototype novel approaches to NLP and computer vision.', 'reqs': 'PhD or equivalent research experience. Published papers.', 'resp': 'Research. Prototyping. Knowledge transfer to engineering.', 'skills': ['Deep Learning', 'NLP', 'Computer Vision', 'PyTorch', 'Research']},
+            {'title': 'Business Intelligence Analyst', 'desc': 'Transform raw data into actionable dashboards and reports that drive business decisions.', 'reqs': '2+ years BI/analytics. Strong SQL and visualization skills.', 'resp': 'Dashboard creation. Ad-hoc analysis. Stakeholder reporting.', 'skills': ['SQL', 'Tableau', 'Power BI', 'Excel', 'Data Analysis']},
+            # ── Design ──
+            {'title': 'UX/UI Designer', 'desc': 'Shape the user experience across web and mobile products. Conduct research, create wireframes, and build design systems.', 'reqs': '3+ years product design. Proficiency in Figma.', 'resp': 'User research. Wireframing. Design system maintenance.', 'skills': ['Figma', 'UI/UX', 'User Research', 'Sketch', 'Prototyping']},
+            {'title': 'Visual / Graphic Designer', 'desc': 'Create stunning visuals for marketing, product, and brand materials across digital and print.', 'reqs': '3+ years graphic design. Adobe Creative Suite mastery.', 'resp': 'Brand asset creation. Marketing collateral. Social media graphics.', 'skills': ['Photoshop', 'Illustrator', 'InDesign', 'Graphic Design', 'Branding']},
+            {'title': 'Motion Graphics Designer', 'desc': 'Bring our brand to life through animation and motion design for web, social, and video.', 'reqs': '2+ years motion design. After Effects proficiency.', 'resp': 'Animation production. Video editing. Asset library management.', 'skills': ['After Effects', 'Premiere Pro', 'Motion Design', 'Animation', 'Video Editing']},
+            {'title': 'Product Design Lead', 'desc': 'Set the design vision for our product suite. Mentor designers and drive design ops.', 'reqs': '6+ years product design. 2+ years leadership.', 'resp': 'Design strategy. Team mentorship. Design system governance.', 'skills': ['Figma', 'Design Systems', 'Leadership', 'UI/UX', 'Prototyping']},
+            # ── Product & Management ──
+            {'title': 'Product Manager', 'desc': 'Drive product strategy from ideation to launch. Work cross-functionally with engineering, design, and marketing.', 'reqs': '3+ years PM experience in SaaS.', 'resp': 'Roadmap planning. Sprint management. Stakeholder communication.', 'skills': ['Agile', 'Roadmapping', 'Analytics', 'Jira', 'Product Strategy']},
+            {'title': 'Scrum Master', 'desc': 'Facilitate agile ceremonies and remove blockers for engineering teams. Drive continuous improvement.', 'reqs': '2+ years Scrum Master experience. CSM certification preferred.', 'resp': 'Sprint facilitation. Retrospectives. Process improvement.', 'skills': ['Agile', 'Scrum', 'Jira', 'Kanban', 'Coaching']},
+            {'title': 'Technical Program Manager', 'desc': 'Coordinate complex cross-team engineering programs. Manage timelines, dependencies, and risk.', 'reqs': '4+ years TPM or similar. Technical background.', 'resp': 'Program planning. Cross-team coordination. Executive reporting.', 'skills': ['Program Management', 'Agile', 'Technical Writing', 'Risk Management', 'Leadership']},
+            # ── Marketing & Growth ──
+            {'title': 'Digital Marketing Manager', 'desc': 'Own the growth marketing strategy. Plan campaigns, optimize funnels, and analyze performance metrics.', 'reqs': '4+ years digital marketing. B2B SaaS preferred.', 'resp': 'Campaign strategy. SEO/SEM. Analytics reporting.', 'skills': ['SEO', 'Marketing', 'Google Analytics', 'Copywriting', 'Social Media']},
+            {'title': 'Content Strategist', 'desc': 'Plan and execute a content strategy that drives organic growth and thought leadership.', 'reqs': '3+ years content marketing. Strong writing skills.', 'resp': 'Editorial calendar. Blog production. SEO optimization.', 'skills': ['Content Strategy', 'SEO', 'Copywriting', 'WordPress', 'Analytics']},
+            {'title': 'Social Media Manager', 'desc': 'Grow our social presence across LinkedIn, Twitter/X, and emerging platforms. Build community.', 'reqs': '2+ years social media management. Strong creative instincts.', 'resp': 'Content creation. Community management. Performance analytics.', 'skills': ['Social Media', 'Content Creation', 'Copywriting', 'Analytics', 'Canva']},
+            {'title': 'Brand Strategist', 'desc': 'Develop and execute brand strategies that resonate with target audiences across digital channels.', 'reqs': '3+ years brand/marketing strategy.', 'resp': 'Brand positioning. Market research. Content strategy.', 'skills': ['Branding', 'Marketing', 'Copywriting', 'Market Research', 'Strategy']},
+            {'title': 'Growth Hacker / Performance Marketer', 'desc': 'Run rapid experiments across paid and organic channels. Optimize CAC and LTV.', 'reqs': '2+ years growth or performance marketing.', 'resp': 'Experiment design. Paid ads management. Funnel optimization.', 'skills': ['Google Ads', 'Facebook Ads', 'A/B Testing', 'Analytics', 'Growth Marketing']},
+            # ── Sales & Business ──
+            {'title': 'Account Executive (SaaS)', 'desc': 'Close deals with mid-market and enterprise clients. Manage the full sales cycle from discovery to close.', 'reqs': '3+ years B2B SaaS sales. Track record of exceeding quota.', 'resp': 'Pipeline management. Demos. Contract negotiation.', 'skills': ['Sales', 'Salesforce', 'B2B', 'Negotiation', 'CRM']},
+            {'title': 'Business Development Representative', 'desc': 'Generate qualified pipeline through outbound prospecting and inbound lead follow-up.', 'reqs': '1+ years SDR/BDR experience or strong communication skills.', 'resp': 'Outbound outreach. Lead qualification. CRM management.', 'skills': ['Sales', 'Cold Outreach', 'Communication', 'CRM', 'LinkedIn']},
+            {'title': 'Customer Success Manager', 'desc': 'Ensure client satisfaction, drive adoption, and expand accounts. Be the voice of the customer internally.', 'reqs': '2+ years customer success in SaaS.', 'resp': 'Onboarding. QBRs. Churn prevention. Upselling.', 'skills': ['Customer Success', 'Communication', 'Salesforce', 'Analytics', 'SaaS']},
+            # ── HR & People ──
+            {'title': 'Technical Recruiter', 'desc': 'Source and hire top engineering talent. Partner with hiring managers to build world-class teams.', 'reqs': '2+ years technical recruiting. ATS experience.', 'resp': 'Sourcing. Screening. Offer management. Employer branding.', 'skills': ['Recruiting', 'Sourcing', 'LinkedIn', 'ATS', 'Communication']},
+            {'title': 'People Operations Manager', 'desc': 'Build and scale HR processes, benefits, and culture programs for a growing team.', 'reqs': '3+ years HR/People Ops. HRIS experience.', 'resp': 'HR policy. Benefits administration. Culture programs.', 'skills': ['HR', 'People Operations', 'HRIS', 'Communication', 'Leadership']},
+            # ── Finance & Legal ──
+            {'title': 'Financial Analyst', 'desc': 'Build financial models, forecast revenue, and provide insights to leadership for strategic decisions.', 'reqs': '2+ years financial analysis. Advanced Excel/Sheets.', 'resp': 'Financial modeling. Budgeting. Variance analysis. Board reporting.', 'skills': ['Financial Modeling', 'Excel', 'SQL', 'Accounting', 'Data Analysis']},
+            {'title': 'Legal Counsel (Tech)', 'desc': 'Advise on contracts, IP, privacy compliance, and corporate governance for a fast-growing tech company.', 'reqs': 'JD + 3 years legal experience in tech or startups.', 'resp': 'Contract review. Privacy compliance. IP protection.', 'skills': ['Legal', 'Contract Law', 'Privacy', 'GDPR', 'Compliance']},
+            # ── Cybersecurity ──
+            {'title': 'Cybersecurity Analyst', 'desc': 'Monitor, detect, and respond to security threats. Conduct vulnerability assessments and security audits.', 'reqs': '2+ years security operations. SIEM experience.', 'resp': 'Threat detection. Incident response. Security audits.', 'skills': ['Cybersecurity', 'SIEM', 'Penetration Testing', 'Networking', 'Linux']},
+            {'title': 'Application Security Engineer', 'desc': 'Embed security into the SDLC. Conduct code reviews, threat modeling, and manage bug bounty programs.', 'reqs': '3+ years AppSec. Coding proficiency in at least one language.', 'resp': 'Security reviews. SAST/DAST tooling. Developer training.', 'skills': ['Application Security', 'OWASP', 'Python', 'DevSecOps', 'Threat Modeling']},
+            # ── QA & Testing ──
+            {'title': 'QA Automation Engineer', 'desc': 'Build and maintain automated test suites for web and API. Improve test coverage and reliability.', 'reqs': '2+ years test automation. Selenium or Playwright.', 'resp': 'Test framework development. CI integration. Bug reporting.', 'skills': ['Selenium', 'Playwright', 'Python', 'CI/CD', 'QA']},
+            {'title': 'Manual QA Tester', 'desc': 'Execute test plans, write detailed bug reports, and ensure product quality before every release.', 'reqs': '1+ years QA experience. Strong attention to detail.', 'resp': 'Test case creation. Regression testing. Release verification.', 'skills': ['QA', 'Testing', 'Jira', 'Test Planning', 'Communication']},
+            # ── Blockchain / Web3 ──
+            {'title': 'Solidity Smart Contract Developer', 'desc': 'Write, audit, and deploy smart contracts on Ethereum and L2 chains. Build DeFi and NFT protocols.', 'reqs': '2+ years Solidity. Understanding of EVM and gas optimization.', 'resp': 'Contract development. Security audits. Protocol design.', 'skills': ['Solidity', 'Ethereum', 'Web3', 'Smart Contracts', 'DeFi']},
+            # ── Game Development ──
+            {'title': 'Unity Game Developer', 'desc': 'Build immersive gaming experiences with Unity. Work with artists and designers to ship polished games.', 'reqs': '2+ years Unity/C# development. Published title preferred.', 'resp': 'Gameplay programming. Performance optimization. Build pipeline.', 'skills': ['Unity', 'C#', 'Game Development', '3D Modeling', 'Shader Programming']},
+            # ── Technical Writing / Support ──
+            {'title': 'Technical Writer', 'desc': 'Create clear, concise documentation for APIs, SDKs, and developer tools.', 'reqs': '2+ years technical writing. Developer audience experience.', 'resp': 'API docs. Tutorials. Release notes. Knowledge base.', 'skills': ['Technical Writing', 'API Documentation', 'Markdown', 'Git', 'Communication']},
+            {'title': 'Technical Support Engineer', 'desc': 'Troubleshoot complex customer issues, bridge the gap between users and engineering.', 'reqs': '2+ years tech support. Coding/scripting ability.', 'resp': 'Ticket resolution. Root cause analysis. Knowledge base updates.', 'skills': ['Technical Support', 'Troubleshooting', 'SQL', 'Communication', 'Linux']},
+            # ── Consulting / Freelance ──
+            {'title': 'Freelance WordPress Developer', 'desc': 'Design, build, and maintain custom WordPress sites for our agency clients.', 'reqs': '2+ years WordPress development. Theme and plugin experience.', 'resp': 'Custom theme development. Plugin integration. Site maintenance.', 'skills': ['WordPress', 'PHP', 'CSS', 'JavaScript', 'SEO']},
+            {'title': 'IT Consultant', 'desc': 'Advise enterprises on technology strategy, digital transformation, and system architecture.', 'reqs': '5+ years IT consulting. Strong communication.', 'resp': 'Technology assessment. Roadmap creation. Stakeholder management.', 'skills': ['IT Consulting', 'Cloud Architecture', 'Project Management', 'Communication', 'Strategy']},
+            # ── Education & Research ──
+            {'title': 'Instructional Designer (Tech)', 'desc': 'Create engaging online courses and training materials for technical topics.', 'reqs': '2+ years instructional design. LMS experience.', 'resp': 'Course design. Video scripting. Assessment creation.', 'skills': ['Instructional Design', 'E-Learning', 'Video Production', 'LMS', 'Communication']},
         ]
 
         locations = ['New York, NY', 'San Francisco, CA', 'London, UK', 'Remote', 'Berlin, DE', 'Austin, TX', 'Toronto, CA', 'Seattle, WA']
@@ -258,8 +320,8 @@ class Command(BaseCommand):
                 )
                 jobs.append(job)
 
-            # Add a few more varied postings
-            for i in range(10):
+            # Add more varied postings
+            for i in range(20):
                 company = random.choice(companies)
                 tmpl = random.choice(job_templates)
                 job = JobPost.objects.create(

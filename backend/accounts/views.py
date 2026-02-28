@@ -5,6 +5,7 @@ Authentication and user profile management views.
 from django.contrib.auth import update_session_auth_hash
 from rest_framework import status, generics, permissions
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView

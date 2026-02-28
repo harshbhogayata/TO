@@ -82,22 +82,37 @@ const UserDashboard = () => {
             {!isLoading && applications.length === 0 && saved.length === 0 ? (
                 <div className="dashboard-empty">
                     <div className="empty-main">
-                        <div className="illustration-placeholder"></div>
-                        <h2 className="empty-title">Welcome to TalentOrbit</h2>
-                        <p className="empty-desc">Your career dashboard is currently empty. Complete your profile and start applying to positions to track them here.</p>
+                        <h2 className="empty-title">Welcome to TalentOrbit, {user?.full_name?.split(' ')[0] || 'there'}!</h2>
+                        <p className="empty-desc">
+                            {profile?.resume || profile?.skills?.length
+                                ? 'Your profile is set up. Start exploring jobs and your applications will appear here.'
+                                : 'Complete your profile and start applying to positions to track them here.'}
+                        </p>
                         <div style={{ display: 'flex', gap: '16px', marginTop: '16px' }}>
                             <button className="btn-primary" onClick={() => navigate('/jobs')}>Browse Jobs</button>
-                            <button className="btn-outline" onClick={() => navigate('/profile')}>Complete Profile</button>
+                            <button className="btn-outline" onClick={() => navigate('/profile')}>
+                                {profile?.resume ? 'View Profile' : 'Complete Profile'}
+                            </button>
                         </div>
                     </div>
 
                     <div className="empty-sidebar">
                         <div>
-                            <h3 className="sidebar-section-title">Getting Started</h3>
+                            <h3 className="sidebar-section-title">
+                                {profile?.resume || profile?.skills?.length ? 'Quick Links' : 'Getting Started'}
+                            </h3>
                             <div className="link-group">
-                                <a className="text-link" onClick={() => navigate('/profile')}>1. Upload Resume</a>
-                                <a className="text-link" onClick={() => navigate('/skills')}>2. Verify Skills</a>
-                                <a className="text-link" onClick={() => navigate('/jobs')}>3. Set Preferences</a>
+                                {!profile?.resume && <a className="text-link" onClick={() => navigate('/profile')}>1. Upload Resume</a>}
+                                {(!profile?.skills || profile.skills.length === 0) && <a className="text-link" onClick={() => navigate('/skills')}>2. Verify Skills</a>}
+                                <a className="text-link" onClick={() => navigate('/jobs')}>
+                                    {profile?.resume || profile?.skills?.length ? 'Browse Jobs' : '3. Find Your First Job'}
+                                </a>
+                                {(profile?.resume || profile?.skills?.length > 0) && (
+                                    <>
+                                        <a className="text-link" onClick={() => navigate('/skills')}>Skill Hub</a>
+                                        <a className="text-link" onClick={() => navigate('/inbox')}>Messages</a>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

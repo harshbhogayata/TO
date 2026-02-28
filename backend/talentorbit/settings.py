@@ -268,10 +268,8 @@ SIMPLE_JWT = {
 }
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    'CORS_ALLOWED_ORIGINS',
-    'http://localhost:5173'
-).split(',')
+_cors_raw = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173')
+CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_raw.split(',') if o.strip()]
 
 CORS_ALLOW_CREDENTIALS = True
 

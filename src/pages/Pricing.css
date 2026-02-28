@@ -131,3 +131,41 @@
     display: flex;
     min-height: 100%;
 }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .pricing-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tier-section {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .pricing-label {
+        display: none;
+    }
+
+    .layout-inner {
+        flex-direction: column;
+    }
+
+    .tier-card {
+        padding: 24px 20px;
+    }
+
+    .tier-price {
+        font-size: 32px;
+    }
+}
+
+@media (max-width: 480px) {
+    .tier-card {
+        padding: 20px 16px;
+    }
+
+    .tier-name {
+        font-size: 20px;
+    }
+}

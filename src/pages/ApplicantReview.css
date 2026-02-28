@@ -185,3 +185,41 @@
     font-size: 18px;
     text-transform: uppercase;
 }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .ar-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .ar-list-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        max-height: 40vh;
+    }
+
+    .ar-detail-body {
+        padding: 20px;
+        gap: 20px;
+    }
+
+    .ar-applicant-row {
+        padding: 16px 20px;
+    }
+
+    .ar-detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+}
+
+@media (max-width: 480px) {
+    .ar-detail-section {
+        padding: 16px;
+    }
+
+    .ar-detail-section h3 {
+        font-size: 16px;
+    }
+}

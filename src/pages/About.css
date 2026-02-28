@@ -165,3 +165,78 @@
     letter-spacing: 2px;
     text-transform: uppercase;
 }
+
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+    .stat-item h4 {
+        font-size: 36px;
+    }
+
+    .mission-text {
+        font-size: 20px;
+        max-width: 100%;
+    }
+
+    .sub-label {
+        font-size: 26px;
+    }
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .about-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-strip {
+        flex-wrap: wrap;
+        gap: 24px;
+        padding: 24px 20px;
+    }
+
+    .stat-item h4 {
+        font-size: clamp(28px, 8vw, 40px);
+    }
+
+    .section-padding {
+        padding: 24px 20px;
+    }
+
+    .team-section {
+        grid-template-columns: 1fr;
+    }
+
+    .team-member {
+        border-right: none;
+        padding: 24px 20px;
+    }
+
+    .partner-logos-header,
+    .partner-logos-inline {
+        gap: 20px;
+    }
+
+    .mission-text {
+        font-size: 18px;
+    }
+
+    .border-left {
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-strip {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .team-section {
+        grid-template-columns: 1fr;
+    }
+
+    .sub-label {
+        font-size: 22px;
+    }
+}

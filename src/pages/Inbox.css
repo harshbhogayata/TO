@@ -329,3 +329,75 @@
     align-items: center;
     border-left: 1px solid var(--border-color);
 }
+
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+    .messaging-grid {
+        grid-template-columns: 280px 1fr;
+    }
+
+    .vertical-label-messaging {
+        display: none;
+    }
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .messaging-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .vertical-label-messaging {
+        display: none;
+    }
+
+    .threads-panel {
+        border-right: none;
+    }
+
+    .chat-area {
+        border-right: none;
+    }
+
+    .chat-header {
+        padding: 16px 20px;
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .message-history {
+        padding: 20px;
+    }
+
+    .message {
+        max-width: 85%;
+    }
+
+    .composer {
+        padding: 16px 20px;
+    }
+
+    .btn-send {
+        padding: 0 20px;
+        font-size: 14px;
+    }
+
+    .chat-user-info h3 {
+        font-size: 18px;
+    }
+}
+
+@media (max-width: 480px) {
+    .message {
+        max-width: 92%;
+    }
+
+    .threads-header {
+        padding: 16px;
+    }
+
+    .thread-item {
+        padding: 16px;
+    }
+}

@@ -307,3 +307,89 @@
     text-transform: uppercase;
     margin-left: 8px;
 }
+
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+    .sj-page-title {
+        font-size: clamp(48px, 8vw, 72px);
+    }
+
+    .sj-grid-layout {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .sj-wrapper {
+        width: 100%;
+        height: 100%;
+    }
+
+    .sj-tape-bar span:nth-child(2),
+    .sj-tape-bar span:nth-child(3) {
+        display: none;
+    }
+
+    .sj-app-container {
+        grid-template-columns: 1fr;
+    }
+
+    .sj-sidebar {
+        display: none;
+    }
+
+    .sj-content-header {
+        padding: 32px 20px 24px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .sj-page-title {
+        font-size: clamp(36px, 10vw, 56px);
+    }
+
+    .sj-vertical-label {
+        display: none;
+    }
+
+    .sj-jobs-container {
+        flex-direction: column;
+    }
+
+    .sj-jobs-grid-section {
+        border-right: none;
+    }
+
+    .sj-grid-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .sj-job-card {
+        padding: 24px 20px;
+    }
+
+    .sj-list-header {
+        padding: 16px 20px;
+    }
+
+    .sj-header-stats {
+        gap: 24px;
+        text-align: left;
+    }
+}
+
+@media (max-width: 480px) {
+    .sj-page-title {
+        font-size: clamp(28px, 10vw, 42px);
+    }
+
+    .sj-job-card {
+        padding: 20px 16px;
+    }
+
+    .sj-job-title {
+        font-size: 20px;
+    }
+}

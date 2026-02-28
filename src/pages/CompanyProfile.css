@@ -77,3 +77,23 @@
     font-size: 18px;
     text-transform: uppercase;
 }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .cp-edit-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .cp-right-col {
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .cp-form-body {
+        padding: 20px;
+    }
+
+    .resume-upload {
+        padding: 20px;
+    }
+}

@@ -130,3 +130,52 @@
     justify-content: space-between;
     align-items: center;
 }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .hub-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .video-library {
+        border-right: none;
+    }
+
+    .video-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .video-item {
+        border-right: none;
+        padding: 20px;
+    }
+
+    .sidebar-right {
+        border-top: 1px solid var(--border-color);
+    }
+
+    .progress-section {
+        padding: 24px 20px;
+    }
+
+    .certificate-card {
+        margin: 20px;
+    }
+
+    .quiz-alert {
+        padding: 12px 20px;
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .video-item {
+        padding: 16px;
+    }
+
+    .video-title {
+        font-size: 16px;
+    }
+}

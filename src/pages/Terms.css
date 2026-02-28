@@ -189,3 +189,68 @@
     opacity: 0.3;
     cursor: not-allowed;
 }
+
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+    .terms-content-layout {
+        grid-template-columns: 240px 1fr;
+    }
+
+    .terms-doc-title {
+        font-size: clamp(48px, 8vw, 68px);
+    }
+
+    .terms-document-area {
+        padding: 40px;
+    }
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .terms-content-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .terms-toc-sidebar {
+        display: none;
+    }
+
+    .terms-minimal-header {
+        padding: 16px 20px;
+    }
+
+    .terms-document-area {
+        padding: 32px 20px 60px;
+    }
+
+    .terms-doc-title {
+        font-size: clamp(36px, 10vw, 56px);
+    }
+
+    .terms-legal-text {
+        font-size: 16px;
+    }
+
+    .terms-button-group {
+        flex-direction: column;
+    }
+
+    .terms-doc-meta {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .terms-doc-title {
+        font-size: clamp(28px, 10vw, 42px);
+    }
+
+    .terms-document-area {
+        padding: 24px 16px 48px;
+    }
+
+    .terms-section-heading {
+        font-size: 22px;
+    }
+}

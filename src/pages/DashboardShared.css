@@ -141,3 +141,50 @@
     flex: 1;
     overflow-y: auto;
 }
+
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+    .company-grid {
+        grid-template-columns: 1.5fr 1fr;
+    }
+
+    .dashboard-empty {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .company-grid,
+    .user-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .section-column.border-right {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .dashboard-empty {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-card {
+        padding: 24px 20px;
+    }
+
+    .pane-section {
+        padding: 24px 20px;
+    }
+
+    .tender-card {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .resume-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

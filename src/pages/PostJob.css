@@ -133,3 +133,33 @@
     opacity: 0.6;
     text-transform: uppercase;
 }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .post-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .post-form-grid .form-section {
+        padding: 24px 20px;
+        border-right: none;
+    }
+
+    .post-form-grid .sidebar-controls {
+        padding: 24px 20px;
+    }
+
+    .post-form-grid .dual-input {
+        grid-template-columns: 1fr;
+    }
+
+    .post-form-grid .textarea-editor {
+        height: 180px;
+    }
+}
+
+@media (max-width: 480px) {
+    .post-form-grid .form-section {
+        padding: 20px 16px;
+    }
+}

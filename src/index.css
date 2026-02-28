@@ -401,9 +401,9 @@ body {
     .sidebar {
         position: fixed !important;
         top: 0;
-        left: -220px;
+        left: -260px;
         height: 100vh;
-        width: 200px;
+        width: 240px;
         z-index: 950;
         transition: left 0.25s ease;
         box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
@@ -415,5 +415,78 @@ body {
 
     .app-container {
         grid-template-columns: 1fr !important;
+    }
+
+    .tape-bar {
+        font-size: 10px;
+        padding: 6px 12px;
+    }
+
+    .tape-bar span:nth-child(2),
+    .tape-bar span:nth-child(3) {
+        display: none;
+    }
+
+    .content-header {
+        padding: 32px 20px 24px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .page-title {
+        font-size: clamp(36px, 10vw, 64px);
+        letter-spacing: -1px;
+    }
+
+    .header-stats {
+        gap: 24px;
+        text-align: left;
+    }
+
+    .list-header {
+        padding: 16px 20px;
+    }
+
+    .data-row {
+        padding: 16px 20px;
+    }
+
+    .vertical-label {
+        display: none;
+    }
+
+    .sidebar-hamburger {
+        top: 48px;
+        left: 8px;
+    }
+
+    .form-section {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .content-header {
+        padding: 24px 16px 20px;
+    }
+
+    .page-title {
+        font-size: clamp(28px, 9vw, 48px);
+    }
+
+    .list-header {
+        padding: 12px 16px;
+    }
+
+    .list-header h2 {
+        font-size: 22px;
+    }
+
+    .data-row {
+        padding: 14px 16px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
     }
 }

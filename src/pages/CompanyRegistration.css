@@ -82,3 +82,34 @@
     font-weight: 700;
     margin-bottom: 16px;
 }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .registration-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-section {
+        padding: 24px 20px;
+        border-right: none;
+    }
+
+    .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .sidebar-right {
+        padding: 24px 20px;
+    }
+
+    .upload-zone {
+        padding: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-section {
+        padding: 20px 16px;
+    }
+}

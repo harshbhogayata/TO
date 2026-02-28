@@ -1,0 +1,159 @@
+/* Existing .ma-* classes preserved for backward compatibility */
+.ma-wrapper {
+    background-color: var(--bg-beige);
+    color: var(--text-black);
+    font-family: var(--font-sans);
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── New API-integrated layout classes ─────────────────────────────────────── */
+.applications-grid {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.applications-list {
+    overflow-y: auto;
+}
+
+.applications-sidebar {
+    border-left: 1px solid var(--border-color);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.application-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 24px;
+    padding: 28px 32px;
+    border-bottom: 1px solid var(--border-color);
+    align-items: center;
+    transition: background 0.1s;
+}
+
+.application-row:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.app-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.app-title-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.app-job-title {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    text-transform: uppercase;
+}
+
+.app-company {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    opacity: 0.6;
+    letter-spacing: 1px;
+}
+
+.app-date {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    opacity: 0.4;
+    text-transform: uppercase;
+}
+
+/* Status badges */
+.app-status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-family: var(--font-sans);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid currentColor;
+}
+
+.app-status-badge.status-applied {
+    color: #444;
+}
+
+.app-status-badge.status-reviewing {
+    color: #2255bb;
+    border-color: #2255bb;
+}
+
+.app-status-badge.status-shortlisted {
+    color: #0066aa;
+    border-color: #0066aa;
+}
+
+.app-status-badge.status-interview {
+    color: #884400;
+    border-color: #884400;
+}
+
+.app-status-badge.status-offered {
+    color: #006600;
+    border-color: #006600;
+}
+
+.app-status-badge.status-rejected {
+    color: #aa0000;
+    border-color: #aa0000;
+}
+
+.app-status-badge.status-withdrawn {
+    color: #888;
+    border-color: #888;
+}
+
+/* Timeline dots */
+.app-timeline {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.timeline-dot {
+    width: 10px;
+    height: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-beige);
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.timeline-dot.reached {
+    background: var(--text-black);
+}
+
+.timeline-dot.current {
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.15);
+}
+
+.app-actions {
+    min-width: 80px;
+    text-align: right;
+}
+
+.status-key-row {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+}

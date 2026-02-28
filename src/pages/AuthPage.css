@@ -1,0 +1,137 @@
+.login-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+}
+
+.login-branding {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 60px;
+    overflow-y: auto;
+}
+
+.brand-large {
+    font-family: var(--font-display);
+    font-size: 120px;
+    line-height: 0.85;
+    text-transform: uppercase;
+}
+
+.brand-sub {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    text-transform: uppercase;
+    opacity: 0.8;
+    margin-top: 20px;
+}
+
+.login-form-container {
+    display: flex;
+    flex-direction: column;
+    padding: 60px;
+    justify-content: center;
+    border-left: 1px solid var(--border-color);
+    overflow-y: auto;
+}
+
+.login-header {
+    margin-bottom: 48px;
+}
+
+.login-header h2 {
+    font-family: var(--font-display);
+    font-size: 64px;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.role-selector {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 24px;
+}
+
+.role-btn {
+    flex: 1;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.role-btn.active {
+    background: var(--bg-dark);
+    color: var(--text-white);
+}
+
+.form-group {
+    margin-bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.login-btn {
+    background: var(--bg-dark);
+    color: var(--text-white);
+    border: none;
+    padding: 20px;
+    font-family: var(--font-display);
+    font-size: 24px;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 12px;
+    transition: opacity 0.2s;
+}
+
+.login-btn:hover {
+    opacity: 0.9;
+}
+
+.form-footer {
+    margin-top: 24px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.link-text {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.footer-branding {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.vertical-mark {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    opacity: 0.4;
+}

@@ -1,0 +1,132 @@
+.hub-grid {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    flex-grow: 1;
+}
+
+.video-library {
+    border-right: 1px solid var(--border-color);
+    padding: 0;
+}
+
+.video-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.video-item {
+    border-right: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 24px;
+    transition: background 0.2s;
+}
+
+.video-item:nth-child(even) {
+    border-right: none;
+}
+
+.thumbnail-placeholder {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background-color: #000;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.thumbnail-placeholder img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%) contrast(110%);
+    opacity: 0.8;
+}
+
+.duration-tag {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: var(--bg-dark);
+    color: var(--text-white);
+    font-size: 10px;
+    padding: 2px 6px;
+    font-weight: 600;
+}
+
+.video-meta {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.video-title {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+}
+
+.sidebar-right {
+    display: flex;
+    flex-direction: column;
+}
+
+.progress-section {
+    padding: 32px;
+    border-bottom: 1px solid var(--border-color);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.progress-bar-container {
+    height: 4px;
+    background: rgba(0, 0, 0, 0.1);
+    margin: 16px 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--text-black);
+}
+
+.certificate-card {
+    margin: 32px;
+    padding: 24px;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    position: relative;
+}
+
+.cert-stamp {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 40px;
+    height: 40px;
+    border: 2px solid var(--text-black);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 900;
+    transform: rotate(15deg);
+}
+
+.quiz-alert {
+    background: var(--text-black);
+    color: var(--text-white);
+    padding: 16px 32px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

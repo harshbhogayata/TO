@@ -1,0 +1,193 @@
+/* ── Standalone page shell (public job detail, no dashboard layout) ── */
+
+.jd-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background: var(--bg-beige);
+    overflow: hidden;
+}
+
+.jd-tape-bar {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.jd-app-container {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.jd-sidebar {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+    padding: 32px 0;
+    overflow-y: auto;
+}
+
+.jd-brand {
+    font-family: var(--font-display);
+    font-size: 28px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 20px 32px 20px;
+    line-height: 0.9;
+}
+
+.jd-nav-item {
+    padding: 14px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    opacity: 0.55;
+}
+
+.jd-nav-item:last-child {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.jd-nav-item:hover,
+.jd-nav-item.active {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.jd-nav-num {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.jd-nav-label {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.jd-main-content {
+    background-color: var(--bg-beige);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.jd-sidebar-right {
+    overflow-y: auto;
+    border-left: 1px solid var(--border-color);
+}
+
+/* ── Inner content (header, grid, detail rows) ── */
+
+.jd-content-header {
+    padding: 60px 40px 40px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--border-color);
+    gap: 20px;
+}
+
+.jd-page-title {
+    font-family: var(--font-display);
+    font-size: clamp(36px, 5vw, 80px);
+    text-transform: uppercase;
+    line-height: 0.85;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+}
+
+.jd-company-meta {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    text-transform: uppercase;
+    opacity: 0.6;
+    letter-spacing: 1px;
+}
+
+.jd-header-actions {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.jd-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.jd-description-col {
+    border-right: 1px solid var(--border-color);
+    overflow-y: auto;
+}
+
+.jd-section-header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.jd-section-header h2 {
+    font-family: var(--font-display);
+    font-size: 24px;
+    text-transform: uppercase;
+}
+
+.jd-description-body {
+    padding: 24px 32px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.jd-detail-list {
+    padding: 0;
+}
+
+.jd-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 12px;
+}
+
+.jd-detail-label {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    opacity: 0.5;
+}
+
+.jd-detail-value {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    text-transform: uppercase;
+    text-align: right;
+}

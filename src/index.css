@@ -1,0 +1,419 @@
+:root {
+    --bg-beige: #E6E2D8;
+    --bg-dark: #111111;
+    --text-black: #000000;
+    --text-white: #F0F0F0;
+    --border-color: #000000;
+    --border-light: rgba(255, 255, 255, 0.2);
+    --font-display: 'Anton', sans-serif;
+    --font-serif: 'Bodoni Moda', serif;
+    --font-sans: 'Inter', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-beige);
+    color: var(--text-black);
+    font-family: var(--font-sans);
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#root {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Common Components */
+.tape-bar {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    width: 100%;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.vertical-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    padding: 20px;
+    font-family: var(--font-display);
+    font-size: 24px;
+    border-left: 1px solid var(--border-color);
+    background: var(--bg-beige);
+    height: 100%;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+/* Dashboard Global Layout */
+.app-container {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    width: 100%;
+}
+
+.sidebar {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+    padding: 40px 0;
+    overflow-y: auto;
+}
+
+.brand {
+    font-family: var(--font-display);
+    font-size: 32px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 24px 40px 24px;
+    line-height: 0.9;
+}
+
+.logo {
+    font-family: var(--font-display);
+    font-size: 28px;
+    text-transform: uppercase;
+    line-height: 0.9;
+    letter-spacing: 1px;
+    cursor: pointer;
+}
+
+.nav-group {
+    margin-bottom: 40px;
+}
+
+.nav-item {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+    opacity: 0.6;
+}
+
+.nav-item:last-child {
+    border-bottom: 1px solid var(--border-light);
+}
+
+.nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.nav-item.active {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.nav-item.active .nav-label {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.nav-num {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.nav-label {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.main-content {
+    background-color: var(--bg-beige);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.content-header {
+    padding: 60px 40px 40px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.page-title {
+    font-family: var(--font-display);
+    font-size: clamp(48px, 6vw, 96px);
+    /* Responsive sizing so it's not massive on smaller viewports */
+    text-transform: uppercase;
+    line-height: 0.85;
+    letter-spacing: -2px;
+}
+
+/* Shared UI Components */
+.btn {
+    padding: 12px 20px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-black);
+}
+
+.btn-outline,
+.btn-primary,
+.btn-black,
+.btn-large {
+    padding: 12px 20px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-black);
+}
+
+.btn-outline:hover {
+    background: var(--text-black);
+    color: var(--bg-beige);
+}
+
+.btn-primary,
+.btn-black,
+.btn-large {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    border: 1px solid var(--bg-dark);
+}
+
+.btn-primary:hover,
+.btn-black:hover,
+.btn-large:hover {
+    opacity: 0.9;
+}
+
+.btn-text {
+    background: none;
+    border: none;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 1px solid transparent;
+}
+
+.btn-text:hover {
+    border-bottom-color: var(--text-black);
+}
+
+.header-stats {
+    display: flex;
+    gap: 40px;
+    text-align: right;
+}
+
+.stat-block h3 {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.stat-block p {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.list-header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.list-header h2 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    text-transform: uppercase;
+}
+
+.data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.1s;
+}
+
+.data-row:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.row-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.row-title {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.row-meta {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Forms */
+.form-input,
+.text-input {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    font-family: var(--font-serif);
+    font-size: 16px;
+    outline: none;
+}
+
+.form-input:focus,
+.text-input:focus {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.form-label,
+.input-label {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+/* ── Shared utility classes ──────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border: 1px solid var(--border-color);
+    font-family: var(--font-sans);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    vertical-align: middle;
+}
+
+/* .btn-text defined once above — duplicate removed */
+
+/* ── Mobile Sidebar ──────────────────────────────────────────────────────── */
+.sidebar-hamburger {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 12px;
+    z-index: 1000;
+    background: var(--bg-dark);
+    color: var(--text-white);
+    border: 1px solid var(--border-light);
+    padding: 8px 12px;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 900;
+}
+
+@media (max-width: 768px) {
+    .sidebar-hamburger {
+        display: block;
+    }
+
+    .sidebar-overlay {
+        display: block;
+    }
+
+    .sidebar {
+        position: fixed !important;
+        top: 0;
+        left: -220px;
+        height: 100vh;
+        width: 200px;
+        z-index: 950;
+        transition: left 0.25s ease;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .sidebar.sidebar-mobile-open {
+        left: 0;
+    }
+
+    .app-container {
+        grid-template-columns: 1fr !important;
+    }
+}

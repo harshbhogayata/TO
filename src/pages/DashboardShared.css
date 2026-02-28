@@ -1,0 +1,143 @@
+/* Shared styles for User and Company Dashboards */
+
+.dashboard-grid {
+    display: grid;
+    height: 100%;
+}
+
+.company-grid {
+    grid-template-columns: 2fr 1fr;
+}
+
+.user-grid {
+    grid-template-columns: 1.5fr 1fr;
+}
+
+.section-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.section-column.border-right {
+    border-right: 1px solid var(--border-color);
+}
+
+.badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border: 1px solid var(--border-color);
+    font-weight: 700;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+/* Company specific widgets */
+.tender-card {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tender-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.progress-bar {
+    height: 2px;
+    background: rgba(0, 0, 0, 0.1);
+    width: 100%;
+    margin: 12px 0;
+    position: relative;
+}
+
+.progress-fill {
+    position: absolute;
+    height: 100%;
+    background: var(--text-black);
+    width: 65%;
+}
+
+.profile-card {
+    padding: 32px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.profile-image {
+    width: 80px;
+    height: 80px;
+    background: #000;
+    margin-bottom: 20px;
+    filter: grayscale(1);
+}
+
+.settings-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+/* User Dashboard Specifics */
+.tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--border-color);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-right: 4px;
+}
+
+.right-pane {
+    display: flex;
+    flex-direction: column;
+}
+
+.pane-section {
+    border-bottom: 1px solid var(--border-color);
+    padding: 32px;
+}
+
+.pane-section:last-child {
+    border-bottom: none;
+    flex-grow: 1;
+}
+
+.section-label {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: block;
+    letter-spacing: 1px;
+}
+
+.resume-card {
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.subscription-box {
+    background: var(--text-black);
+    color: var(--bg-beige);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ── Dashboard Empty State ── */
+.dashboard-empty {
+    display: grid;
+    grid-template-columns: 1fr 320px 60px;
+    flex: 1;
+    overflow-y: auto;
+}

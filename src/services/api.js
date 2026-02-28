@@ -1,0 +1,208 @@
+/**
+ * src/services/api.js
+ * Central Axios instance for the TalentOrbit API.
+ *
+ * Features:
+ *  - Base URL points to Django backend (v1 prefix)
+ *  - Automatically attaches Authorization: Bearer <token>
+ *  - Silently refreshes expired access tokens via the refresh endpoint
+ *  - Logs the user out (clears store) when refresh also fails
+ */
+import axios from 'axios';
+import { useAuthStore } from '../store/authStore';
+
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
+const api = axios.create({
+    baseURL: BASE_URL,
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 10000,
+});
+
+// ─── Request Interceptor ────────────────────────────────────────────────────
+api.interceptors.request.use(
+    (config) => {
+        const token = useAuthStore.getState().accessToken;
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// ─── Response Interceptor — silent token refresh ────────────────────────────
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(({ resolve, reject }) => {
+        if (error) reject(error);
+        else resolve(token);
+    });
+    failedQueue = [];
+};
+
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            if (isRefreshing) {
+                // Queue the request while a refresh is in-flight
+                return new Promise((resolve, reject) => {
+                    failedQueue.push({ resolve, reject });
+                }).then((token) => {
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    return api(originalRequest);
+                }).catch((err) => Promise.reject(err));
+            }
+
+            originalRequest._retry = true;
+            isRefreshing = true;
+
+            const refreshToken = useAuthStore.getState().refreshToken;
+
+            try {
+                const { data } = await axios.post(`${BASE_URL}/auth/refresh/`, {
+                    refresh: refreshToken,
+                });
+                const newAccess = data.access;
+                // ROTATE_REFRESH_TOKENS is enabled: the server returns a new
+                // refresh token and blacklists the old one. Save both.
+                const newRefresh = data.refresh || refreshToken;
+                useAuthStore.getState().setTokens(newAccess, newRefresh);
+                api.defaults.headers.common.Authorization = `Bearer ${newAccess}`;
+                processQueue(null, newAccess);
+                originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+                return api(originalRequest);
+            } catch (refreshError) {
+                processQueue(refreshError, null);
+                useAuthStore.getState().logout();
+                return Promise.reject(refreshError);
+            } finally {
+                isRefreshing = false;
+            }
+        }
+
+        return Promise.reject(error);
+    }
+);
+
+export default api;
+
+/**
+ * Extract a user-friendly message from an API error (Axios or similar).
+ * Prefers detail, then message, then non-field errors, then fallback.
+ */
+export function getApiErrorMessage(err, fallback = 'Something went wrong. Please try again.') {
+    const data = err?.response?.data;
+    if (!data) return fallback;
+    if (typeof data.detail === 'string') return data.detail;
+    if (data.message) return data.message;
+    if (data.error) return data.error;
+    const nonField = data.non_field_errors?.[0];
+    if (nonField) return nonField;
+    const firstKey = Object.keys(data)[0];
+    const firstVal = Array.isArray(data[firstKey]) ? data[firstKey][0] : data[firstKey];
+    if (firstVal && typeof firstVal === 'string') return firstVal;
+    return fallback;
+}
+
+// ─── Named service functions ────────────────────────────────────────────────
+export const authService = {
+    loginUser: (email, password) =>
+        api.post('/auth/login/', { email, password }),
+    registerTalent: (data) =>
+        api.post('/auth/register/talent/', data),
+    extractResume: (formData) =>
+        api.post('/auth/extract-resume/', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        }),
+    registerCompany: (data) =>
+        api.post('/auth/register/company/', data),
+    logout: (refresh) =>
+        api.post('/auth/logout/', { refresh }),
+    getMe: () =>
+        api.get('/auth/me/'),
+    updateTalentProfile: (data) =>
+        api.patch('/auth/profile/talent/', data, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        }),
+    updateCompanyProfile: (data) =>
+        api.patch('/auth/profile/company/', data, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        }),
+    changePassword: (data) =>
+        api.post('/auth/change-password/', data),
+    requestPasswordReset: (email) =>
+        api.post('/auth/password-reset/', { email }),
+    setup2FA: () => api.get('/auth/2fa/setup/'),
+    verify2FA: (token) => api.post('/auth/2fa/verify/', { token }),
+    disable2FA: () => api.post('/auth/2fa/disable/'),
+    deactivateAccount: () => api.post('/auth/deactivate/'),
+};
+
+export const jobsService = {
+    listJobs: (params) => api.get('/jobs/', { params }),
+    getJob: (id) => api.get(`/jobs/${id}/`),
+    applyToJob: (id, data) => api.post(`/jobs/${id}/apply/`, data),
+    myApplications: () => api.get('/jobs/applications/'),
+    withdrawApplication: (id) => api.delete(`/jobs/applications/${id}/`),
+    savedJobs: () => api.get('/jobs/saved/'),
+    saveJob: (jobId) => api.post('/jobs/saved/', { job_id: jobId }),
+    unsaveJob: (id) => api.delete(`/jobs/saved/${id}/`),
+    // Company
+    companyJobs: () => api.get('/jobs/mine/'),
+    createJob: (data) => api.post('/jobs/mine/', data),
+    updateJob: (id, data) => api.patch(`/jobs/mine/${id}/`, data),
+    deleteJob: (id) => api.delete(`/jobs/mine/${id}/`),
+    jobApplications: (jobId) => api.get(`/jobs/${jobId}/applications/`),
+    updateApplicationStatus: (id, status) =>
+        api.patch(`/jobs/applications/${id}/status/`, { status }),
+};
+
+export const messagingService = {
+    myThreads: () => api.get('/messages/'),
+    createThread: (data) => api.post('/messages/thread/', data),
+    getMessages: (threadId) => api.get(`/messages/${threadId}/messages/`),
+    sendMessage: (data) => api.post('/messages/send/', data),
+    unreadCount: () => api.get('/messages/unread/'),
+};
+
+export const adminService = {
+    stats: () => api.get('/admin-api/stats/'),
+    listUsers: (params) => api.get('/admin-api/users/', { params }),
+    verifyUser: (id) => api.patch(`/admin-api/users/${id}/verify/`),
+    deactivateUser: (id) => api.delete(`/admin-api/users/${id}/`),
+    listJobs: () => api.get('/admin-api/jobs/'),
+    toggleJob: (id) => api.patch(`/admin-api/jobs/${id}/toggle/`),
+    listApplications: () => api.get('/admin-api/applications/'),
+};
+
+export const paymentsService = {
+    /**
+     * Creates a Stripe Checkout Session on the backend.
+     * @param {string} plan  e.g. 'Premium Pro'
+     * @returns {Promise<{url: string}>}  Stripe-hosted checkout URL
+     */
+    createCheckoutSession: (plan) =>
+        api.post('/payments/create-checkout-session/', { plan }),
+    downloadInvoice: (id) =>
+        api.get(`/payments/invoice/${id}/`, { responseType: 'blob' }),
+};
+
+export const blogService = {
+    listArticles: (params) => api.get('/blog/articles/', { params }),
+};
+
+export const notificationsService = {
+    myNotifications: () => api.get('/notifications/'),
+    read: (id) => api.patch(`/notifications/${id}/read/`),
+    readAll: () => api.post('/notifications/read-all/'),
+};
+
+export const coursesService = {
+    listCourses: () => api.get('/courses/'),
+};

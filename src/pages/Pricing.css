@@ -1,0 +1,133 @@
+.pricing-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100%;
+}
+
+.tier-section {
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.section-sub-header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.section-sub-header h2 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    text-transform: uppercase;
+}
+
+.tier-card {
+    padding: 32px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+}
+
+.tier-card.featured {
+    background-color: #E0DBCF;
+}
+
+.tier-name {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.tier-price {
+    font-family: var(--font-display);
+    font-size: 42px;
+}
+
+.tier-price span {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.feature-list {
+    list-style: none;
+    margin-top: 8px;
+}
+
+.feature-item {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    padding: 8px 0;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.feature-item::before {
+    content: "→";
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+.btn-action {
+    width: 100%;
+    padding: 16px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: auto;
+    transition: all 0.2s;
+}
+
+.btn-action:hover {
+    background: var(--text-black);
+    color: var(--bg-beige);
+}
+
+.btn-action.primary {
+    background: var(--text-black);
+    color: var(--bg-beige);
+}
+
+.btn-action.primary:hover {
+    opacity: 0.9;
+}
+
+.pricing-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    padding: 20px;
+    font-family: var(--font-display);
+    font-size: 24px;
+    border-left: 1px solid var(--border-color);
+    background: var(--bg-beige);
+    height: 100%;
+    text-transform: uppercase;
+}
+
+.badge {
+    display: inline-block;
+    background: var(--text-black);
+    color: var(--bg-beige);
+    font-size: 10px;
+    padding: 2px 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    align-self: flex-start;
+}
+
+.layout-inner {
+    display: flex;
+    min-height: 100%;
+}

@@ -1,0 +1,135 @@
+.post-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    height: 100%;
+}
+
+.post-form-grid .form-section {
+    padding: 40px;
+    border-right: 1px solid var(--border-color);
+}
+
+.post-form-grid .input-group {
+    margin-bottom: 32px;
+}
+
+.post-form-grid .input-label {
+    display: block;
+    font-family: var(--font-serif);
+    font-size: 14px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.post-form-grid .input-field {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    padding: 16px;
+    font-family: var(--font-sans);
+    font-size: 16px;
+    outline: none;
+}
+
+.post-form-grid .textarea-editor {
+    width: 100%;
+    height: 250px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    padding: 16px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+}
+
+.post-form-grid .tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    min-height: 54px;
+    align-items: center;
+}
+
+.post-form-grid .skill-tag-item {
+    background: var(--bg-dark);
+    color: var(--text-white);
+    padding: 4px 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.post-form-grid .tag-input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: var(--font-sans);
+    flex: 1;
+    min-width: 100px;
+}
+
+.post-form-grid .sidebar-controls {
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.post-form-grid .select-field {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    text-transform: uppercase;
+    appearance: none;
+    outline: none;
+}
+
+.post-form-grid .dual-input {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.btn-secondary {
+    padding: 12px 20px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-black);
+    transition: all 0.2s;
+    width: 100%;
+    text-align: center;
+}
+
+.btn-secondary:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.btn-secondary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.post-form-grid .publish-meta {
+    margin-top: auto;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-color);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    opacity: 0.6;
+    text-transform: uppercase;
+}

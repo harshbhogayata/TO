@@ -1,0 +1,105 @@
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    min-height: 100%;
+}
+
+.settings-column {
+    padding: 0;
+}
+
+.settings-column.border-right {
+    border-right: 1px solid var(--border-color);
+}
+
+.list-header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.list-header h2 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    text-transform: uppercase;
+}
+
+.setting-row {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.setting-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.setting-label {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    text-transform: uppercase;
+}
+
+.setting-desc {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+.plan-card {
+    margin: 32px;
+    padding: 24px;
+    border: 1px solid var(--border-color);
+    background: #fff;
+}
+
+.plan-header {
+    margin-bottom: 20px;
+}
+
+.plan-tier {
+    font-family: var(--font-display);
+    font-size: 24px;
+    text-transform: uppercase;
+}
+
+.plan-price {
+    font-family: var(--font-serif);
+    font-size: 32px;
+    margin: 8px 0;
+}
+
+.invoice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    font-family: var(--font-sans);
+}
+
+.invoice-table th {
+    text-align: left;
+    padding: 12px 32px;
+    border-bottom: 1px solid var(--border-color);
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.invoice-table td {
+    padding: 12px 32px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.vertical-label-settings {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    padding: 20px;
+    font-family: var(--font-display);
+    font-size: 24px;
+    border-left: 1px solid var(--border-color);
+    text-transform: uppercase;
+}

@@ -1,0 +1,309 @@
+.sj-wrapper {
+    background-color: var(--bg-beige);
+    color: var(--text-black);
+    font-family: var(--font-sans);
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sj-tape-bar {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.sj-app-container {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    height: 100%;
+    overflow: hidden;
+    flex: 1;
+}
+
+.sj-sidebar {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+    padding: 40px 0;
+    overflow-y: auto;
+}
+
+.sj-brand {
+    font-family: var(--font-display);
+    font-size: 32px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 24px 40px 24px;
+    line-height: 0.9;
+}
+
+.sj-nav-group {
+    margin-bottom: 40px;
+}
+
+.sj-nav-item {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    color: var(--text-white);
+    text-decoration: none;
+}
+
+.sj-nav-item:last-child {
+    border-bottom: 1px solid var(--border-light);
+}
+
+.sj-nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sj-nav-num {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    opacity: 0.6;
+}
+
+.sj-nav-label {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sj-nav-item.active .sj-nav-label {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.sj-main-content {
+    background-color: var(--bg-beige);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.sj-content-header {
+    padding: 60px 40px 40px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sj-page-title {
+    font-family: var(--font-display);
+    font-size: 96px;
+    text-transform: uppercase;
+    line-height: 0.8;
+    letter-spacing: -1px;
+}
+
+.sj-header-stats {
+    display: flex;
+    gap: 40px;
+    text-align: right;
+}
+
+.sj-stat-block h3 {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.sj-stat-block p {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.sj-jobs-container {
+    display: flex;
+    flex: 1;
+}
+
+.sj-jobs-grid-section {
+    flex: 1;
+    padding: 0;
+    border-right: 1px solid var(--border-color);
+}
+
+.sj-list-header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sj-list-header h2 {
+    font-family: var(--font-display);
+    font-size: 32px;
+    text-transform: uppercase;
+}
+
+.sj-grid-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 0;
+}
+
+.sj-job-card {
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: background 0.2s;
+    position: relative;
+}
+
+.sj-job-card:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.sj-job-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.sj-company-tag {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.6;
+}
+
+.sj-remove-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 4px;
+}
+
+.sj-job-title {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    text-transform: uppercase;
+    line-height: 1.1;
+}
+
+.sj-job-title:hover {
+    text-decoration: underline;
+}
+
+.sj-job-details-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.sj-detail-item {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    border-bottom: 1px dotted rgba(0, 0, 0, 0.2);
+    padding-bottom: 4px;
+}
+
+.sj-detail-label {
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.sj-job-actions {
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.sj-btn-black {
+    background: var(--bg-dark);
+    color: var(--bg-beige);
+    border: 1px solid var(--bg-dark);
+    padding: 14px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: opacity 0.2s;
+}
+
+.sj-btn-black:hover {
+    opacity: 0.9;
+}
+
+.sj-vertical-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    padding: 20px;
+    font-family: var(--font-display);
+    font-size: 24px;
+    border-left: 1px solid var(--border-color);
+    background: var(--bg-beige);
+    height: auto;
+    text-transform: uppercase;
+}
+
+.sj-filter-controls {
+    display: flex;
+    gap: 16px;
+}
+
+.sj-btn-text {
+    background: none;
+    border: none;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 1px solid transparent;
+}
+
+.sj-btn-text:hover {
+    border-bottom: 1px solid var(--text-black);
+}
+
+.sj-status-pill {
+    display: inline-block;
+    padding: 2px 6px;
+    background: #000;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 8px;
+}

@@ -1,0 +1,298 @@
+.notif-wrapper {
+    background-color: var(--bg-beige);
+    color: var(--text-black);
+    font-family: var(--font-sans);
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.notif-tape-bar {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.notif-app-container {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    height: 100%;
+    overflow: hidden;
+    flex: 1;
+}
+
+.notif-sidebar {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+    padding: 40px 0;
+}
+
+.notif-brand {
+    font-family: var(--font-display);
+    font-size: 32px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0 24px 40px 24px;
+    line-height: 0.9;
+}
+
+.notif-nav-group {
+    margin-bottom: 40px;
+}
+
+.notif-nav-item {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-light);
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.notif-nav-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.notif-nav-num {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    opacity: 0.6;
+}
+
+.notif-nav-label {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.notif-nav-item.active .notif-nav-label {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.notif-main-content {
+    background-color: var(--bg-beige);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.notif-content-header {
+    padding: 60px 40px 40px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.notif-page-title {
+    font-family: var(--font-display);
+    font-size: 96px;
+    text-transform: uppercase;
+    line-height: 0.8;
+    letter-spacing: -1px;
+}
+
+.notif-header-stats {
+    display: flex;
+    gap: 40px;
+    text-align: right;
+}
+
+.notif-stat-block h3 {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.notif-stat-block p {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.notif-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    flex: 1;
+}
+
+.notif-section-column {
+    border-right: 1px solid var(--border-color);
+}
+
+.notif-list-header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notif-list-header h2 {
+    font-family: var(--font-display);
+    font-size: 32px;
+    text-transform: uppercase;
+}
+
+.notif-filter-controls {
+    display: flex;
+    gap: 16px;
+}
+
+.notif-btn-text {
+    background: none;
+    border: none;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 1px solid transparent;
+}
+
+.notif-btn-text.active {
+    border-bottom: 1px solid var(--text-black);
+}
+
+.notif-row {
+    display: flex;
+    gap: 20px;
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.1s;
+    position: relative;
+}
+
+.notif-row:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.notif-row.unread {
+    background-color: rgba(0, 0, 0, 0.015);
+}
+
+.notif-unread-indicator {
+    width: 8px;
+    height: 8px;
+    background-color: var(--text-black);
+    border-radius: 50%;
+    position: absolute;
+    left: 12px;
+    top: 32px;
+}
+
+.notif-category-tag {
+    font-family: var(--font-sans);
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border: 1px solid var(--border-color);
+    height: fit-content;
+    margin-top: 4px;
+}
+
+.notif-item-content {
+    flex: 1;
+}
+
+.notif-item-title {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.notif-item-desc {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.4;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.notif-time {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    text-transform: uppercase;
+    opacity: 0.5;
+    letter-spacing: 0.5px;
+}
+
+.notif-sidebar-panel {
+    padding: 32px;
+}
+
+.notif-summary-card {
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.notif-summary-label {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 16px;
+}
+
+.notif-summary-count {
+    font-family: var(--font-display);
+    font-size: 48px;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.notif-summary-subtext {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    text-transform: uppercase;
+}
+
+.notif-btn-outline {
+    background: transparent;
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.notif-vertical-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    padding: 20px;
+    font-family: var(--font-display);
+    font-size: 24px;
+    border-left: 1px solid var(--border-color);
+    height: 100%;
+    text-transform: uppercase;
+}

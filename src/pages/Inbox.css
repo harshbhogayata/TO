@@ -1,0 +1,331 @@
+.messaging-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr 60px;
+    height: 100%;
+}
+
+.threads-panel {
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    background: #fdfdfd;
+}
+
+.threads-header {
+    padding: 24px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.threads-header h2 {
+    font-family: var(--font-display);
+    font-size: 24px;
+    text-transform: uppercase;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.search-bar {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-beige);
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    outline: none;
+}
+
+.thread-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.thread-item {
+    display: flex;
+    padding: 20px;
+    gap: 16px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.thread-item:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.thread-item.active {
+    background: var(--bg-dark);
+    color: var(--text-white);
+}
+
+.thread-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    background: #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.thread-item.active .thread-avatar {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.thread-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%);
+}
+
+.thread-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.thread-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    align-items: baseline;
+}
+
+.thread-top h4 {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.thread-top span {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    opacity: 0.6;
+}
+
+.thread-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.unread-dot {
+    width: 6px;
+    height: 6px;
+    background: currentColor;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.thread-preview p {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.chat-area {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+}
+
+.chat-header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-user-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    filter: grayscale(100%);
+    object-fit: cover;
+}
+
+.chat-user-info h3 {
+    font-family: var(--font-display);
+    font-size: 24px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.user-status {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    opacity: 0.6;
+}
+
+.chat-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-outline-sm {
+    border: 1px solid var(--border-color);
+    background: transparent;
+    padding: 8px 16px;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.message-history {
+    flex: 1;
+    padding: 32px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.timestamp-badge {
+    align-self: center;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 6px 12px;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    text-transform: uppercase;
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.message {
+    max-width: 70%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.message.received {
+    align-self: flex-start;
+}
+
+.message.sent {
+    align-self: flex-end;
+}
+
+.message-content {
+    padding: 16px 20px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    border: 1px solid var(--border-color);
+}
+
+.received .message-content {
+    background: white;
+}
+
+.sent .message-content {
+    background: var(--bg-dark);
+    color: var(--text-white);
+    border-color: var(--bg-dark);
+}
+
+.message-time {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    opacity: 0.5;
+    text-transform: uppercase;
+}
+
+.sent .message-time {
+    text-align: right;
+}
+
+.composer {
+    padding: 24px 32px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 16px;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.btn-attachment {
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--border-color);
+    background: white;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.composer-input {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    background: white;
+    padding: 0 20px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    outline: none;
+}
+
+.btn-send {
+    background: var(--bg-dark);
+    color: var(--text-white);
+    border: none;
+    padding: 0 32px;
+    font-family: var(--font-display);
+    font-size: 18px;
+    letter-spacing: 1px;
+    cursor: pointer;
+}
+
+.vertical-label-messaging {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    transform: rotate(180deg);
+    padding: 20px;
+    font-family: var(--font-display);
+    font-size: 24px;
+    background: var(--bg-beige);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    border-left: 1px solid var(--border-color);
+}

@@ -1,0 +1,79 @@
+/* CompanyProfile layout for API-integrated version */
+.cp-edit-layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.cp-form-col {
+    overflow-y: auto;
+}
+
+.cp-form-body {
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.cp-right-col {
+    display: flex;
+    border-left: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.resume-upload {
+    border: 1px dashed var(--border-color);
+    padding: 24px;
+    text-align: center;
+    font-family: var(--font-serif);
+    font-size: 16px;
+    text-transform: uppercase;
+    width: 100%;
+    transition: background 0.2s;
+}
+
+.resume-upload:hover {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Preserve old .cp-* sidebar classes for backward compat */
+.cp-sidebar {
+    background-color: var(--bg-dark);
+    color: var(--text-white);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border-color);
+    padding: 40px 0;
+}
+
+.cp-nav-item {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-light);
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    color: inherit;
+}
+
+.cp-nav-num {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    font-weight: 700;
+    opacity: 0.6;
+}
+
+.cp-nav-label {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    text-transform: uppercase;
+}

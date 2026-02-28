@@ -16,6 +16,7 @@ const JobBoard = () => {
     const [applyLoading, setApplyLoading] = useState(false);
     const [applySuccess, setApplySuccess] = useState(false);
     const [error, setError] = useState('');
+    const [resetKey, setResetKey] = useState(0);
     const { user } = useAuthStore();
     usePageTitle('Job Board');
 
@@ -49,7 +50,7 @@ const JobBoard = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [search, workMode]);
+    }, [search, workMode, resetKey]);
 
     useEffect(() => {
         const debounce = setTimeout(fetchJobs, 300);
@@ -125,7 +126,7 @@ const JobBoard = () => {
                         <div className="illustration-placeholder"></div>
                         <h2 className="empty-title">No matches found</h2>
                         <p className="empty-desc">We couldn't find any job openings matching your current selection. Adjust your filters to widen your search.</p>
-                        <button className="btn-primary" onClick={() => { setSearch(''); setWorkMode(''); }}>Reset All Filters</button>
+                        <button className="btn-primary" onClick={() => { setSearch(''); setWorkMode(''); setResetKey(k => k + 1); }}>Reset All Filters</button>
                     </div>
 
                     <div className="empty-sidebar">
@@ -141,7 +142,7 @@ const JobBoard = () => {
 
                         <div className="link-group">
                             <h3 className="sidebar-section-title">Quick Actions</h3>
-                            <a className="text-link" onClick={() => { setSearch(''); setWorkMode(''); }}>Browse all jobs</a>
+                            <a className="text-link" style={{ cursor: 'pointer' }} onClick={() => { setSearch(''); setWorkMode(''); setResetKey(k => k + 1); }}>Browse all jobs</a>
                         </div>
                     </div>
 

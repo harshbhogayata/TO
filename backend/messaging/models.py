@@ -1,9 +1,10 @@
 """
 messaging/models.py
-Encrypted secure messaging between Talent and Company users.
+Secure messaging between Talent and Company users.
 """
 from django.db import models
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 
 
 class Thread(models.Model):
@@ -45,7 +46,7 @@ class Thread(models.Model):
 class Message(models.Model):
     """
     A single message within a Thread.
-    Tracks read status at the per-message level.
+    Tracks read status at the per-message level with timestamp.
     """
     thread = models.ForeignKey(
         Thread, on_delete=models.CASCADE, related_name='messages'
@@ -58,9 +59,16 @@ class Message(models.Model):
     body = models.TextField(max_length=10000)
     attachment = models.FileField(
         upload_to='message_attachments/',
-        null=True, blank=True
+        null=True, blank=True,
+        validators=[FileExtensionValidator(
+            allowed_extensions=['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'doc', 'docx', 'txt']
+        )],
     )
     read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Timestamp when the recipient read this message.',
+    )
     sent_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

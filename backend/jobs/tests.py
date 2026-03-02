@@ -7,7 +7,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from accounts.models import User, CompanyProfile
+from accounts.models import User, CompanyProfile, TalentProfile
 from .models import JobPost, Application, SavedJob
 
 
@@ -17,20 +17,27 @@ class _JobTestMixin:
     def _setup_users_and_job(self):
         self.client = APIClient()
 
-        # Company user + profile
+        # Company user + profile (verified, starter tier so CRUD tests can create jobs)
         self.company = User.objects.create_user(
             email='co@test.com', password='pass123',
             full_name='Test Corp', role=User.Role.COMPANY,
+            is_verified=True,
         )
         CompanyProfile.objects.create(
             user=self.company, legal_name='Test Corp Inc',
             industry='Tech', headquarters='Remote',
+            subscription_tier='starter',
         )
 
-        # Talent user
+        # Talent user (verified + profile for tier checks)
         self.talent = User.objects.create_user(
             email='talent@test.com', password='pass123',
             full_name='Test Talent', role=User.Role.TALENT,
+            is_verified=True,
+        )
+        TalentProfile.objects.create(
+            user=self.talent, skills=['React', 'TypeScript'],
+            subscription_tier='free',
         )
 
         # Open job

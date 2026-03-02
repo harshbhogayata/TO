@@ -4,5 +4,6 @@ from . import views
 urlpatterns = [
     path('create-checkout-session/', views.create_checkout_session, name='create-checkout-session'),
     path('webhook/', views.stripe_webhook, name='stripe-webhook'),
+    path('customer-portal/', views.customer_portal, name='customer-portal'),
     path('invoice/<str:invoice_id>/', views.download_invoice, name='download-invoice'),
 ]

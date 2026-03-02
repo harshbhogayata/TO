@@ -1,12 +1,15 @@
 """
 payments/views.py
 Stripe Checkout session creation + webhook handler.
+Supports recurring subscriptions with monthly billing.
 """
 import io
 import re
 import json
+import logging
 import stripe
 from django.conf import settings
+from django.core.cache import cache
 from django.http import FileResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
@@ -14,14 +17,17 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
+logger = logging.getLogger(__name__)
+
 # Safe character set for invoice IDs (alphanumeric and hyphens only)
 INVOICE_ID_PATTERN = re.compile(r'^[A-Za-z0-9\-]+$')
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 # ── Plan definitions ──────────────────────────────────────────────────────────
-# If you have Stripe Price IDs set up in your dashboard, replace the
-# 'price_id' values below. Otherwise, the amount/currency approach is used.
+# Each plan defines its recurring monthly price. Set 'price_id' in your
+# Stripe Dashboard for production; the amount/currency fallback creates
+# ad-hoc prices for development.
 PLANS = {
     'Free Agent': {
         'amount': 0,
@@ -29,27 +35,35 @@ PLANS = {
         'name': 'Free Agent',
         'description': 'Basic profile, 3 applications/month',
         'tier': 'free',
+        'interval': 'month',
+        'price_id': None,        # Free — no Stripe price needed
     },
     'Premium Pro': {
-        'amount': 1900,          # in cents  ($19.00)
+        'amount': 1900,          # in cents  ($19.00/month)
         'currency': 'usd',
         'name': 'Premium Pro',
         'description': 'Unlimited applications, priority placement',
         'tier': 'premium',
+        'interval': 'month',
+        'price_id': settings.__dict__.get('STRIPE_PRICE_PREMIUM', None),
     },
     'Starter': {
-        'amount': 9900,          # $99.00
+        'amount': 9900,          # $99.00/month
         'currency': 'usd',
         'name': 'Starter Corporate',
         'description': '5 active job posts, standard ATS integration',
         'tier': 'starter',
+        'interval': 'month',
+        'price_id': settings.__dict__.get('STRIPE_PRICE_STARTER', None),
     },
     'Professional': {
-        'amount': 29900,         # $299.00
+        'amount': 29900,         # $299.00/month
         'currency': 'usd',
         'name': 'Professional Corporate',
         'description': 'Unlimited posts, custom branding, automated screening',
         'tier': 'professional',
+        'interval': 'month',
+        'price_id': settings.__dict__.get('STRIPE_PRICE_PROFESSIONAL', None),
     },
     'Enterprise': {
         'amount': 0,             # Custom — redirect to contact instead
@@ -57,6 +71,8 @@ PLANS = {
         'name': 'Enterprise',
         'description': 'Full API access, white-label, 24/7 support',
         'tier': 'enterprise',
+        'interval': 'month',
+        'price_id': None,
     },
 }
 
@@ -71,6 +87,7 @@ def create_checkout_session(request):
     POST /api/v1/payments/create-checkout-session/
     Body: { "plan": "Premium Pro" }
     Returns: { "url": "https://checkout.stripe.com/..." }
+    Creates a Stripe Checkout Session in **subscription** mode for recurring billing.
     """
     plan_name = request.data.get('plan', '')
     plan = PLANS.get(plan_name)
@@ -87,9 +104,11 @@ def create_checkout_session(request):
         return Response({'url': f"{settings.FRONTEND_URL}/payment/success?plan=free"})
 
     try:
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[{
+        # Build line_items: prefer a pre-created Stripe Price ID, fall back to ad-hoc price_data
+        if plan.get('price_id'):
+            line_items = [{'price': plan['price_id'], 'quantity': 1}]
+        else:
+            line_items = [{
                 'price_data': {
                     'currency': plan['currency'],
                     'product_data': {
@@ -97,23 +116,35 @@ def create_checkout_session(request):
                         'description': plan['description'],
                     },
                     'unit_amount': plan['amount'],
-                    # To make it recurring (subscription), add:
-                    # 'recurring': {'interval': 'month'},
+                    'recurring': {'interval': plan.get('interval', 'month')},
                 },
                 'quantity': 1,
-            }],
-            mode='payment',   # Change to 'subscription' for recurring billing
+            }]
+
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=line_items,
+            mode='subscription',
             success_url=f"{settings.FRONTEND_URL}/payment/success?plan={plan_name}&session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{settings.FRONTEND_URL}/payment/cancel",
             customer_email=request.user.email,
             metadata={
                 'user_id': str(request.user.id),
                 'plan': plan_name,
+                'tier': plan['tier'],
+            },
+            subscription_data={
+                'metadata': {
+                    'user_id': str(request.user.id),
+                    'plan': plan_name,
+                    'tier': plan['tier'],
+                },
             },
         )
         return Response({'url': checkout_session.url})
 
     except stripe.error.StripeError as e:
+        logger.exception('Stripe checkout session creation failed')
         return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 
 
@@ -123,8 +154,13 @@ def create_checkout_session(request):
 def stripe_webhook(request):
     """
     POST /api/v1/payments/webhook/
-    Stripe sends events here. Verify signature and handle checkout.session.completed.
+    Stripe sends events here. Verify signature and handle subscription lifecycle events.
     Configure your Stripe Dashboard webhook to point to this URL.
+    Events handled:
+      - checkout.session.completed  → initial subscription activated
+      - customer.subscription.updated → plan upgrade/downgrade
+      - customer.subscription.deleted → cancellation (revert to free tier)
+      - invoice.payment_failed → notify user (logged, tier preserved until grace period)
     """
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
@@ -138,35 +174,117 @@ def stripe_webhook(request):
     except (ValueError, stripe.error.SignatureVerificationError):
         return HttpResponse(status=400)
 
+    # ── Idempotency guard ─────────────────────────────────────────────────
+    # Stripe may retry events; deduplicate using event ID stored in cache.
+    event_id = event_data.get('id', '')
+    if event_id:
+        cache_key = f'stripe_event:{event_id}'
+        if cache.get(cache_key):
+            logger.info('Duplicate Stripe event ignored: %s', event_id)
+            return HttpResponse(status=200)
+        # Mark as processed for 48 hours (Stripe retries for up to 72h)
+        cache.set(cache_key, True, 60 * 60 * 48)
+
     event_type = event_data.get('type', '')
 
+    # ── Checkout completed (initial subscription) ─────────────────────────
     if event_type == 'checkout.session.completed':
         session = event_data['data']['object']
         user_id = session.get('metadata', {}).get('user_id')
         plan = session.get('metadata', {}).get('plan')
+        subscription_id = session.get('subscription')
 
         if user_id and plan:
-            try:
-                from accounts.models import User
-                user = User.objects.get(id=user_id)
-                # Map the plan name to a normalized tier code for the model
-                plan_obj = PLANS.get(plan, {})
-                tier = plan_obj.get('tier', plan)
-                # Update subscription tier on the user's profile
-                if hasattr(user, 'talent_profile'):
-                    user.talent_profile.subscription_tier = tier
-                    user.talent_profile.save(update_fields=['subscription_tier'])
-                elif hasattr(user, 'company_profile'):
-                    user.company_profile.subscription_tier = tier
-                    user.company_profile.save(update_fields=['subscription_tier'])
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).exception(
-                    'Webhook: failed to update subscription for user %s: %s', user_id, e
-                )
-                return HttpResponse(status=500)
+            _update_user_tier(user_id, plan, stripe_subscription_id=subscription_id)
+
+    # ── Subscription updated (upgrade/downgrade) ─────────────────────────
+    elif event_type == 'customer.subscription.updated':
+        subscription = event_data['data']['object']
+        user_id = subscription.get('metadata', {}).get('user_id')
+        plan = subscription.get('metadata', {}).get('plan')
+        sub_status = subscription.get('status', '')
+
+        if user_id and plan and sub_status == 'active':
+            _update_user_tier(user_id, plan, stripe_subscription_id=subscription.get('id'))
+
+    # ── Subscription deleted (cancellation) ───────────────────────────────
+    elif event_type == 'customer.subscription.deleted':
+        subscription = event_data['data']['object']
+        user_id = subscription.get('metadata', {}).get('user_id')
+
+        if user_id:
+            # Revert to free tier
+            _update_user_tier(user_id, 'Free Agent')
+
+    # ── Invoice payment failed ────────────────────────────────────────────
+    elif event_type == 'invoice.payment_failed':
+        invoice = event_data['data']['object']
+        sub_id = invoice.get('subscription')
+        logger.warning(
+            'Payment failed for subscription %s — customer will be notified by Stripe.',
+            sub_id,
+        )
 
     return HttpResponse(status=200)
+
+
+def _update_user_tier(user_id, plan_name, stripe_subscription_id=None):
+    """
+    Internal helper: update a user's subscription tier based on their plan.
+    Optionally stores the Stripe subscription ID for future management.
+    """
+    try:
+        from accounts.models import User
+        user = User.objects.get(id=user_id)
+        plan_obj = PLANS.get(plan_name, {})
+        tier = plan_obj.get('tier', 'free')
+
+        if hasattr(user, 'talent_profile'):
+            user.talent_profile.subscription_tier = tier
+            user.talent_profile.save(update_fields=['subscription_tier'])
+        elif hasattr(user, 'company_profile'):
+            user.company_profile.subscription_tier = tier
+            user.company_profile.save(update_fields=['subscription_tier'])
+
+        logger.info(
+            'Subscription updated: user=%s tier=%s stripe_sub=%s',
+            user_id, tier, stripe_subscription_id,
+        )
+    except Exception as e:
+        logger.exception(
+            'Webhook: failed to update subscription for user %s: %s', user_id, e
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def customer_portal(request):
+    """
+    POST /api/v1/payments/customer-portal/
+    Creates a Stripe Billing Portal session so the user can manage their
+    subscription (cancel, upgrade, update payment method) without leaving
+    TalentOrbit.
+    """
+    user = request.user
+
+    # Resolve the Stripe customer ID from the user's email
+    try:
+        customers = stripe.Customer.list(email=user.email, limit=1)
+        if not customers.data:
+            return Response(
+                {'error': 'No Stripe customer found. Please subscribe first.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        session = stripe.billing_portal.Session.create(
+            customer=customers.data[0].id,
+            return_url=f"{settings.FRONTEND_URL}/settings/billing",
+        )
+        return Response({'url': session.url})
+
+    except stripe.error.StripeError as e:
+        logger.exception('Stripe customer portal session creation failed')
+        return Response({'error': str(e)}, status=status.HTTP_502_BAD_GATEWAY)
 
 
 @api_view(['GET'])

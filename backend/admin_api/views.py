@@ -88,8 +88,12 @@ def verify_user(request, pk):
 @permission_classes([IsAdminUser])
 def deactivate_user(request, pk):
     """DELETE /api/admin/users/<pk>/ — Deactivate a user account."""
+    if str(pk) == str(request.user.pk):
+        return Response({'error': 'Cannot deactivate your own account.'}, status=status.HTTP_400_BAD_REQUEST)
     try:
         user = User.objects.get(pk=pk)
+        if user.role == 'ADMIN':
+            return Response({'error': 'Cannot deactivate another admin via this endpoint.'}, status=status.HTTP_403_FORBIDDEN)
         user.is_active = False
         user.save(update_fields=['is_active'])
         return Response({'message': f'{user.email} deactivated.'})

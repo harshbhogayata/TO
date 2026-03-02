@@ -24,10 +24,20 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.exceptions import TokenError
 
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.conf import settings as django_settings
+from django.contrib.auth.password_validation import validate_password as _validate_pw
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+
 from .models import User, TalentProfile, CompanyProfile
 from .throttling import AuthEndpointThrottle, ContactEndpointThrottle
 from .permissions import IsEmailVerified
 from .crypto import sign_totp, unsign_totp
+from .utils import blacklist_all_tokens
 from .serializers import (
     CustomTokenObtainPairSerializer,
     TalentRegistrationSerializer,
@@ -59,11 +69,12 @@ class RegisterTalentView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Send verification email (non-blocking — fail_silently)
+        # Send verification email asynchronously via Celery
+        from accounts.tasks import send_verification_email_task
         try:
-            _send_verification_email(user)
+            send_verification_email_task.delay(user_id=user.pk)
         except Exception:
-            pass
+            logger.warning('Failed to dispatch verification email task for user %s', user.email, exc_info=True)
 
         # Issue tokens immediately after registration
         refresh = RefreshToken.for_user(user)
@@ -88,11 +99,12 @@ class RegisterCompanyView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # Send verification email (non-blocking — fail_silently)
+        # Send verification email asynchronously via Celery
+        from accounts.tasks import send_verification_email_task
         try:
-            _send_verification_email(user)
+            send_verification_email_task.delay(user_id=user.pk)
         except Exception:
-            pass
+            logger.warning('Failed to dispatch verification email task for user %s', user.email, exc_info=True)
 
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -201,13 +213,7 @@ def change_password(request):
     update_session_auth_hash(request, user)
 
     # Blacklist all existing refresh tokens for this user to force re-login on other devices
-    try:
-        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
-        tokens = OutstandingToken.objects.filter(user=user)
-        for token in tokens:
-            BlacklistedToken.objects.get_or_create(token=token)
-    except Exception:
-        pass  # token_blacklist may not be fully configured
+    blacklist_all_tokens(user)
 
     return Response({'message': 'Password changed successfully. Please log in again.'})
 
@@ -221,12 +227,6 @@ def password_reset_request(request):
     Generates a one-time token and emails a reset link to the user.
     Always returns 200 to prevent email enumeration.
     """
-    from django.contrib.auth.tokens import default_token_generator
-    from django.utils.http import urlsafe_base64_encode
-    from django.utils.encoding import force_bytes
-    from django.core.mail import send_mail
-    from django.conf import settings as django_settings
-
     email = request.data.get('email', '').strip().lower()
     if not email:
         return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -234,28 +234,12 @@ def password_reset_request(request):
     # Always return success to prevent email enumeration
     try:
         user = User.objects.get(email=email, is_active=True)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-        reset_url = f"{django_settings.FRONTEND_URL}/recovery?uid={uid}&token={token}"
-
-        send_mail(
-            subject='TalentOrbit — Password Reset',
-            message=(
-                f'Hi {user.full_name or "there"},\n\n'
-                f'We received a request to reset your password.\n'
-                f'Click the link below (valid for ~15 minutes):\n\n'
-                f'{reset_url}\n\n'
-                f'If you didn\'t request this, you can safely ignore this email.\n\n'
-                f'— TalentOrbit'
-            ),
-            from_email=django_settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
+        from accounts.tasks import send_password_reset_email_task
+        send_password_reset_email_task.delay(user_id=user.pk)
     except User.DoesNotExist:
         pass  # Silent — no info leak
     except Exception:
-        logger.exception('Password reset email failed')
+        logger.exception('Password reset email dispatch failed')
 
     return Response({'message': 'If an account with that email exists, a reset link has been sent.'})
 
@@ -268,10 +252,6 @@ def password_reset_confirm(request):
     POST /api/auth/password-reset/confirm/
     Accepts uid, token, and new_password to complete the reset flow.
     """
-    from django.contrib.auth.tokens import default_token_generator
-    from django.utils.http import urlsafe_base64_decode
-    from django.utils.encoding import force_str
-
     uid = request.data.get('uid', '')
     token = request.data.get('token', '')
     new_password = request.data.get('new_password', '')
@@ -280,8 +260,6 @@ def password_reset_confirm(request):
         return Response({'error': 'uid, token, and new_password are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
     # Run the full Django password validator suite (length, common, numeric, similarity)
-    from django.contrib.auth.password_validation import validate_password as _validate_pw
-    from django.core.exceptions import ValidationError as DjangoValidationError
     try:
         _validate_pw(new_password)
     except DjangoValidationError as e:
@@ -300,12 +278,7 @@ def password_reset_confirm(request):
     user.save()
 
     # Blacklist all existing refresh tokens
-    try:
-        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
-        for t in OutstandingToken.objects.filter(user=user):
-            BlacklistedToken.objects.get_or_create(token=t)
-    except Exception:
-        pass
+    blacklist_all_tokens(user)
 
     return Response({'message': 'Password has been reset. You can now log in with your new password.'})
 
@@ -321,12 +294,6 @@ class ContactMessageView(generics.CreateAPIView):
 
 def _send_verification_email(user):
     """Helper — sends a verification email with a one-time token link."""
-    from django.contrib.auth.tokens import default_token_generator
-    from django.utils.http import urlsafe_base64_encode
-    from django.utils.encoding import force_bytes
-    from django.core.mail import send_mail
-    from django.conf import settings as django_settings
-
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     verify_url = f"{django_settings.FRONTEND_URL}/verify-email?uid={uid}&token={token}"
@@ -355,10 +322,6 @@ def verify_email(request):
     POST /api/v1/auth/verify-email/
     Accepts uid + token, marks user.is_verified = True.
     """
-    from django.contrib.auth.tokens import default_token_generator
-    from django.utils.http import urlsafe_base64_decode
-    from django.utils.encoding import force_str
-
     uid = request.data.get('uid', '')
     token = request.data.get('token', '')
 
@@ -394,10 +357,11 @@ def resend_verification(request):
     if user.is_verified:
         return Response({'message': 'Email is already verified.'})
 
+    from accounts.tasks import send_verification_email_task
     try:
-        _send_verification_email(user)
+        send_verification_email_task.delay(user_id=user.pk)
     except Exception:
-        logger.exception('Verification email failed')
+        logger.exception('Verification email task dispatch failed')
 
     return Response({'message': 'Verification email sent. Check your inbox and spam folder.'})
 
@@ -528,14 +492,26 @@ class TwoFactorVerifyView(APIView):
         if not request.user.totp_secret:
             return Response({'error': '2FA not setup'}, status=400)
 
+        # Brute-force protection: lock after 5 failed attempts for 15 minutes
+        cache_key = f'2fa_attempts:{request.user.pk}'
+        attempts = cache.get(cache_key, 0)
+        if attempts >= 5:
+            return Response(
+                {'error': 'Too many failed attempts. Please try again in 15 minutes.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
         plain_secret = unsign_totp(request.user.totp_secret)
         totp = pyotp.TOTP(plain_secret)
         if totp.verify(token):
+            cache.delete(cache_key)  # Reset on success
             request.user.is_2fa_enabled = True
             # Re-sign the secret if it was a legacy unsigned value
             request.user.totp_secret = sign_totp(plain_secret)
             request.user.save(update_fields=['is_2fa_enabled', 'totp_secret'])
             return Response({'success': True, 'message': '2FA Enabled'})
+
+        cache.set(cache_key, attempts + 1, 900)  # 15-min lockout window
         return Response({'success': False, 'error': 'Invalid 6-digit PIN'}, status=400)
 
 
@@ -581,11 +557,90 @@ def deactivate_account(request):
     user.save(update_fields=['is_active'])
 
     # Blacklist all outstanding refresh tokens so the user is logged out everywhere
-    try:
-        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
-        for token in OutstandingToken.objects.filter(user=user):
-            BlacklistedToken.objects.get_or_create(token=token)
-    except Exception:
-        pass
+    blacklist_all_tokens(user)
 
     return Response({'message': 'Account deactivated.'}, status=status.HTTP_200_OK)
+
+
+# ─── 2FA Login Step ───────────────────────────────────────────────────────────
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+@throttle_classes([AuthEndpointThrottle])
+def two_factor_login(request):
+    """
+    POST /api/v1/auth/2fa/login/
+    Complete login for users with 2FA enabled.
+    Accepts temp_token (from initial login) + totp_code, returns full JWT pair.
+    """
+    import pyotp
+
+    temp_token = request.data.get('temp_token', '')
+    totp_code = request.data.get('totp_code', '')
+
+    if not temp_token or not totp_code:
+        return Response(
+            {'error': 'temp_token and totp_code are required.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Verify the temporary token (valid for 5 minutes)
+    signer = TimestampSigner(salt='2fa-login')
+    try:
+        user_pk = signer.unsign(temp_token, max_age=300)
+    except (BadSignature, SignatureExpired):
+        return Response(
+            {'error': 'Invalid or expired login session. Please log in again.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        user = User.objects.get(pk=user_pk, is_active=True)
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Invalid or expired login session.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Brute-force protection
+    cache_key = f'2fa_login_attempts:{user.pk}'
+    attempts = cache.get(cache_key, 0)
+    if attempts >= 5:
+        return Response(
+            {'error': 'Too many failed attempts. Please try again in 15 minutes.'},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
+    if not user.totp_secret:
+        return Response({'error': '2FA is not configured.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    plain_secret = unsign_totp(user.totp_secret)
+    totp = pyotp.TOTP(plain_secret)
+
+    if not totp.verify(totp_code):
+        cache.set(cache_key, attempts + 1, 900)
+        return Response(
+            {'error': 'Invalid 2FA code.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    cache.delete(cache_key)
+
+    # Issue full JWT pair
+    refresh = RefreshToken.for_user(user)
+    avatar_url = None
+    if user.avatar:
+        avatar_url = user.avatar.url
+
+    return Response({
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+        'user': {
+            'id': user.id,
+            'email': user.email,
+            'full_name': user.full_name,
+            'role': user.role,
+            'is_verified': user.is_verified,
+            'avatar': avatar_url,
+        },
+    })

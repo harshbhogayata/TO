@@ -21,6 +21,7 @@ from .views import (
     TwoFactorVerifyView,
     TwoFactorDisableView,
     deactivate_account,
+    two_factor_login,
 )
 
 urlpatterns = [
@@ -43,6 +44,7 @@ urlpatterns = [
     path('2fa/setup/', TwoFactorSetupView.as_view(), name='2fa_setup'),
     path('2fa/verify/', TwoFactorVerifyView.as_view(), name='2fa_verify'),
     path('2fa/disable/', TwoFactorDisableView.as_view(), name='2fa_disable'),
+    path('2fa/login/', two_factor_login, name='2fa_login'),
     path('deactivate/', deactivate_account, name='deactivate_account'),
 
     # Profiles

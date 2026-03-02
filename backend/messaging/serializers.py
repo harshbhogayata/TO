@@ -12,8 +12,8 @@ class MessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = ('id', 'thread', 'sender', 'sender_name', 'sender_role',
-                  'body', 'attachment', 'read', 'sent_at')
-        read_only_fields = ('id', 'sender', 'read', 'sent_at')
+                  'body', 'attachment', 'read', 'read_at', 'sent_at')
+        read_only_fields = ('id', 'sender', 'read', 'read_at', 'sent_at')
 
 
 # Allowed attachment types and size limit for messages

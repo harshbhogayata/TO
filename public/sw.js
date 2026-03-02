@@ -1,6 +1,7 @@
 /**
  * TalentOrbit Service Worker
  * Cache-first for static assets, network-first for API calls.
+ * Push notification support for real-time alerts.
  * Version is bumped automatically by the build timestamp.
  */
 
@@ -29,6 +30,66 @@ self.addEventListener('activate', (event) => {
         )
     );
     self.clients.claim();
+});
+
+// ── Push Notifications ────────────────────────────────────────────────────
+self.addEventListener('push', (event) => {
+    let payload = { title: 'TalentOrbit', body: 'You have a new notification.' };
+
+    if (event.data) {
+        try {
+            payload = event.data.json();
+        } catch {
+            payload.body = event.data.text() || payload.body;
+        }
+    }
+
+    const options = {
+        body: payload.body || payload.message || '',
+        icon: payload.icon || '/icon-192.svg',
+        badge: '/icon-192.svg',
+        tag: payload.tag || `to-push-${Date.now()}`,
+        data: {
+            url: payload.url || payload.click_action || '/',
+            notificationId: payload.notification_id || null,
+        },
+        actions: payload.actions || [],
+        requireInteraction: payload.require_interaction || false,
+        vibrate: [100, 50, 100],
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(payload.title || 'TalentOrbit', options)
+    );
+});
+
+// Handle notification click — focus or open the app
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    const targetUrl = event.notification.data?.url || '/';
+
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+            // If a TalentOrbit window is already open, focus it and navigate
+            for (const client of clients) {
+                if (client.url.includes(self.location.origin) && 'focus' in client) {
+                    client.focus();
+                    if (targetUrl !== '/') {
+                        client.navigate(targetUrl);
+                    }
+                    return;
+                }
+            }
+            // Otherwise open a new window
+            return self.clients.openWindow(targetUrl);
+        })
+    );
+});
+
+// Handle notification close — optional analytics hook
+self.addEventListener('notificationclose', (_event) => {
+    // Could send analytics event here in the future
 });
 
 // Fetch — network-first for API, cache-first for static assets

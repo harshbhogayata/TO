@@ -11,6 +11,12 @@ from django.utils import timezone
 class UserManager(BaseUserManager):
     """Custom manager for the TalentOrbit User model."""
 
+    @classmethod
+    def normalize_email(cls, email):
+        """Fully lowercase the email address for case-insensitive uniqueness."""
+        email = super().normalize_email(email)
+        return email.lower() if email else email
+
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError('Email address is required.')

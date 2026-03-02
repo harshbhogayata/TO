@@ -119,7 +119,7 @@ class Application(models.Model):
     )
     cover_letter = models.TextField(blank=True)
     status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
+        max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True
     )
 
     applied_at = models.DateTimeField(auto_now_add=True)

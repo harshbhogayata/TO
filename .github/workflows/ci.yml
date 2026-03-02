@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
     branches: [main]
 
@@ -40,6 +40,9 @@ jobs:
       - name: Unit tests
         run: npm test -- --reporter=verbose
 
+      - name: npm audit (dependency vulnerability scan)
+        run: npm audit --audit-level=high
+
   # ─── Backend ────────────────────────────────────────────────────────────────
   backend:
     name: Backend Lint + Test
@@ -58,6 +61,11 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - run: pip install -r requirements.txt
+
+      - name: pip audit (dependency vulnerability scan)
+        run: |
+          pip install pip-audit
+          pip-audit --strict --desc
 
       - name: Syntax check all Python files
         run: python -m py_compile manage.py && python -c "
@@ -78,7 +86,7 @@ jobs:
           "
 
       - name: Django system checks
-        run: python manage.py check --deploy 2>&1 || true
+        run: python manage.py check --deploy 2>&1
         env:
           SECRET_KEY: ci-test-secret-key-not-for-production
           DEBUG: "True"
@@ -86,7 +94,7 @@ jobs:
           DB_ENGINE: django.db.backends.sqlite3
 
       - name: Run tests
-        run: python manage.py test --verbosity=2
+        run: python manage.py test --settings=talentorbit.test_settings --verbosity=2
         env:
           SECRET_KEY: ci-test-secret-key-not-for-production
           DEBUG: "True"

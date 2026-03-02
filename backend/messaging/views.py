@@ -3,6 +3,7 @@ messaging/views.py
 """
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -102,8 +103,32 @@ class ThreadMessagesView(generics.ListAPIView):
         thread = get_object_or_404(
             Thread, pk=thread_id, participants=self.request.user
         )
-        # Mark all messages from others as read
-        thread.messages.exclude(sender=self.request.user).update(read=True)
+        # Mark all messages from others as read with timestamp
+        now = timezone.now()
+        updated = thread.messages.exclude(
+            sender=self.request.user
+        ).filter(read=False).update(read=True, read_at=now)
+
+        # Broadcast read receipt via WebSocket if any messages were marked
+        if updated > 0:
+            from realtime.broadcast import broadcast_thread_message
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            layer = get_channel_layer()
+            if layer:
+                try:
+                    async_to_sync(layer.group_send)(
+                        f'thread_{thread_id}',
+                        {
+                            'type': 'chat_read',
+                            'thread_id': thread_id,
+                            'user_id': self.request.user.id,
+                            'user_name': self.request.user.full_name or self.request.user.email,
+                        },
+                    )
+                except Exception:
+                    pass  # Non-critical: WS broadcast failure shouldn't break REST
+
         return thread.messages.select_related('sender').all()
 
 
@@ -129,6 +154,21 @@ class SendMessageView(generics.CreateAPIView):
             serializer.instance, context={'request': request}
         )
         headers = self.get_success_headers(response_serializer.data)
+
+        # ── Broadcast to WebSocket (for users connected via WS) ──────────
+        msg = serializer.instance
+        from realtime.broadcast import broadcast_thread_message
+        broadcast_thread_message(msg.thread_id, {
+            'id': msg.id,
+            'thread_id': msg.thread_id,
+            'sender': msg.sender_id,
+            'sender_name': msg.sender.full_name or msg.sender.email,
+            'sender_role': msg.sender.role,
+            'body': msg.body,
+            'read': False,
+            'sent_at': msg.sent_at.isoformat(),
+        })
+
         return Response(
             response_serializer.data,
             status=status.HTTP_201_CREATED,

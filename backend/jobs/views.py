@@ -17,6 +17,11 @@ from .serializers import (
 )
 from .permissions import IsCompanyOwner, IsCompanyUser, IsTalentUser
 from accounts.permissions import IsEmailVerified
+from accounts.tier_limits import (
+    check_talent_application_limit,
+    check_talent_saved_job_limit,
+    check_company_job_post_limit,
+)
 
 
 def _annotate_user_relations(qs, user):
@@ -68,7 +73,7 @@ class JobPostListView(generics.ListAPIView):
         if job_type:
             qs = qs.filter(job_type=job_type)
         if skill:
-            qs = qs.filter(skills_required__icontains=skill)
+            qs = qs.filter(skills_required__contains=[skill])
         return _annotate_user_relations(qs, self.request.user)
 
 
@@ -106,6 +111,15 @@ class CompanyJobsView(generics.ListCreateAPIView):
         qs = JobPost.objects.filter(company=self.request.user).select_related('company__company_profile')
         return _annotate_user_relations(qs, self.request.user)
 
+    def create(self, request, *args, **kwargs):
+        allowed, message, current, limit = check_company_job_post_limit(request.user)
+        if not allowed:
+            return Response(
+                {'detail': message, 'current': current, 'limit': limit, 'upgrade_required': True},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().create(request, *args, **kwargs)
+
 
 class CompanyJobDetailView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH/DELETE /api/jobs/mine/<id>/ — Company manages one of their posts."""
@@ -124,6 +138,15 @@ class ApplyView(generics.CreateAPIView):
     """POST /api/jobs/<id>/apply/ — Talent applies to a job."""
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated, IsTalentUser, IsEmailVerified]
+
+    def create(self, request, *args, **kwargs):
+        allowed, message, current, limit = check_talent_application_limit(request.user)
+        if not allowed:
+            return Response(
+                {'detail': message, 'current': current, 'limit': limit, 'upgrade_required': True},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         from rest_framework.exceptions import ValidationError
@@ -153,7 +176,7 @@ class CompanyApplicationsView(generics.ListAPIView):
         return Application.objects.filter(
             job_id=job_id,
             job__company=self.request.user
-        ).select_related('applicant__talent_profile')
+        ).select_related('applicant__talent_profile', 'job__company__company_profile')
 
 
 class UpdateApplicationStatusView(generics.UpdateAPIView):
@@ -190,6 +213,15 @@ class SavedJobsView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return SavedJob.objects.filter(user=self.request.user).select_related('job__company__company_profile')
+
+    def create(self, request, *args, **kwargs):
+        allowed, message = check_talent_saved_job_limit(request.user)
+        if not allowed:
+            return Response(
+                {'detail': message, 'upgrade_required': True},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().create(request, *args, **kwargs)
 
 
 class UnsaveJobView(generics.DestroyAPIView):

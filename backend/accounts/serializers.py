@@ -4,9 +4,18 @@ Serializers for registration, login, and profile management.
 """
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import User, TalentProfile, CompanyProfile, ContactMessage
+
+
+class LowercaseEmailField(serializers.EmailField):
+    """EmailField that normalizes to lowercase before any validation (including UniqueValidator)."""
+
+    def to_internal_value(self, data):
+        val = super().to_internal_value(data)
+        return val.lower() if val else val
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -30,6 +39,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         # self.user is set by the parent's validate() after authentication
+
+        # ── 2FA gate: if enabled, don't issue tokens yet ──────────────
+        if self.user.is_2fa_enabled:
+            from django.core.signing import TimestampSigner
+            signer = TimestampSigner(salt='2fa-login')
+            return {
+                'requires_2fa': True,
+                'temp_token': signer.sign(str(self.user.pk)),
+            }
+
         avatar_url = None
         if self.user.avatar:
             request = self.context.get('request')
@@ -49,6 +68,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class TalentRegistrationSerializer(serializers.ModelSerializer):
     """Register a new Talent (job-seeker) account."""
+    email = LowercaseEmailField(
+        required=True,
+        validators=[UniqueValidator(
+            queryset=User.objects.all(),
+            message='A user with this email already exists.',
+        )],
+    )
     password = serializers.CharField(
         write_only=True, required=True, validators=[validate_password]
     )
@@ -81,6 +107,13 @@ class TalentRegistrationSerializer(serializers.ModelSerializer):
 
 class CompanyRegistrationSerializer(serializers.ModelSerializer):
     """Register a new Company account and its profile simultaneously."""
+    email = LowercaseEmailField(
+        required=True,
+        validators=[UniqueValidator(
+            queryset=User.objects.all(),
+            message='A user with this email already exists.',
+        )],
+    )
     password = serializers.CharField(
         write_only=True, required=True, validators=[validate_password]
     )

@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
-import { messagingService, getApiErrorMessage } from '../services/api';
+import { getApiErrorMessage } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { useChatStore } from '../store/chatStore';
 import { useToast } from '../contexts/ToastContext';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
@@ -11,12 +12,16 @@ const Inbox = () => {
     const { user } = useAuthStore();
     const { addToast } = useToast();
     usePageTitle('Inbox', 'Messages between you and recruiters. Stay connected throughout the hiring process.');
-    const [threads, setThreads] = useState([]);
-    const [activeThread, setActiveThread] = useState(null);
-    const [messages, setMessages] = useState([]);
+
+    const {
+        threads, messages, activeThreadId, typingUsers,
+        isLoadingThreads, isLoadingMessages, wsConnected, totalUnread,
+        initialize, selectThread, sendMessage,
+        sendTypingStart, sendTypingStop, disconnectWebSocket,
+    } = useChatStore();
+
     const [draft, setDraft] = useState('');
     const [sending, setSending] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const [showNewThread, setShowNewThread] = useState(false);
     const [newRecipientEmail, setNewRecipientEmail] = useState('');
     const [newInitialMsg, setNewInitialMsg] = useState('');
@@ -25,67 +30,57 @@ const Inbox = () => {
     const [threadSearch, setThreadSearch] = useState('');
     const bottomRef = useRef(null);
 
+    // ── Initialize on mount ───────────────────────────────────────────────
     useEffect(() => {
-        messagingService.myThreads()
-            .then(({ data }) => {
-                const list = data.results || data;
-                setThreads(list);
-                if (list.length > 0) selectThread(list[0]);
-            })
-            .catch((err) => addToast(getApiErrorMessage(err, 'Failed to load conversations.'), 'error'))
-            .finally(() => setIsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        initialize().catch((err) =>
+            addToast(getApiErrorMessage(err, 'Failed to load conversations.'), 'error')
+        );
+        return () => disconnectWebSocket();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // ── Auto-scroll to bottom when new messages arrive ────────────────────
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    /* Poll active thread messages every 10s for near-real-time updates (paused when tab hidden) */
+    // ── Select first thread on initial load ───────────────────────────────
     useEffect(() => {
-        if (!activeThread) return;
-        const threadId = activeThread.id;
-        const fetchMessages = async () => {
-            if (document.hidden) return; // Don't poll when tab is not visible
-            try {
-                const { data } = await messagingService.getMessages(threadId);
-                const fresh = data.results || data;
-                setMessages(prev => {
-                    if (fresh.length !== prev.length) return fresh;
-                    return prev;
-                });
-            } catch { /* silent */ }
-        };
-        const interval = setInterval(fetchMessages, 10000);
-        return () => clearInterval(interval);
-    }, [activeThread]);
-
-    const selectThread = async (thread) => {
-        setActiveThread(thread);
-        try {
-            const { data } = await messagingService.getMessages(thread.id);
-            setMessages(data.results || data);
-        } catch (err) {
-            setMessages([]);
-            addToast(getApiErrorMessage(err, 'Failed to load messages.'), 'error');
+        if (!isLoadingThreads && threads.length > 0 && !activeThreadId) {
+            selectThread(threads[0].id);
         }
-    };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isLoadingThreads]);
 
-    const handleSend = async () => {
-        if (!draft.trim() || !activeThread || sending) return;
+    const activeThread = threads.find(t => t.id === activeThreadId);
+
+    const handleSend = useCallback(async () => {
+        if (!draft.trim() || !activeThreadId || sending) return;
         setSending(true);
         try {
-            const { data } = await messagingService.sendMessage({ thread: activeThread.id, body: draft.trim() });
-            setMessages(prev => [...prev, data]);
+            await sendMessage(activeThreadId, draft.trim());
             setDraft('');
-            setThreads(prev => prev.map(t =>
-                t.id === activeThread.id
-                    ? { ...t, last_message: { body: draft.trim(), sender_name: user?.full_name, sent_at: new Date().toISOString() } }
-                    : t
-            ));
-        } catch (err) { addToast(getApiErrorMessage(err, 'Failed to send message.'), 'error'); }
-        finally { setSending(false); }
-    };
+        } catch (err) {
+            addToast(getApiErrorMessage(err, 'Failed to send message.'), 'error');
+        } finally {
+            setSending(false);
+        }
+    }, [draft, activeThreadId, sending, sendMessage, addToast]);
+
+    const handleDraftChange = useCallback((e) => {
+        const value = e.target.value;
+        setDraft(value);
+        if (value.trim() && activeThreadId) {
+            sendTypingStart(activeThreadId);
+        }
+    }, [activeThreadId, sendTypingStart]);
+
+    const handleKeyDown = useCallback((e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    }, [handleSend]);
 
     const handleCreateThread = async (e) => {
         e.preventDefault();
@@ -93,18 +88,12 @@ const Inbox = () => {
         setCreatingThread(true);
         setNewThreadError('');
         try {
-            const { data } = await messagingService.createThread({
-                recipient_email: newRecipientEmail.trim(),
-                initial_message: newInitialMsg.trim() || undefined,
-            });
-            setThreads(prev => {
-                const filtered = prev.filter(t => t.id !== data.id);
-                return [data, ...filtered];
-            });
+            const { createThread } = useChatStore.getState();
+            const data = await createThread(newRecipientEmail.trim(), newInitialMsg.trim());
             setShowNewThread(false);
             setNewRecipientEmail('');
             setNewInitialMsg('');
-            selectThread(data);
+            selectThread(data.id);
         } catch (err) {
             setNewThreadError(getApiErrorMessage(err, 'Failed to create thread. Check the email matches a valid user.'));
         } finally {
@@ -113,7 +102,7 @@ const Inbox = () => {
     };
 
     const getOtherParticipant = (thread) =>
-        thread.participants?.find(p => p.id !== user?.id) || thread.participants?.[0];
+        thread?.participants?.find(p => p.id !== user?.id) || thread?.participants?.[0];
 
     const formatTime = (iso) => {
         if (!iso) return '';
@@ -123,11 +112,19 @@ const Inbox = () => {
         return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
     };
 
+    // ── Typing indicator text for active thread ───────────────────────────
+    const activeTyping = typingUsers[activeThreadId] || [];
+    const typingText = activeTyping.length > 0
+        ? activeTyping.length === 1
+            ? `${activeTyping[0].userName} is typing…`
+            : `${activeTyping.map(t => t.userName).join(', ')} are typing…`
+        : '';
+
     return (
         <DashboardLayout
             tapeBarProps={{
                 title: "TalentOrbit // Inbox",
-                status: "Communications: Secured",
+                status: wsConnected ? "● Live" : "○ Connecting…",
                 info: `Active Threads: ${threads.length}`
             }}
             pageTitleLine1="In"
@@ -181,8 +178,8 @@ const Inbox = () => {
                     </div>
 
                     <div className="thread-list">
-                        {isLoading && <Skeleton.Threads count={5} />}
-                        {!isLoading && threads.length === 0 && (
+                        {isLoadingThreads && <Skeleton.Threads count={5} />}
+                        {!isLoadingThreads && threads.length === 0 && (
                             <div style={{ padding: '24px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>
                                 No messages yet.
                             </div>
@@ -200,12 +197,13 @@ const Inbox = () => {
                             : threads
                         ).map(thread => {
                             const other = getOtherParticipant(thread);
-                            const isActive = activeThread?.id === thread.id;
+                            const isActive = activeThreadId === thread.id;
+                            const threadTyping = typingUsers[thread.id] || [];
                             return (
                                 <div
                                     key={thread.id}
                                     className={`thread-item ${isActive ? 'active' : ''}`}
-                                    onClick={() => selectThread(thread)}
+                                    onClick={() => selectThread(thread.id)}
                                     style={{ cursor: 'pointer' }}
                                 >
                                     <div className="thread-avatar">
@@ -218,7 +216,15 @@ const Inbox = () => {
                                         </div>
                                         <div className="thread-preview">
                                             {thread.unread_count > 0 && <span className="unread-dot"></span>}
-                                            <p>{thread.job_title ? `[${thread.job_title}] ` : ''}{thread.last_message?.body || 'No messages yet.'}</p>
+                                            <p>
+                                                {threadTyping.length > 0
+                                                    ? <em style={{ opacity: 0.7 }}>typing…</em>
+                                                    : <>
+                                                        {thread.job_title ? `[${thread.job_title}] ` : ''}
+                                                        {thread.last_message?.body || 'No messages yet.'}
+                                                    </>
+                                                }
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -238,13 +244,17 @@ const Inbox = () => {
                                     </div>
                                     <div>
                                         <h3>{getOtherParticipant(activeThread)?.full_name || 'Unknown'}</h3>
-                                        <span className="user-status">{getOtherParticipant(activeThread)?.role || ''}</span>
+                                        <span className="user-status">
+                                            {getOtherParticipant(activeThread)?.role || ''}
+                                            {wsConnected && <span style={{ marginLeft: '8px', color: '#2d8a4e', fontSize: '9px' }}>● LIVE</span>}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="message-history">
-                                {messages.length === 0 && (
+                                {isLoadingMessages && <Skeleton.List count={4} />}
+                                {!isLoadingMessages && messages.length === 0 && (
                                     <div style={{ padding: '32px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase', textAlign: 'center' }}>
                                         No messages in this thread yet. Send the first one.
                                     </div>
@@ -254,10 +264,32 @@ const Inbox = () => {
                                     return (
                                         <div key={msg.id} className={`message ${isMine ? 'sent' : 'received'}`}>
                                             <div className="message-content">{msg.body}</div>
-                                            <div className="message-time">{formatTime(msg.sent_at)}</div>
+                                            <div className="message-time">
+                                                {formatTime(msg.sent_at)}
+                                                {isMine && msg.read && (
+                                                    <span style={{ marginLeft: '6px', fontSize: '9px', opacity: 0.6 }} title={msg.read_at ? `Read at ${new Date(msg.read_at).toLocaleString()}` : 'Read'}>
+                                                        ✓✓
+                                                    </span>
+                                                )}
+                                                {isMine && !msg.read && (
+                                                    <span style={{ marginLeft: '6px', fontSize: '9px', opacity: 0.3 }} title="Delivered">
+                                                        ✓
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })}
+
+                                {/* Typing indicator */}
+                                {typingText && (
+                                    <div className="message received" style={{ opacity: 0.6 }}>
+                                        <div className="message-content" style={{ fontStyle: 'italic', padding: '10px 16px', fontSize: '12px' }}>
+                                            {typingText}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div ref={bottomRef} />
                             </div>
 
@@ -267,8 +299,9 @@ const Inbox = () => {
                                     className="composer-input"
                                     placeholder="Type your transmission..."
                                     value={draft}
-                                    onChange={e => setDraft(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                                    onChange={handleDraftChange}
+                                    onKeyDown={handleKeyDown}
+                                    onBlur={() => activeThreadId && sendTypingStop(activeThreadId)}
                                 />
                                 <button className="btn-send" onClick={handleSend} disabled={sending}>
                                     {sending ? '...' : 'SEND'}
@@ -282,7 +315,7 @@ const Inbox = () => {
                     )}
                 </div>
 
-                <div className="vertical-label-messaging">Comms Relay // Encrypted</div>
+                <div className="vertical-label-messaging">Comms Relay // {wsConnected ? 'Live' : 'Reconnecting'}</div>
             </div>
         </DashboardLayout>
     );

@@ -42,6 +42,7 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(','
 
 # ─── Application definition ───────────────────────────────────────────────────
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -55,6 +56,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'storages',
+    'django_celery_results',
+    'django_celery_beat',
+    'channels',
 
     # TalentOrbit apps
     'accounts',
@@ -65,6 +69,7 @@ INSTALLED_APPS = [
     'notifications',
     'courses',
     'payments',
+    'realtime',
 ]
 
 MIDDLEWARE = [
@@ -97,6 +102,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'talentorbit.wsgi.application'
+ASGI_APPLICATION = 'talentorbit.asgi.application'
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 # Supports DATABASE_URL (e.g. postgres://user:pass@host/db) via dj-database-url,
@@ -143,6 +149,30 @@ else:
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         }
     }
+
+# ─── Channel Layers (Django Channels — WebSocket backend) ─────────────────────
+_channels_redis_url = os.environ.get('CHANNELS_REDIS_URL', _redis_url or '')
+if _channels_redis_url:
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [_channels_redis_url],
+                'capacity': 1500,
+                'expiry': 60,
+            },
+        },
+    }
+else:
+    # In-memory channel layer for local development (single-process only)
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
+
+# ─── Firebase Cloud Messaging (push notifications) ────────────────────────────
+FIREBASE_CREDENTIALS_PATH = os.environ.get('FIREBASE_CREDENTIALS_PATH', '')
 
 # ─── Custom User Model ────────────────────────────────────────────────────────
 AUTH_USER_MODEL = 'accounts.User'
@@ -241,6 +271,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
+    'DEFAULT_VERSION': 'v1',
+    'ALLOWED_VERSIONS': ['v1'],
     'DEFAULT_PAGINATION_CLASS': 'talentorbit.pagination.StandardPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_RENDERER_CLASSES': (
@@ -298,16 +331,24 @@ PASSWORD_RESET_TIMEOUT = 900  # 15 minutes (default is 3 days — too long)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024   # 10 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024   # 10 MB
 
+# Always set — applies in both dev and prod
+X_FRAME_OPTIONS = 'DENY'
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
 if not DEBUG:
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    X_FRAME_OPTIONS = 'DENY'
+
+    if not STRIPE_WEBHOOK_SECRET:
+        import warnings
+        warnings.warn(
+            'STRIPE_WEBHOOK_SECRET is not set — Stripe webhook will reject all events.',
+            stacklevel=1,
+        )
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
 LOGGING = {
@@ -355,5 +396,95 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'celery': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# ─── Celery (async task queue) ────────────────────────────────────────────────
+# Broker: reuse the same Upstash Redis instance used for caching.
+# Falls back to an in-memory broker for local development (eager mode).
+_celery_broker = os.environ.get('CELERY_BROKER_URL', _redis_url or '')
+
+if _celery_broker:
+    CELERY_BROKER_URL = _celery_broker
+    CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+    CELERY_BROKER_TRANSPORT_OPTIONS = {
+        'visibility_timeout': 3600,     # 1 hour — long enough for email retries
+        'socket_timeout': 15,
+        'socket_connect_timeout': 15,
+    }
+else:
+    # No broker available — run tasks synchronously in-process.
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+
+# Result backend — store task results in the Django ORM
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_RESULT_EXTENDED = True
+CELERY_RESULT_EXPIRES = 60 * 60 * 24 * 7   # 7 days
+
+# Serialisation — JSON-only for security (no pickle)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# Time zone — match Django
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Reliability — late ack + reject on worker crash
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+
+# Prefetch — pull only 1 task at a time per worker process
+# (prevents one slow task from blocking the queue)
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+# Task execution limits
+CELERY_TASK_SOFT_TIME_LIMIT = 120   # seconds — raises SoftTimeLimitExceeded
+CELERY_TASK_TIME_LIMIT = 180        # seconds — hard kill
+CELERY_TASK_TRACK_STARTED = True
+
+# Queue routing — explicit queues keep workloads isolated
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_QUEUES = {
+    'default': {},
+    'emails': {},
+    'notifications': {},
+    'dlq': {},                       # Dead-letter queue for manual triage
+}
+CELERY_TASK_ROUTES = {
+    'accounts.send_verification_email': {'queue': 'emails'},
+    'accounts.send_password_reset_email': {'queue': 'emails'},
+    'accounts.send_generic_email': {'queue': 'emails'},
+    'notifications.create_notification': {'queue': 'notifications'},
+    'notifications.create_bulk_notifications': {'queue': 'notifications'},
+    'notifications.send_application_notification': {'queue': 'notifications'},
+    'notifications.send_message_notification': {'queue': 'notifications'},
+}
+
+# Celery Beat schedule — periodic housekeeping tasks
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Default periodic tasks — seeded in code so deploys start clean.
+# The DatabaseScheduler will merge these with any admin-created schedules.
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    # Clean up read notifications older than 90 days (daily at 03:00 UTC)
+    'cleanup-old-notifications': {
+        'task': 'notifications.tasks.cleanup_old_notifications_task',
+        'schedule': crontab(hour=3, minute=0),
+        'options': {'queue': 'default'},
+    },
+    # Celery health-check heartbeat (every 5 minutes)
+    'celery-health-heartbeat': {
+        'task': 'talentorbit.tasks.celery_health_heartbeat',
+        'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'default'},
     },
 }

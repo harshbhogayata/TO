@@ -6,7 +6,7 @@ import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
 import './Notifications.css';
 
-const CATEGORIES = ['All', 'System', 'Message', 'Billing', 'Application'];
+const CATEGORIES = ['All', 'Application', 'Message'];
 
 const Notifications = () => {
     const { addToast } = useToast();

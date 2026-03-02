@@ -48,7 +48,7 @@ const AdminConsole = () => {
         if (!window.confirm('Deactivate this user?')) return;
         try {
             await adminService.deactivateUser(id);
-            setUsers(prev => prev.filter(u => u.id !== id));
+            setUsers(prev => prev.map(u => u.id === id ? { ...u, is_active: false } : u));
         } catch (err) { addToast(getApiErrorMessage(err, 'Deactivate failed.'), 'error'); }
     };
 
@@ -127,16 +127,18 @@ const AdminConsole = () => {
                         {isLoading && <div style={{ padding: '32px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>Loading...</div>}
 
                         {users.map(u => (
-                            <div key={u.id} className="data-row">
+                            <div key={u.id} className="data-row" style={{ opacity: u.is_active === false ? 0.5 : 1 }}>
                                 <div className="row-info">
                                     <span className="row-title">{u.full_name || u.email}</span>
-                                    <span className="row-meta">{u.email} • {u.role} {u.is_verified ? '✓ Verified' : '○ Unverified'}</span>
+                                    <span className="row-meta">{u.email} • {u.role} {u.is_verified ? '✓ Verified' : '○ Unverified'}{u.is_active === false ? ' • DEACTIVATED' : ''}</span>
                                 </div>
                                 <div style={{ display: 'flex', gap: '6px' }}>
-                                    {!u.is_verified && (
+                                    {!u.is_verified && u.is_active !== false && (
                                         <button className="btn-outline" style={{ padding: '6px 10px', fontSize: '10px' }} onClick={() => handleVerify(u.id)}>Verify</button>
                                     )}
-                                    <button className="btn-outline" style={{ padding: '6px 10px', fontSize: '10px', color: '#900', borderColor: '#900' }} onClick={() => handleDeactivate(u.id)}>Deactivate</button>
+                                    {u.is_active !== false && (
+                                        <button className="btn-outline" style={{ padding: '6px 10px', fontSize: '10px', color: '#900', borderColor: '#900' }} onClick={() => handleDeactivate(u.id)}>Deactivate</button>
+                                    )}
                                 </div>
                             </div>
                         ))}

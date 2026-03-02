@@ -24,7 +24,7 @@ class MyThreadsView(generics.ListAPIView):
     def get_queryset(self):
         return Thread.objects.filter(
             participants=self.request.user
-        ).prefetch_related('participants', 'messages__sender', 'job')
+        ).prefetch_related('participants', 'messages__sender').select_related('job')
 
 
 @api_view(['POST'])

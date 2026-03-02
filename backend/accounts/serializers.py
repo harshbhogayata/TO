@@ -30,12 +30,17 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         # self.user is set by the parent's validate() after authentication
+        avatar_url = None
+        if self.user.avatar:
+            request = self.context.get('request')
+            avatar_url = request.build_absolute_uri(self.user.avatar.url) if request else self.user.avatar.url
         data['user'] = {
             'id': self.user.id,
             'email': self.user.email,
             'full_name': self.user.full_name,
             'role': self.user.role,
             'is_verified': self.user.is_verified,
+            'avatar': avatar_url,
         }
         return data
 
@@ -129,6 +134,18 @@ class TalentProfileSerializer(serializers.ModelSerializer):
             'subscription_tier', 'created_at', 'updated_at',
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'subscription_tier')
+
+    def validate_skills(self, value):
+        """FormData sends skills as a JSON string — parse it back to a list."""
+        import json
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                pass
+        if not isinstance(value, list):
+            raise serializers.ValidationError('Skills must be a list.')
+        return value
 
 
 class CompanyProfileSerializer(serializers.ModelSerializer):

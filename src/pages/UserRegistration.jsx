@@ -240,7 +240,9 @@ const UserRegistration = () => {
                                 )}
                                 <div className="action-footer">
                                     <button className="btn-black" style={{ background: 'transparent', color: 'black', border: '1px solid black' }} onClick={() => setStep(1)}>Back</button>
-                                    <button className="btn-black" disabled={isParsing || !resumeFile} onClick={() => setStep(3)}>Continue to Preview</button>
+                                    <button className="btn-black" disabled={isParsing} onClick={() => setStep(3)}>
+                                        {resumeFile ? 'Continue to Preview' : 'Skip — Continue Without Resume'}
+                                    </button>
                                 </div>
                             </section>
                             <section style={{ display: 'flex' }}>

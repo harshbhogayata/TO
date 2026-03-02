@@ -41,11 +41,12 @@ const Inbox = () => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    /* Poll active thread messages every 10s for near-real-time updates */
+    /* Poll active thread messages every 10s for near-real-time updates (paused when tab hidden) */
     useEffect(() => {
         if (!activeThread) return;
         const threadId = activeThread.id;
-        const interval = setInterval(async () => {
+        const fetchMessages = async () => {
+            if (document.hidden) return; // Don't poll when tab is not visible
             try {
                 const { data } = await messagingService.getMessages(threadId);
                 const fresh = data.results || data;
@@ -54,7 +55,8 @@ const Inbox = () => {
                     return prev;
                 });
             } catch { /* silent */ }
-        }, 10000);
+        };
+        const interval = setInterval(fetchMessages, 10000);
         return () => clearInterval(interval);
     }, [activeThread]);
 

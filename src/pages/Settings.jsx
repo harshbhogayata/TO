@@ -11,7 +11,7 @@ const Settings = () => {
     usePageTitle('Settings', 'Manage your TalentOrbit account settings, security, and preferences.');
     const { addToast } = useToast();
     const navigate = useNavigate();
-    const { logout, refreshToken, user } = useAuthStore();
+    const { logout, user } = useAuthStore();
     const [pwForm, setPwForm] = useState({ old_password: '', new_password: '', new_password_confirm: '' });
     const [pwMsg, setPwMsg] = useState('');
     const [pwSaving, setPwSaving] = useState(false);
@@ -97,9 +97,8 @@ const Settings = () => {
             addToast(getApiErrorMessage(err, 'Deactivation failed. Check your password.'), 'error');
             return; // Don't proceed with local cleanup if the backend rejected it
         }
-        try {
-            await authService.logout(refreshToken);
-        } catch { /* swallow */ }
+        // Backend already blacklists all tokens — skip the logout API call
+        // (it would always fail with 401) and just clear local state
         logout();
         navigate('/');
     };
@@ -114,8 +113,13 @@ const Settings = () => {
         setPwMsg('');
         try {
             await authService.changePassword(pwForm);
-            setPwMsg('Password changed successfully.');
+            setPwMsg('Password changed successfully. Logging you out…');
             setPwForm({ old_password: '', new_password: '', new_password_confirm: '' });
+            // Backend blacklists all tokens — force re-login to avoid abrupt session expiry
+            setTimeout(() => {
+                logout();
+                navigate('/auth');
+            }, 1500);
         } catch (err) {
             setPwMsg(getApiErrorMessage(err, 'Failed. Check current password.'));
         } finally {

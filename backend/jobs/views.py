@@ -6,7 +6,7 @@ from rest_framework import generics, permissions, status, filters
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.core.cache import cache
-from django.db.models import F, Exists, OuterRef, Subquery
+from django.db.models import F, Exists, OuterRef, Subquery, Count
 from django.utils import timezone
 
 from .models import JobPost, Application, SavedJob
@@ -20,7 +20,8 @@ from accounts.permissions import IsEmailVerified
 
 
 def _annotate_user_relations(qs, user):
-    """Annotate a JobPost queryset with per-user saved/applied state to avoid N+1 queries."""
+    """Annotate a JobPost queryset with per-user saved/applied state and application count to avoid N+1 queries."""
+    qs = qs.annotate(_application_count=Count('applications'))
     if not user or not user.is_authenticated:
         return qs
     return qs.annotate(

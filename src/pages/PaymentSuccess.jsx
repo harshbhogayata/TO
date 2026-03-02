@@ -2,16 +2,23 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import { useAuthStore } from '../store/authStore';
+import { authService } from '../services/api';
 
 const PaymentSuccess = () => {
     const navigate = useNavigate();
     const [params] = useSearchParams();
-    const { user } = useAuthStore();
+    const { user, setUser } = useAuthStore();
     const plan = params.get('plan');
     const [count, setCount] = useState(5);
 
     const dashboardMap = { TALENT: '/user', COMPANY: '/company', ADMIN: '/admin' };
     const dashboardPath = dashboardMap[user?.role] || '/user';
+
+    // Refresh user data so the new subscription tier is reflected everywhere
+    useEffect(() => {
+        authService.getMe().then(({ data }) => setUser(data)).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         if (count <= 0) { navigate(dashboardPath); return; }

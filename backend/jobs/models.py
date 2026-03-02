@@ -73,7 +73,11 @@ class JobPost(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.title} @ {self.company.company_profile.legal_name}'
+        try:
+            company_name = self.company.company_profile.legal_name
+        except Exception:
+            company_name = self.company.full_name or self.company.email
+        return f'{self.title} @ {company_name}'
 
     @property
     def salary_display(self):
@@ -83,6 +87,9 @@ class JobPost(models.Model):
 
     @property
     def application_count(self):
+        """Fallback for when queryset annotation is not available."""
+        if hasattr(self, '_application_count'):
+            return self._application_count
         return self.applications.count()
 
 

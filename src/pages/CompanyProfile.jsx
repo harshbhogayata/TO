@@ -8,7 +8,7 @@ import usePageTitle from '../hooks/usePageTitle';
 import './CompanyProfile.css';
 
 const CompanyProfile = () => {
-    const { user } = useAuthStore();
+    const { user, setUser } = useAuthStore();
     const { addToast } = useToast();
     usePageTitle('Company Profile', 'Edit your company profile to attract top talent on TalentOrbit.');
     const [profile, setProfile] = useState(null);
@@ -41,6 +41,10 @@ const CompanyProfile = () => {
             if (logoFile) fd.append('logo', logoFile);
             const { data } = await authService.updateCompanyProfile(fd);
             setProfile(data);
+            // Sync updated name back to auth store so sidebar reflects changes
+            if (form.legal_name && user) {
+                setUser({ ...user, full_name: form.legal_name });
+            }
             setSaveMsg('Profile updated successfully.');
             setEditMode(false);
         } catch (err) {

@@ -106,6 +106,7 @@ const UserRegistration = () => {
                 password_confirm: form.password,
                 bio,
                 skills,
+                location: preferences.location || '',
             });
             setAuth(data.user, data.tokens.access, data.tokens.refresh);
 

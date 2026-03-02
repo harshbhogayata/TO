@@ -45,6 +45,16 @@ const Settings = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
+    // Fetch actual 2FA status on mount so the toggle reflects reality
+    useEffect(() => {
+        authService.getMe().then(({ data }) => {
+            const u = data;
+            if (u.is_2fa_enabled) {
+                setConfig2fa('done');
+            }
+        }).catch(() => { /* silent */ });
+    }, []);
+
     const handleSetup2FA = async () => {
         try {
             const { data } = await authService.setup2FA();
@@ -56,13 +66,15 @@ const Settings = () => {
     };
 
     const handleDisable2FA = async () => {
+        const pw = window.prompt('Enter your current password to disable 2FA:');
+        if (!pw) return;
         try {
-            await authService.disable2FA();
+            await authService.disable2FA(pw);
             setConfig2fa('none');
             setQrCode('');
             addToast('Two-factor authentication disabled.', 'success');
         } catch (err) {
-            addToast(getApiErrorMessage(err, 'Failed to disable 2FA.'), 'error');
+            addToast(getApiErrorMessage(err, 'Failed to disable 2FA. Check your password.'), 'error');
         }
     };
 
@@ -77,10 +89,13 @@ const Settings = () => {
 
     const handleDeactivate = async () => {
         if (!window.confirm('Are you sure you want to deactivate your account? This action cannot be undone.')) return;
+        const pw = window.prompt('Enter your current password to confirm:');
+        if (!pw) return;
         try {
-            await authService.deactivateAccount();
-        } catch {
-            // Even if the call fails, proceed with local cleanup
+            await authService.deactivateAccount(pw);
+        } catch (err) {
+            addToast(getApiErrorMessage(err, 'Deactivation failed. Check your password.'), 'error');
+            return; // Don't proceed with local cleanup if the backend rejected it
         }
         try {
             await authService.logout(refreshToken);

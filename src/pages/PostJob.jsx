@@ -42,20 +42,32 @@ const PostJob = () => {
     };
 
     const handlePublish = async (isDraft = false) => {
+        // Manual validation since buttons are not form-submit
+        if (!isDraft && (!form.title.trim() || !form.description.trim())) {
+            setError('Title and description are required.');
+            return;
+        }
         setError('');
         setIsLoading(true);
         try {
-            // Parse salary string e.g. "80k - 110k" -> min: 80000, max: 110000
+            // Parse salary string e.g. "80k - 110k" or "$80,000 - $110,000"
             let salary_min = null;
             let salary_max = null;
-            const numbers = form.salary.match(/\d+/g);
-            if (numbers && numbers.length >= 1) {
-                salary_min = parseInt(numbers[0]);
-                if (salary_min < 1000) salary_min *= 1000;
-            }
-            if (numbers && numbers.length >= 2) {
-                salary_max = parseInt(numbers[1]);
-                if (salary_max < 1000) salary_max *= 1000;
+            if (form.salary.trim()) {
+                // Split on common range separators, then parse each half
+                const parts = form.salary.split(/[-–—to]+/i).map(s => s.trim()).filter(Boolean);
+                const parseAmount = (str) => {
+                    const cleaned = str.replace(/[^0-9.k]/gi, '');
+                    const num = parseFloat(cleaned);
+                    if (isNaN(num)) return null;
+                    if (/k$/i.test(cleaned)) return num * 1000;
+                    if (num > 0 && num < 1000) return num * 1000;
+                    return num;
+                };
+                if (parts.length >= 1) salary_min = parseAmount(parts[0]);
+                if (parts.length >= 2) salary_max = parseAmount(parts[1]);
+                // If only one value provided, treat as both min and max
+                if (salary_min && !salary_max) salary_max = salary_min;
             }
 
             const payload = {

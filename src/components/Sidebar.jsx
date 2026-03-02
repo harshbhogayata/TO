@@ -153,7 +153,9 @@ const Sidebar = () => {
                     {activeNav && activeNav.map((group, gIndex) => (
                         <nav key={gIndex} className="nav-group" role="list">
                             {group.map((item, index) => {
-                                const isActive = location.pathname === item.path;
+                                const isActive = item.path === '/'
+                                    ? location.pathname === '/'
+                                    : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
                                 return (
                                     <div
                                         key={index}

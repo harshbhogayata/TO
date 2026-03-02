@@ -42,7 +42,7 @@ const Home = () => {
                     <h1 className="hero-title">Beyond<br />The Hire</h1>
                     <p className="hero-subtitle">The first specialized network connecting high-performance creative talent with the world's most ambitious studios.</p>
                     <div>
-                        <Link to="/register/company" className="btn btn-black" style={{ padding: '18px 40px', fontSize: '14px' }}>Get Started</Link>
+                        <Link to="/register/user" className="btn btn-black" style={{ padding: '18px 40px', fontSize: '14px' }}>Get Started</Link>
                     </div>
                 </div>
                 <div className="hero-image"></div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { blogService, getApiErrorMessage } from '../services/api';
+import { useAuthStore } from '../store/authStore';
 import usePageTitle from '../hooks/usePageTitle';
 import './Blog.css';
 
@@ -8,15 +9,18 @@ const CATEGORIES = ['All Articles', 'Career Advice', 'Hiring Trends', 'Platform 
 
 const Blog = () => {
     const navigate = useNavigate();
+    const { isAuthenticated, user } = useAuthStore();
     usePageTitle('Blog', 'Career advice, hiring trends, and industry insights from TalentOrbit. Stay ahead in the talent economy.');
     const [activeCategory, setActiveCategory] = useState('All Articles');
     const [articles, setArticles] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [error, setError] = useState('');
 
     const loadArticles = async (pageNum, cat, append = false) => {
+        if (!append) setIsLoading(true);
         setLoadingMore(true);
         setError('');
         try {
@@ -35,6 +39,7 @@ const Blog = () => {
             setError(getApiErrorMessage(err, 'Failed to load articles. Please try again.'));
         } finally {
             setLoadingMore(false);
+            setIsLoading(false);
         }
     };
 
@@ -62,8 +67,17 @@ const Blog = () => {
                     <span className="blog-active-nav">Resources</span>
                 </nav>
                 <div className="blog-header-actions">
-                    <button className="blog-btn-outline" onClick={() => navigate('/auth')}>Login</button>
-                    <button className="blog-btn-solid" onClick={() => navigate('/register/user')}>Register</button>
+                    {isAuthenticated ? (
+                        <button className="blog-btn-solid" onClick={() => {
+                            const dashMap = { COMPANY: '/company', ADMIN: '/admin' };
+                            navigate(dashMap[user?.role] || '/user');
+                        }}>Dashboard</button>
+                    ) : (
+                        <>
+                            <button className="blog-btn-outline" onClick={() => navigate('/auth')}>Login</button>
+                            <button className="blog-btn-solid" onClick={() => navigate('/register/user')}>Register</button>
+                        </>
+                    )}
                 </div>
             </header>
 
@@ -107,7 +121,12 @@ const Blog = () => {
                             {error}
                         </div>
                     )}
-                    {!error && filtered.length === 0 && (
+                    {isLoading && !error && (
+                        <div style={{ padding: '40px', fontSize: '11px', opacity: 0.5, textTransform: 'uppercase', fontFamily: 'var(--font-sans)' }}>
+                            Loading articles...
+                        </div>
+                    )}
+                    {!isLoading && !error && filtered.length === 0 && (
                         <div style={{ padding: '40px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase', fontFamily: 'var(--font-sans)' }}>
                             No articles in this category yet.
                         </div>

@@ -50,10 +50,11 @@ class TalentRegistrationSerializer(serializers.ModelSerializer):
     password_confirm = serializers.CharField(write_only=True, required=True)
     bio = serializers.CharField(required=False, allow_blank=True)
     skills = serializers.JSONField(required=False, default=list)
+    location = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ('email', 'full_name', 'password', 'password_confirm', 'bio', 'skills')
+        fields = ('email', 'full_name', 'password', 'password_confirm', 'bio', 'skills', 'location')
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -64,11 +65,12 @@ class TalentRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop('password_confirm')
         bio = validated_data.pop('bio', '')
         skills = validated_data.pop('skills', [])
+        location = validated_data.pop('location', '')
 
         user = User.objects.create_user(
             role=User.Role.TALENT, **validated_data
         )
-        TalentProfile.objects.create(user=user, bio=bio, skills=skills)
+        TalentProfile.objects.create(user=user, bio=bio, skills=skills, location=location)
         return user
 
 
@@ -149,7 +151,7 @@ class UserMeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'full_name', 'role', 'is_verified', 'is_active', 'date_joined', 'avatar', 'profile')
+        fields = ('id', 'email', 'full_name', 'role', 'is_verified', 'is_active', 'is_2fa_enabled', 'date_joined', 'avatar', 'profile')
 
     def get_profile(self, obj):
         if obj.role == User.Role.TALENT and hasattr(obj, 'talent_profile'):

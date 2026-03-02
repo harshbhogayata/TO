@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { authService, getApiErrorMessage } from '../services/api';
+import { useAuthStore } from '../store/authStore';
 import usePageTitle from '../hooks/usePageTitle';
 
 /**
@@ -11,6 +12,7 @@ const VerifyEmail = () => {
     usePageTitle('Verify Email', 'Confirm your TalentOrbit email address to unlock all features.');
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { user } = useAuthStore();
     const uid = searchParams.get('uid');
     const token = searchParams.get('token');
 
@@ -86,7 +88,14 @@ const VerifyEmail = () => {
 
                 {status !== 'verifying' && (
                     <button
-                        onClick={() => navigate(status === 'success' ? '/user' : '/auth')}
+                        onClick={() => {
+                            if (status === 'success') {
+                                const dashMap = { COMPANY: '/company', ADMIN: '/admin' };
+                                navigate(dashMap[user?.role] || '/user');
+                            } else {
+                                navigate('/auth');
+                            }
+                        }}
                         style={{
                             padding: '14px 32px', border: '1px solid var(--text-black, #1a1a1a)',
                             background: status === 'success' ? 'var(--text-black, #1a1a1a)' : 'transparent',

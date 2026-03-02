@@ -175,8 +175,8 @@ export const authService = {
         api.post('/auth/resend-verification/'),
     setup2FA: () => api.get('/auth/2fa/setup/'),
     verify2FA: (token) => api.post('/auth/2fa/verify/', { token }),
-    disable2FA: () => api.post('/auth/2fa/disable/'),
-    deactivateAccount: () => api.post('/auth/deactivate/'),
+    disable2FA: (password) => api.post('/auth/2fa/disable/', { password }),
+    deactivateAccount: (password) => api.post('/auth/deactivate/', { password }),
 };
 
 export const jobsService = {

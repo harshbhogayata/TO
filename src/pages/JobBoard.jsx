@@ -204,7 +204,7 @@ const JobBoard = () => {
                                             <span>{job.salary_display}</span>
                                         </div>
                                     </div>
-                                    {renderMatchBadge(job.match_score || 0)}
+                                    {job.match_score > 0 && renderMatchBadge(job.match_score)}
                                 </div>
                                 {job.has_applied && (
                                     <span style={{ fontSize: '9px', fontWeight: 700, color: '#006400', textTransform: 'uppercase', marginTop: '12px', display: 'block' }}>✓ Applied</span>

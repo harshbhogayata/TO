@@ -248,7 +248,7 @@ const Inbox = () => {
                                     </div>
                                 )}
                                 {messages.map(msg => {
-                                    const isMine = msg.sender === user?.id || msg.sender_name === user?.full_name;
+                                    const isMine = msg.sender === user?.id;
                                     return (
                                         <div key={msg.id} className={`message ${isMine ? 'sent' : 'received'}`}>
                                             <div className="message-content">{msg.body}</div>

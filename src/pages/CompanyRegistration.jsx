@@ -39,6 +39,7 @@ const CompanyRegistration = () => {
         try {
             const { data } = await authService.registerCompany(form);
             setAuth(data.user, data.tokens.access, data.tokens.refresh);
+            localStorage.removeItem('co_reg_draft');
             navigate('/company', { replace: true });
         } catch (err) {
             const apiErrors = err.response?.data;

@@ -5,6 +5,7 @@ Job board API views for TalentOrbit.
 from rest_framework import generics, permissions, status, filters
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from django.core.cache import cache
 from django.db.models import F, Exists, OuterRef, Subquery
 from django.utils import timezone
 
@@ -15,6 +16,7 @@ from .serializers import (
     SavedJobSerializer,
 )
 from .permissions import IsCompanyOwner, IsCompanyUser, IsTalentUser
+from accounts.permissions import IsEmailVerified
 
 
 def _annotate_user_relations(qs, user):
@@ -28,6 +30,18 @@ def _annotate_user_relations(qs, user):
         ),
         _has_applied=Exists(Application.objects.filter(applicant=user, job_id=OuterRef('pk'))),
     )
+
+
+def _should_count_view(job_id, request):
+    """Deduplicate view counts: one increment per IP per hour."""
+    ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
+    if ',' in ip:
+        ip = ip.split(',')[0].strip()
+    cache_key = f'job_view:{job_id}:{ip}'
+    if cache.get(cache_key):
+        return False
+    cache.set(cache_key, 1, 3600)  # 1-hour TTL
+    return True
 
 
 class JobPostListView(generics.ListAPIView):
@@ -68,8 +82,9 @@ class JobPostDetailView(generics.RetrieveAPIView):
 
     def get(self, request, *args, **kwargs):
         instance = self.get_object()
-        JobPost.objects.filter(pk=instance.pk).update(views_count=F('views_count') + 1)
-        instance.refresh_from_db()
+        if _should_count_view(instance.pk, request):
+            JobPost.objects.filter(pk=instance.pk).update(views_count=F('views_count') + 1)
+            instance.refresh_from_db()
         serializer = self.get_serializer(instance, context={'request': request})
         return Response(serializer.data)
 
@@ -79,7 +94,7 @@ class CompanyJobsView(generics.ListCreateAPIView):
     GET  /api/jobs/mine/   — Company sees their own posts.
     POST /api/jobs/mine/   — Company creates a new post.
     """
-    permission_classes = [permissions.IsAuthenticated, IsCompanyUser]
+    permission_classes = [permissions.IsAuthenticated, IsCompanyUser, IsEmailVerified]
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -93,7 +108,7 @@ class CompanyJobsView(generics.ListCreateAPIView):
 
 class CompanyJobDetailView(generics.RetrieveUpdateDestroyAPIView):
     """PUT/PATCH/DELETE /api/jobs/mine/<id>/ — Company manages one of their posts."""
-    permission_classes = [permissions.IsAuthenticated, IsCompanyOwner]
+    permission_classes = [permissions.IsAuthenticated, IsCompanyOwner, IsEmailVerified]
 
     def get_serializer_class(self):
         if self.request.method in ('PUT', 'PATCH'):
@@ -107,7 +122,7 @@ class CompanyJobDetailView(generics.RetrieveUpdateDestroyAPIView):
 class ApplyView(generics.CreateAPIView):
     """POST /api/jobs/<id>/apply/ — Talent applies to a job."""
     serializer_class = ApplicationSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTalentUser]
+    permission_classes = [permissions.IsAuthenticated, IsTalentUser, IsEmailVerified]
 
     def perform_create(self, serializer):
         from rest_framework.exceptions import ValidationError
@@ -170,7 +185,7 @@ class WithdrawApplicationView(generics.DestroyAPIView):
 class SavedJobsView(generics.ListCreateAPIView):
     """GET/POST /api/jobs/saved/ — Talent saves or views saved jobs."""
     serializer_class = SavedJobSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTalentUser]
+    permission_classes = [permissions.IsAuthenticated, IsTalentUser, IsEmailVerified]
 
     def get_queryset(self):
         return SavedJob.objects.filter(user=self.request.user).select_related('job__company__company_profile')

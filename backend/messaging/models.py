@@ -55,7 +55,7 @@ class Message(models.Model):
         on_delete=models.CASCADE,
         related_name='sent_messages'
     )
-    body = models.TextField()
+    body = models.TextField(max_length=10000)
     attachment = models.FileField(
         upload_to='message_attachments/',
         null=True, blank=True
@@ -65,6 +65,10 @@ class Message(models.Model):
 
     class Meta:
         ordering = ['sent_at']
+        indexes = [
+            models.Index(fields=['thread', 'read'], name='idx_msg_thread_read'),
+            models.Index(fields=['thread', 'sent_at'], name='idx_msg_thread_sent'),
+        ]
 
     def __str__(self):
         return f'[{self.thread_id}] {self.sender.full_name}: {self.body[:40]}'

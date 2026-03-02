@@ -1,49 +1,76 @@
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
-import { ToastProvider } from './contexts/ToastContext';
+import { ToastProvider, useToast } from './contexts/ToastContext';
 
-// Public pages
-import Home from './pages/Home';
-import AuthPage from './pages/AuthPage';
-import Pricing from './pages/Pricing';
-import About from './pages/About';
-import HelpDesk from './pages/HelpDesk';
-import NotFound from './pages/NotFound';
-import PasswordRecovery from './pages/PasswordRecovery';
-import PaymentSuccess from './pages/PaymentSuccess';
-import PaymentCancel from './pages/PaymentCancel';
+// ── Lightweight global loading fallback ──────────────────────────────────────
+const PageLoader = () => (
+    <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', width: '100vw',
+        background: 'var(--bg-cream, #f5f0eb)', color: 'var(--text-black, #1a1a1a)',
+        fontFamily: 'var(--font-display, "Anton", sans-serif)',
+        fontSize: 'clamp(14px, 3vw, 18px)', letterSpacing: '2px', textTransform: 'uppercase',
+    }}>
+        Loading…
+    </div>
+);
 
-// Registration (public — must be logged out)
-import CompanyRegistration from './pages/CompanyRegistration';
-import UserRegistration from './pages/UserRegistration';
+// ── Lazy-loaded pages (code-split at route level) ────────────────────────────
+// Public
+const Home = lazy(() => import('./pages/Home'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const Pricing = lazy(() => import('./pages/Pricing'));
+const About = lazy(() => import('./pages/About'));
+const HelpDesk = lazy(() => import('./pages/HelpDesk'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const PasswordRecovery = lazy(() => import('./pages/PasswordRecovery'));
+const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
+const PaymentCancel = lazy(() => import('./pages/PaymentCancel'));
+const CompanyRegistration = lazy(() => import('./pages/CompanyRegistration'));
+const UserRegistration = lazy(() => import('./pages/UserRegistration'));
+const Blog = lazy(() => import('./pages/Blog'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const JobDetail = lazy(() => import('./pages/JobDetail'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 
-// Protected dashboard pages
-import CompanyDashboard from './pages/CompanyDashboard';
-import UserDashboard from './pages/UserDashboard';
-import JobBoard from './pages/JobBoard';
-import SkillHub from './pages/SkillHub';
-import UserProfile from './pages/UserProfile';
-import AdminConsole from './pages/AdminConsole';
-import Settings from './pages/Settings';
-import Inbox from './pages/Inbox';
+// Protected — Talent
+const UserDashboard = lazy(() => import('./pages/UserDashboard'));
+const JobBoard = lazy(() => import('./pages/JobBoard'));
+const SkillHub = lazy(() => import('./pages/SkillHub'));
+const UserProfile = lazy(() => import('./pages/UserProfile'));
+const MyApplications = lazy(() => import('./pages/MyApplications'));
+const SavedJobs = lazy(() => import('./pages/SavedJobs'));
 
-// New specialized components
-import JobDetail from './pages/JobDetail';
-import CompanyProfilePage from './pages/CompanyProfile';
-import ApplicantReview from './pages/ApplicantReview';
-import MyApplications from './pages/MyApplications';
-import SavedJobs from './pages/SavedJobs';
-import Notifications from './pages/Notifications';
-import Blog from './pages/Blog';
-import Terms from './pages/Terms';
-import Privacy from './pages/Privacy';
-import PostJob from './pages/PostJob';
+// Protected — Company
+const CompanyDashboard = lazy(() => import('./pages/CompanyDashboard'));
+const PostJob = lazy(() => import('./pages/PostJob'));
+const CompanyProfilePage = lazy(() => import('./pages/CompanyProfile'));
+const ApplicantReview = lazy(() => import('./pages/ApplicantReview'));
 
-function App() {
+// Protected — Admin
+const AdminConsole = lazy(() => import('./pages/AdminConsole'));
+
+// Protected — Shared
+const Settings = lazy(() => import('./pages/Settings'));
+const Inbox = lazy(() => import('./pages/Inbox'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+
+function AppRoutes() {
+    const { addToast } = useToast();
+
+    useEffect(() => {
+        const handler = () => {
+            addToast('Session expired — please log in again.', 'error');
+        };
+        window.addEventListener('talentorbit:session-expired', handler);
+        return () => window.removeEventListener('talentorbit:session-expired', handler);
+    }, [addToast]);
+
     return (
-        <ToastProvider>
-            <BrowserRouter>
-                <Routes>
+        <Suspense fallback={<PageLoader />}>
+            <Routes>
                     {/* ── Public ───────────────────────────────────── */}
                     <Route path="/" element={<Home />} />
                     <Route path="/auth" element={<AuthPage />} />
@@ -59,6 +86,7 @@ function App() {
                     <Route path="/jobs/:id" element={<JobDetail />} />
                     <Route path="/payment/success" element={<PaymentSuccess />} />
                     <Route path="/payment/cancel" element={<PaymentCancel />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
 
                     {/* ── Talent-only routes ────────────────────────── */}
                     <Route path="/user" element={
@@ -139,9 +167,18 @@ function App() {
                     } />
 
                     <Route path="*" element={<NotFound />} />
-                </Routes>
+            </Routes>
+        </Suspense>
+    );
+}
+
+function App() {
+    return (
+        <ToastProvider>
+            <BrowserRouter>
+                <AppRoutes />
             </BrowserRouter>
-        </ToastProvider >
+        </ToastProvider>
     );
 }
 

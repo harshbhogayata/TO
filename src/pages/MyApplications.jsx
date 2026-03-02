@@ -4,6 +4,7 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import VerticalLabel from '../components/VerticalLabel';
 import { jobsService, getApiErrorMessage } from '../services/api';
 import usePageTitle from '../hooks/usePageTitle';
+import Skeleton from '../components/Skeleton';
 import './MyApplications.css';
 
 const STATUS_ORDER = ['pending', 'reviewing', 'shortlisted', 'interviewing', 'offered', 'rejected', 'withdrawn'];
@@ -19,7 +20,7 @@ const STATUS_LABELS = {
 
 const MyApplications = () => {
     const { addToast } = useToast();
-    usePageTitle('My Applications');
+    usePageTitle('My Applications', 'Track the status of your job applications in real time.');
     const [applications, setApplications] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -73,11 +74,7 @@ const MyApplications = () => {
                         <span style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase' }}>{stats.total} Records</span>
                     </div>
 
-                    {isLoading && (
-                        <div style={{ padding: '40px 32px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>
-                            Loading applications...
-                        </div>
-                    )}
+                    {isLoading && <Skeleton.List count={5} />}
 
                     {error && (
                         <div style={{ padding: '40px 32px', fontSize: '11px', color: '#b00', textTransform: 'uppercase' }}>

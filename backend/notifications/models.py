@@ -11,6 +11,10 @@ class Notification(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read'], name='idx_notif_user_read'),
+            models.Index(fields=['user', '-created_at'], name='idx_notif_user_created'),
+        ]
 
     def __str__(self):
         return f"[{self.category}] {self.title} to {self.user.email}"

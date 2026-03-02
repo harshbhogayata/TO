@@ -17,6 +17,8 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class SendMessageSerializer(serializers.ModelSerializer):
+    body = serializers.CharField(max_length=10000)
+
     class Meta:
         model = Message
         fields = ('thread', 'body', 'attachment')
@@ -70,4 +72,4 @@ class CreateThreadSerializer(serializers.Serializer):
     recipient_id = serializers.IntegerField(required=False, allow_null=True)
     recipient_email = serializers.EmailField(required=False, allow_null=True, allow_blank=True)
     job_id = serializers.IntegerField(required=False, allow_null=True)
-    initial_message = serializers.CharField(required=False, allow_blank=True)
+    initial_message = serializers.CharField(required=False, allow_blank=True, max_length=10000)

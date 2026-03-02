@@ -4,12 +4,13 @@ import { messagingService, getApiErrorMessage } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import usePageTitle from '../hooks/usePageTitle';
+import Skeleton from '../components/Skeleton';
 import './Inbox.css';
 
 const Inbox = () => {
     const { user } = useAuthStore();
     const { addToast } = useToast();
-    usePageTitle('Inbox');
+    usePageTitle('Inbox', 'Messages between you and recruiters. Stay connected throughout the hiring process.');
     const [threads, setThreads] = useState([]);
     const [activeThread, setActiveThread] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -178,9 +179,7 @@ const Inbox = () => {
                     </div>
 
                     <div className="thread-list">
-                        {isLoading && (
-                            <div style={{ padding: '24px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>Loading...</div>
-                        )}
+                        {isLoading && <Skeleton.Threads count={5} />}
                         {!isLoading && threads.length === 0 && (
                             <div style={{ padding: '24px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>
                                 No messages yet.

@@ -50,8 +50,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
 
-    # 2FA
-    totp_secret = models.CharField(max_length=32, blank=True, null=True)
+    # 2FA — signed at rest via accounts.crypto
+    totp_secret = models.CharField(max_length=128, blank=True, null=True)
     is_2fa_enabled = models.BooleanField(default=False)
 
     date_joined = models.DateTimeField(default=timezone.now)

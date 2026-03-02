@@ -8,7 +8,7 @@ import './AdminConsole.css';
 
 const AdminConsole = () => {
     const { addToast } = useToast();
-    usePageTitle('Admin Console');
+    usePageTitle('Admin Console', 'Platform administration — manage users, jobs, and system health.');
     const [stats, setStats] = useState(null);
     const [users, setUsers] = useState([]);
     const [jobs, setJobs] = useState([]);

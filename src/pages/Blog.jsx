@@ -8,7 +8,7 @@ const CATEGORIES = ['All Articles', 'Career Advice', 'Hiring Trends', 'Platform 
 
 const Blog = () => {
     const navigate = useNavigate();
-    usePageTitle('Blog');
+    usePageTitle('Blog', 'Career advice, hiring trends, and industry insights from TalentOrbit. Stay ahead in the talent economy.');
     const [activeCategory, setActiveCategory] = useState('All Articles');
     const [articles, setArticles] = useState([]);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -85,7 +85,7 @@ const Blog = () => {
                         </div>
                     </div>
                     <div className="blog-hero-image-container">
-                        <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=1400&auto=format&fit=crop" className="blog-hero-img" alt="Creative technical portfolios" />
+                        <img loading="lazy" src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=1400&auto=format&fit=crop" className="blog-hero-img" alt="Creative technical portfolios" />
                     </div>
                 </section>
 
@@ -114,7 +114,7 @@ const Blog = () => {
                     )}
                     {filtered.map(article => (
                         <article key={article.id} className="blog-card">
-                            <img src={article.img} className="blog-card-img" alt={article.alt} />
+                            <img loading="lazy" src={article.img} className="blog-card-img" alt={article.alt} />
                             <div className="blog-card-content">
                                 <div className="blog-post-meta">
                                     <span className="blog-category">{article.category}</span>

@@ -5,7 +5,7 @@ import usePageTitle from '../hooks/usePageTitle';
 import './HelpDesk.css';
 
 const HelpDesk = () => {
-    usePageTitle('Help Desk');
+    usePageTitle('Help Desk', 'Get support for your TalentOrbit account. Contact our team for help with job applications, hiring, or platform questions.');
     const [submitted, setSubmitted] = useState(false);
     const [sending, setSending] = useState(false);
     const [openFaq, setOpenFaq] = useState(null);

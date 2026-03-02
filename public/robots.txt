@@ -1,0 +1,8 @@
+# TalentOrbit — robots.txt
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+# Sitemap (add when available)
+# Sitemap: https://to-dusky.vercel.app/sitemap.xml

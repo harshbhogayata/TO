@@ -23,7 +23,7 @@ if _sentry_dsn:
     sentry_sdk.init(
         dsn=_sentry_dsn,
         traces_sample_rate=0.1 if not DEBUG else 1.0,
-        send_default_pii=True,
+        send_default_pii=False,
         environment='production' if not DEBUG else 'development',
     )
 
@@ -124,6 +124,7 @@ else:
                 'PASSWORD': os.environ.get('DB_PASSWORD', ''),
                 'HOST': os.environ.get('DB_HOST', 'localhost'),
                 'PORT': os.environ.get('DB_PORT', '5432'),
+                'CONN_MAX_AGE': 600,
             }
         }
 
@@ -172,6 +173,7 @@ STORAGES = {
 # Media storage — Cloudflare R2 (S3-compatible) when configured, else local filesystem
 _r2_access_key = os.environ.get('R2_ACCESS_KEY_ID', '')
 if _r2_access_key:
+    _r2_custom_domain = os.environ.get('R2_CUSTOM_DOMAIN', '')  # e.g. media.talentorbit.com
     STORAGES['default'] = {
         'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
         'OPTIONS': {
@@ -182,11 +184,17 @@ if _r2_access_key:
             'default_acl': None,
             'signature_version': 's3v4',
             'region_name': 'auto',
-            'querystring_auth': True,
+            # Use public CDN URL when a custom domain is configured (Cloudflare CDN);
+            # otherwise fall back to signed URLs via R2 S3 endpoint.
+            'querystring_auth': not bool(_r2_custom_domain),
+            'custom_domain': _r2_custom_domain or None,
             'file_overwrite': False,
         },
     }
-    MEDIA_URL = f"{os.environ.get('R2_ENDPOINT_URL', '')}/{os.environ.get('R2_BUCKET_NAME', '')}/"
+    if _r2_custom_domain:
+        MEDIA_URL = f"https://{_r2_custom_domain}/"
+    else:
+        MEDIA_URL = f"{os.environ.get('R2_ENDPOINT_URL', '')}/{os.environ.get('R2_BUCKET_NAME', '')}/"
 else:
     STORAGES['default'] = {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
@@ -245,8 +253,10 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/day',
         'user': '2000/day',
-        'auth': '30/hour',  # Stricter for login / password-reset (see AuthEndpointThrottle)
+        'auth': '20/hour',     # Strict — login, password-reset, verify-email
+        'contact': '5/hour',   # Contact form submissions
     },
+    'EXCEPTION_HANDLER': 'talentorbit.exceptions.custom_exception_handler',
 }
 
 # ─── Simple JWT ───────────────────────────────────────────────────────────────
@@ -281,6 +291,13 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # ─── Security (production hardening) ─────────────────────────────────────────
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')  # Render terminates TLS
+PASSWORD_RESET_TIMEOUT = 900  # 15 minutes (default is 3 days — too long)
+
+# Upload size limits (protect against oversized payloads)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024   # 10 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024   # 10 MB
+
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -321,6 +338,21 @@ LOGGING = {
         'django.request': {
             'handlers': ['console'],
             'level': 'ERROR',
+            'propagate': False,
+        },
+        'accounts': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'jobs': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'payments': {
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },

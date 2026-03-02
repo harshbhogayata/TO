@@ -7,7 +7,7 @@ import './Home.css';
 const Home = () => {
     const navigate = useNavigate();
     const { isAuthenticated, user } = useAuthStore();
-    usePageTitle('Home');
+    usePageTitle('Home', 'TalentOrbit connects verified creative talent with ambitious companies. Find your next career opportunity or hire world-class professionals.');
     return (
         <div className="home-container">
             <TapeBar

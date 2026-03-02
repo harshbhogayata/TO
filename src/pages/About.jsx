@@ -6,7 +6,7 @@ import './About.css';
 
 
 const About = () => {
-    usePageTitle('About');
+    usePageTitle('About', 'Learn about TalentOrbit — the next-generation recruitment platform bridging the gap between talent and opportunity.');
     const [submitted, setSubmitted] = useState(false);
     const [sending, setSending] = useState(false);
     const [sendError, setSendError] = useState('');

@@ -10,7 +10,7 @@ import './UserProfile.css';
 const UserProfile = () => {
     const { user, setUser } = useAuthStore();
     const { addToast } = useToast();
-    usePageTitle('My Profile');
+    usePageTitle('My Profile', 'Edit your professional profile, skills, and resume to stand out to employers.');
     const [profile, setProfile] = useState(null);
     const [form, setForm] = useState({ full_name: '', bio: '', location: '', linkedin_url: '', portfolio_url: '' });
     const [skills, setSkills] = useState([]);
@@ -124,7 +124,7 @@ const UserProfile = () => {
                                 title="Click to change photo"
                             >
                                 {currentAvatarUrl ? (
-                                    <img src={currentAvatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img src={currentAvatarUrl} alt="Profile photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : initials}
                             </div>
                             <input id="avatar-input" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />

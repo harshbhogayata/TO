@@ -2,17 +2,32 @@
 accounts/views.py
 Authentication and user profile management views.
 """
+import io
+import logging
+import base64
+
+try:
+    import PyPDF2
+    from docx import Document
+except ImportError:
+    PyPDF2 = None
+    Document = None
+
 from django.contrib.auth import update_session_auth_hash
+from django.core.cache import cache
 from rest_framework import status, generics, permissions
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.exceptions import TokenError
 
 from .models import User, TalentProfile, CompanyProfile
-from .throttling import AuthEndpointThrottle
+from .throttling import AuthEndpointThrottle, ContactEndpointThrottle
+from .permissions import IsEmailVerified
+from .crypto import sign_totp, unsign_totp
 from .serializers import (
     CustomTokenObtainPairSerializer,
     TalentRegistrationSerializer,
@@ -23,6 +38,8 @@ from .serializers import (
     ChangePasswordSerializer,
     ContactMessageSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -42,10 +59,16 @@ class RegisterTalentView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
+        # Send verification email (non-blocking — fail_silently)
+        try:
+            _send_verification_email(user)
+        except Exception:
+            pass
+
         # Issue tokens immediately after registration
         refresh = RefreshToken.for_user(user)
         return Response({
-            'message': 'Talent account created successfully.',
+            'message': 'Talent account created successfully. Please verify your email.',
             'user': UserMeSerializer(user).data,
             'tokens': {
                 'access': str(refresh.access_token),
@@ -65,9 +88,15 @@ class RegisterCompanyView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
+        # Send verification email (non-blocking — fail_silently)
+        try:
+            _send_verification_email(user)
+        except Exception:
+            pass
+
         refresh = RefreshToken.for_user(user)
         return Response({
-            'message': 'Company account created successfully. Verification pending.',
+            'message': 'Company account created successfully. Please verify your email.',
             'user': UserMeSerializer(user).data,
             'tokens': {
                 'access': str(refresh.access_token),
@@ -108,7 +137,7 @@ class MeView(generics.RetrieveAPIView):
 class TalentProfileView(generics.RetrieveUpdateAPIView):
     """GET/PATCH /api/profile/talent — Retrieve or update Talent profile."""
     serializer_class = TalentProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_object(self):
@@ -137,7 +166,7 @@ class TalentProfileView(generics.RetrieveUpdateAPIView):
 class CompanyProfileView(generics.RetrieveUpdateAPIView):
     """GET/PATCH /api/profile/company — Retrieve or update Company profile."""
     serializer_class = CompanyProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_object(self):
@@ -157,6 +186,7 @@ class CompanyProfileView(generics.RetrieveUpdateAPIView):
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
+@throttle_classes([AuthEndpointThrottle])
 def change_password(request):
     """POST /api/auth/change-password"""
     serializer = ChangePasswordSerializer(data=request.data)
@@ -188,40 +218,186 @@ def change_password(request):
 def password_reset_request(request):
     """
     POST /api/auth/password-reset/
-    Password reset is not yet implemented. Returns 503 so clients can show a clear message.
-    When implemented: generate token (e.g. PasswordResetTokenGenerator), send email with
-    FRONTEND_URL/reset?token=..., and add a confirm-reset endpoint.
+    Generates a one-time token and emails a reset link to the user.
+    Always returns 200 to prevent email enumeration.
     """
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.http import urlsafe_base64_encode
+    from django.utils.encoding import force_bytes
+    from django.core.mail import send_mail
+    from django.conf import settings as django_settings
+
     email = request.data.get('email', '').strip().lower()
     if not email:
         return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
-    return Response(
-        {
-            'error': 'Password reset is not available yet. Please contact support.',
-            'code': 'password_reset_not_implemented',
-        },
-        status=status.HTTP_503_SERVICE_UNAVAILABLE,
-    )
+
+    # Always return success to prevent email enumeration
+    try:
+        user = User.objects.get(email=email, is_active=True)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_url = f"{django_settings.FRONTEND_URL}/recovery?uid={uid}&token={token}"
+
+        send_mail(
+            subject='TalentOrbit — Password Reset',
+            message=(
+                f'Hi {user.full_name or "there"},\n\n'
+                f'We received a request to reset your password.\n'
+                f'Click the link below (valid for ~15 minutes):\n\n'
+                f'{reset_url}\n\n'
+                f'If you didn\'t request this, you can safely ignore this email.\n\n'
+                f'— TalentOrbit'
+            ),
+            from_email=django_settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+    except User.DoesNotExist:
+        pass  # Silent — no info leak
+    except Exception:
+        logger.exception('Password reset email failed')
+
+    return Response({'message': 'If an account with that email exists, a reset link has been sent.'})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+@throttle_classes([AuthEndpointThrottle])
+def password_reset_confirm(request):
+    """
+    POST /api/auth/password-reset/confirm/
+    Accepts uid, token, and new_password to complete the reset flow.
+    """
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.http import urlsafe_base64_decode
+    from django.utils.encoding import force_str
+
+    uid = request.data.get('uid', '')
+    token = request.data.get('token', '')
+    new_password = request.data.get('new_password', '')
+
+    if not uid or not token or not new_password:
+        return Response({'error': 'uid, token, and new_password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if len(new_password) < 8:
+        return Response({'error': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user_id = force_str(urlsafe_base64_decode(uid))
+        user = User.objects.get(pk=user_id, is_active=True)
+    except (User.DoesNotExist, ValueError, OverflowError):
+        return Response({'error': 'Invalid or expired reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not default_token_generator.check_token(user, token):
+        return Response({'error': 'Invalid or expired reset link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save()
+
+    # Blacklist all existing refresh tokens
+    try:
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+        for t in OutstandingToken.objects.filter(user=user):
+            BlacklistedToken.objects.get_or_create(token=t)
+    except Exception:
+        pass
+
+    return Response({'message': 'Password has been reset. You can now log in with your new password.'})
 
 
 class ContactMessageView(generics.CreateAPIView):
     """POST /api/v1/auth/contact/ — Submit a contact/support form."""
     serializer_class = ContactMessageSerializer
     permission_classes = [permissions.AllowAny]
+    throttle_classes = [ContactEndpointThrottle]
 
 
-import io
-import logging
-try:
-    import PyPDF2
-    from docx import Document
-except ImportError:
-    PyPDF2 = None
-    Document = None
-from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser, FormParser
+# ─── Email Verification ──────────────────────────────────────────────────────
 
-logger = logging.getLogger(__name__)
+def _send_verification_email(user):
+    """Helper — sends a verification email with a one-time token link."""
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.http import urlsafe_base64_encode
+    from django.utils.encoding import force_bytes
+    from django.core.mail import send_mail
+    from django.conf import settings as django_settings
+
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    verify_url = f"{django_settings.FRONTEND_URL}/verify-email?uid={uid}&token={token}"
+
+    send_mail(
+        subject='TalentOrbit — Verify Your Email',
+        message=(
+            f'Hi {user.full_name or "there"},\n\n'
+            f'Welcome to TalentOrbit! Please verify your email address by clicking the link below:\n\n'
+            f'{verify_url}\n\n'
+            f'This link will expire in approximately 15 minutes.\n\n'
+            f'If you didn\'t create this account, you can safely ignore this email.\n\n'
+            f'— TalentOrbit'
+        ),
+        from_email=django_settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=True,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+@throttle_classes([AuthEndpointThrottle])
+def verify_email(request):
+    """
+    POST /api/v1/auth/verify-email/
+    Accepts uid + token, marks user.is_verified = True.
+    """
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.http import urlsafe_base64_decode
+    from django.utils.encoding import force_str
+
+    uid = request.data.get('uid', '')
+    token = request.data.get('token', '')
+
+    if not uid or not token:
+        return Response({'error': 'uid and token are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user_id = force_str(urlsafe_base64_decode(uid))
+        user = User.objects.get(pk=user_id)
+    except (User.DoesNotExist, ValueError, OverflowError):
+        return Response({'error': 'Invalid verification link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if user.is_verified:
+        return Response({'message': 'Email is already verified.'})
+
+    if not default_token_generator.check_token(user, token):
+        return Response({'error': 'Invalid or expired verification link.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.is_verified = True
+    user.save(update_fields=['is_verified'])
+    return Response({'message': 'Email verified successfully. You can now use all features.'})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+@throttle_classes([AuthEndpointThrottle])
+def resend_verification(request):
+    """
+    POST /api/v1/auth/resend-verification/
+    Resends the verification email for the authenticated user.
+    """
+    user = request.user
+    if user.is_verified:
+        return Response({'message': 'Email is already verified.'})
+
+    try:
+        _send_verification_email(user)
+    except Exception:
+        logger.exception('Verification email failed')
+
+    return Response({'message': 'Verification email sent. Check your inbox and spam folder.'})
+
+
+# ─── Resume Extraction ────────────────────────────────────────────────────────
 
 # Max resume file size: 10 MB
 RESUME_MAX_SIZE_BYTES = 10 * 1024 * 1024
@@ -300,7 +476,7 @@ class ExtractResumeView(APIView):
         return Response({'skills': extracted, 'bio': bio})
 
 
-import base64
+# ─── Two-Factor Authentication ────────────────────────────────────────────────
 
 class TwoFactorSetupView(APIView):
     """GET /api/v1/auth/2fa/setup/ — Generate TOTP QR code securely"""
@@ -310,11 +486,16 @@ class TwoFactorSetupView(APIView):
         import pyotp
         import qrcode
         user = request.user
+
         if not user.totp_secret:
-            user.totp_secret = pyotp.random_base32()
-            user.save()
+            raw_secret = pyotp.random_base32()
+            user.totp_secret = sign_totp(raw_secret)
+            user.save(update_fields=['totp_secret'])
+            plain_secret = raw_secret
+        else:
+            plain_secret = unsign_totp(user.totp_secret)
         
-        totp = pyotp.TOTP(user.totp_secret)
+        totp = pyotp.TOTP(plain_secret)
         uri = totp.provisioning_uri(name=user.email, issuer_name="TalentOrbit")
         
         qr = qrcode.make(uri)
@@ -339,11 +520,14 @@ class TwoFactorVerifyView(APIView):
             
         if not request.user.totp_secret:
             return Response({'error': '2FA not setup'}, status=400)
-            
-        totp = pyotp.TOTP(request.user.totp_secret)
+
+        plain_secret = unsign_totp(request.user.totp_secret)
+        totp = pyotp.TOTP(plain_secret)
         if totp.verify(token):
             request.user.is_2fa_enabled = True
-            request.user.save()
+            # Re-sign the secret if it was a legacy unsigned value
+            request.user.totp_secret = sign_totp(plain_secret)
+            request.user.save(update_fields=['is_2fa_enabled', 'totp_secret'])
             return Response({'success': True, 'message': '2FA Enabled'})
         return Response({'success': False, 'error': 'Invalid 6-digit PIN'}, status=400)
 

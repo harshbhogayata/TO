@@ -10,7 +10,7 @@ import './CompanyProfile.css';
 const CompanyProfile = () => {
     const { user } = useAuthStore();
     const { addToast } = useToast();
-    usePageTitle('Company Profile');
+    usePageTitle('Company Profile', 'Edit your company profile to attract top talent on TalentOrbit.');
     const [profile, setProfile] = useState(null);
     const [form, setForm] = useState({ legal_name: '', industry: '', mission_statement: '', website: '' });
     const [logoFile, setLogoFile] = useState(null);
@@ -166,7 +166,7 @@ const CompanyProfile = () => {
                                 <>
                                     <div className="list-header"><h2>Logo</h2></div>
                                     <div style={{ padding: '24px 32px' }}>
-                                        <img src={profile.logo} alt="Company logo" style={{ maxWidth: '180px', maxHeight: '80px', objectFit: 'contain' }} />
+                                        <img loading="lazy" src={profile.logo} alt="Company logo" style={{ maxWidth: '180px', maxHeight: '80px', objectFit: 'contain' }} />
                                     </div>
                                 </>
                             )}

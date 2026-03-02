@@ -45,10 +45,9 @@ export const useAuthStore = create(
         }),
         {
             name: 'talentorbit-auth',
-            // Only persist tokens and user, not loading state
+            // accessToken intentionally excluded — memory-only (XSS protection)
             partialize: (state) => ({
                 user: state.user,
-                accessToken: state.accessToken,
                 refreshToken: state.refreshToken,
                 isAuthenticated: state.isAuthenticated,
             }),

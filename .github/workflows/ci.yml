@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Frontend ───────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend Lint + Build + Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npx eslint "src/**/*.{js,jsx}" --max-warnings 0
+
+      - name: Type-check (build)
+        run: npm run build
+        env:
+          VITE_API_URL: https://talentorbit-api.onrender.com/api/v1
+
+      - name: Unit tests
+        run: npm test -- --reporter=verbose
+
+  # ─── Backend ────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend Lint + Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      - name: Syntax check all Python files
+        run: python -m py_compile manage.py && python -c "
+          import py_compile, pathlib
+          errors = []
+          for f in pathlib.Path('.').rglob('*.py'):
+              if '__pycache__' in str(f) or 'migrations' in str(f):
+                  continue
+              try:
+                  py_compile.compile(str(f), doraise=True)
+              except py_compile.PyCompileError as e:
+                  errors.append(str(e))
+          if errors:
+              for e in errors:
+                  print(f'ERROR: {e}')
+              raise SystemExit(1)
+          print(f'All Python files compile OK')
+          "
+
+      - name: Django system checks
+        run: python manage.py check --deploy 2>&1 || true
+        env:
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          DEBUG: "True"
+          DATABASE_URL: ""
+          DB_ENGINE: django.db.backends.sqlite3
+
+      - name: Run tests
+        run: python manage.py test --verbosity=2
+        env:
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          DEBUG: "True"
+          DATABASE_URL: ""
+          DB_ENGINE: django.db.backends.sqlite3

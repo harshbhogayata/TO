@@ -12,7 +12,7 @@ const STATUS_LABELS = { pending: 'Pending', reviewing: 'Reviewing', shortlisted:
 const ApplicantReview = () => {
     const { addToast } = useToast();
     const { jobId } = useParams();
-    usePageTitle('Applicant Review');
+    usePageTitle('Applicant Review', 'Review and manage candidates who applied to your job posting.');
     const [applicants, setApplicants] = useState([]);
     const [selectedApplicant, setSelectedApplicant] = useState(null);
     const [isLoading, setIsLoading] = useState(true);

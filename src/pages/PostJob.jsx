@@ -8,7 +8,7 @@ import './PostJob.css';
 
 const PostJob = () => {
     const navigate = useNavigate();
-    usePageTitle('Post a Job');
+    usePageTitle('Post a Job', 'Create a new job posting and reach thousands of verified professionals.');
     const [skills, setSkills] = useState([]);
     const [skillInput, setSkillInput] = useState('');
 

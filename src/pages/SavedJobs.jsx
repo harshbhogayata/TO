@@ -5,12 +5,13 @@ import VerticalLabel from '../components/VerticalLabel';
 import { jobsService, getApiErrorMessage } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import usePageTitle from '../hooks/usePageTitle';
+import Skeleton from '../components/Skeleton';
 import './SavedJobs.css';
 
 const SavedJobs = () => {
     const { addToast } = useToast();
     const navigate = useNavigate();
-    usePageTitle('Saved Jobs');
+    usePageTitle('Saved Jobs', 'Your bookmarked job listings — revisit and apply when ready.');
     const [savedJobs, setSavedJobs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
@@ -72,11 +73,7 @@ const SavedJobs = () => {
                         <span style={{ fontSize: '11px', opacity: 0.5, textTransform: 'uppercase' }}>{savedJobs.length} Saved</span>
                     </div>
 
-                    {isLoading && (
-                        <div style={{ padding: '40px 32px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>
-                            Loading saved jobs...
-                        </div>
-                    )}
+                    {isLoading && <Skeleton.List count={4} />}
 
                     {error && (
                         <div style={{ padding: '40px 32px', fontSize: '11px', color: '#b00', textTransform: 'uppercase' }}>

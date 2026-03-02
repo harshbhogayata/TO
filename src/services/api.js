@@ -16,7 +16,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 const api = axios.create({
     baseURL: BASE_URL,
     headers: { 'Content-Type': 'application/json' },
-    timeout: 10000,
+    timeout: 15000,
 });
 
 // ─── Request Interceptor ────────────────────────────────────────────────────
@@ -64,6 +64,12 @@ api.interceptors.response.use(
 
             const refreshToken = useAuthStore.getState().refreshToken;
 
+            if (!refreshToken) {
+                isRefreshing = false;
+                useAuthStore.getState().logout();
+                return Promise.reject(error);
+            }
+
             try {
                 const { data } = await axios.post(`${BASE_URL}/auth/refresh/`, {
                     refresh: refreshToken,
@@ -79,6 +85,8 @@ api.interceptors.response.use(
                 return api(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError, null);
+                // Dispatch session-expired event so UI can show a toast
+                window.dispatchEvent(new CustomEvent('talentorbit:session-expired'));
                 useAuthStore.getState().logout();
                 return Promise.reject(refreshError);
             } finally {
@@ -91,6 +99,27 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+/**
+ * Restore session on app boot — access token is memory-only,
+ * so we need to refresh it from the persisted refresh token.
+ * Returns true if session was restored, false otherwise.
+ */
+export async function restoreSession() {
+    const { refreshToken, isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated || !refreshToken) return false;
+
+    try {
+        const { data } = await axios.post(`${BASE_URL}/auth/refresh/`, {
+            refresh: refreshToken,
+        });
+        useAuthStore.getState().setTokens(data.access, data.refresh || refreshToken);
+        return true;
+    } catch {
+        useAuthStore.getState().logout();
+        return false;
+    }
+}
 
 /**
  * Extract a user-friendly message from an API error (Axios or similar).
@@ -138,6 +167,12 @@ export const authService = {
         api.post('/auth/change-password/', data),
     requestPasswordReset: (email) =>
         api.post('/auth/password-reset/', { email }),
+    confirmPasswordReset: (uid, token, new_password) =>
+        api.post('/auth/password-reset/confirm/', { uid, token, new_password }),
+    verifyEmail: (uid, token) =>
+        api.post('/auth/verify-email/', { uid, token }),
+    resendVerification: () =>
+        api.post('/auth/resend-verification/'),
     setup2FA: () => api.get('/auth/2fa/setup/'),
     verify2FA: (token) => api.post('/auth/2fa/verify/', { token }),
     disable2FA: () => api.post('/auth/2fa/disable/'),

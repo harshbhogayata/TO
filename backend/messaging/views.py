@@ -1,12 +1,14 @@
 """
 messaging/views.py
 """
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from accounts.models import User
+from accounts.permissions import IsEmailVerified
 from .models import Thread, Message
 from .serializers import (
     ThreadSerializer, MessageSerializer,
@@ -34,6 +36,13 @@ def create_thread(request):
     If a thread already exists between these two users (optionally for the same job),
     return the existing thread instead of creating a duplicate.
     """
+    # Email verification check for thread creation
+    if not request.user.is_verified:
+        return Response(
+            {'detail': 'Please verify your email address before sending messages.'},
+            status=403
+        )
+
     s = CreateThreadSerializer(data=request.data)
     s.is_valid(raise_exception=True)
 
@@ -54,22 +63,23 @@ def create_thread(request):
     if request.user == recipient:
         return Response({'detail': 'You cannot start a thread with yourself.'}, status=400)
 
-    # Look for an existing thread shared by exactly these two participants
-    existing = Thread.objects.filter(
-        participants=request.user
-    ).filter(
-        participants=recipient
-    )
-    if job_id:
-        existing = existing.filter(job_id=job_id)
+    # Atomic block to prevent duplicate thread creation race condition
+    with transaction.atomic():
+        existing = Thread.objects.filter(
+            participants=request.user
+        ).filter(
+            participants=recipient
+        )
+        if job_id:
+            existing = existing.filter(job_id=job_id)
 
-    if existing.exists():
-        thread = existing.first()
-        created = False
-    else:
-        thread = Thread.objects.create(job_id=job_id)
-        thread.participants.add(request.user, recipient)
-        created = True
+        if existing.exists():
+            thread = existing.first()
+            created = False
+        else:
+            thread = Thread.objects.create(job_id=job_id)
+            thread.participants.add(request.user, recipient)
+            created = True
 
     if initial_message:
         Message.objects.create(thread=thread, sender=request.user, body=initial_message)
@@ -100,7 +110,7 @@ class ThreadMessagesView(generics.ListAPIView):
 class SendMessageView(generics.CreateAPIView):
     """POST /api/messages/send/ — Send a message in an existing thread."""
     serializer_class = SendMessageSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
 
     def perform_create(self, serializer):
         thread = serializer.validated_data['thread']
@@ -130,7 +140,6 @@ class SendMessageView(generics.CreateAPIView):
 @permission_classes([permissions.IsAuthenticated])
 def unread_count(request):
     """GET /api/messages/unread/ — Total unread message count for the user."""
-    from django.db.models import Count, Q
     total_unread = Message.objects.filter(
         thread__participants=request.user,
         read=False

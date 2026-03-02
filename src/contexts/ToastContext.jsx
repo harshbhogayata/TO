@@ -18,16 +18,20 @@ export const ToastProvider = ({ children }) => {
     return (
         <ToastContext.Provider value={{ addToast }}>
             {children}
-            <div style={{
-                position: 'fixed',
-                bottom: '24px',
-                right: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                zIndex: 9999,
-                pointerEvents: 'none'
-            }}>
+            <div
+                aria-live="polite"
+                aria-atomic="false"
+                role="status"
+                style={{
+                    position: 'fixed',
+                    bottom: '24px',
+                    right: '24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    zIndex: 9999,
+                    pointerEvents: 'none'
+                }}>
                 {toasts.map(t => (
                     <div key={t.id} style={{
                         background: t.type === 'error' ? 'var(--dark-gray)' : 'var(--text-black)',
@@ -48,6 +52,7 @@ export const ToastProvider = ({ children }) => {
                         <span>{t.message}</span>
                         <button
                             onClick={() => removeToast(t.id)}
+                            aria-label="Dismiss notification"
                             style={{
                                 background: 'transparent',
                                 border: 'none',

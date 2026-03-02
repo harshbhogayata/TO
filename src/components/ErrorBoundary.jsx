@@ -1,9 +1,10 @@
 import { Component } from 'react';
+import * as Sentry from '@sentry/react';
 
 /**
  * ErrorBoundary
  * Wraps the app — catches any uncaught render errors instead of
- * crashing the entire React tree. Shows a minimal recovery UI.
+ * crashing the entire React tree. Reports to Sentry and shows a minimal recovery UI.
  */
 class ErrorBoundary extends Component {
     constructor(props) {
@@ -17,6 +18,11 @@ class ErrorBoundary extends Component {
 
     componentDidCatch(error, info) {
         console.error('[ErrorBoundary caught]', error, info.componentStack);
+        // Report to Sentry with component stack context
+        Sentry.withScope((scope) => {
+            scope.setExtra('componentStack', info.componentStack);
+            Sentry.captureException(error);
+        });
     }
 
     handleReset = () => {

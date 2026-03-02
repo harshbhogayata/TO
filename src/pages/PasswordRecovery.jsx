@@ -1,15 +1,32 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import TapeBar from '../components/TapeBar';
 import { authService, getApiErrorMessage } from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import usePageTitle from '../hooks/usePageTitle';
 import './PasswordRecovery.css';
 
 const PasswordRecovery = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    usePageTitle('Password Recovery', 'Reset your TalentOrbit password securely via email.');
+
+    // Detect if we're in "confirm" mode (arrived via email link)
+    const uid = searchParams.get('uid');
+    const token = searchParams.get('token');
+    const isConfirmMode = useMemo(() => Boolean(uid && token), [uid, token]);
+
+    // Step 1 — Request reset
     const [email, setEmail] = useState('');
     const [step1Sent, setStep1Sent] = useState(false);
     const [step1Loading, setStep1Loading] = useState(false);
     const [step1Error, setStep1Error] = useState('');
+
+    // Step 2 — Confirm reset
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [step2Loading, setStep2Loading] = useState(false);
+    const [step2Error, setStep2Error] = useState('');
+    const [step2Success, setStep2Success] = useState(false);
 
     const handleRequestReset = async (e) => {
         e.preventDefault();
@@ -22,6 +39,28 @@ const PasswordRecovery = () => {
             setStep1Error(getApiErrorMessage(err, 'Request failed. Please try again.'));
         } finally {
             setStep1Loading(false);
+        }
+    };
+
+    const handleConfirmReset = async (e) => {
+        e.preventDefault();
+        setStep2Error('');
+        if (newPassword.length < 8) {
+            setStep2Error('Password must be at least 8 characters.');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setStep2Error('Passwords do not match.');
+            return;
+        }
+        setStep2Loading(true);
+        try {
+            await authService.confirmPasswordReset(uid, token, newPassword);
+            setStep2Success(true);
+        } catch (err) {
+            setStep2Error(getApiErrorMessage(err, 'Reset failed. The link may have expired.'));
+        } finally {
+            setStep2Loading(false);
         }
     };
 
@@ -46,21 +85,17 @@ const PasswordRecovery = () => {
                         <h1 className="recovery-title">Access<br />Reset</h1>
                         <div style={{ textAlign: 'right' }}>
                             <span style={{ fontFamily: 'var(--font-serif)', textTransform: 'uppercase', fontSize: '14px' }}>
-                                NOT YET AVAILABLE
+                                {isConfirmMode ? 'SET NEW PASSWORD' : 'RECOVERY PROTOCOL'}
                             </span>
                             <p style={{ fontSize: '11px', opacity: 0.6, textTransform: 'uppercase' }}>
-                                Email-based password reset coming soon
+                                {isConfirmMode ? 'Enter your new credentials below' : 'Email-based secure password reset'}
                             </p>
                         </div>
                     </header>
 
-                    <div style={{ padding: '16px 32px', background: 'rgba(180,120,0,0.06)', borderBottom: '1px solid rgba(180,120,0,0.2)', fontSize: '11px', fontFamily: 'var(--font-sans)', textTransform: 'uppercase', color: '#886600' }}>
-                        ⚠ Password reset via email is not yet active. To change your password, log in and visit Settings → Change Password. For locked accounts, contact support.
-                    </div>
-
                     <div className="recovery-flow">
                         {/* Step 01 — Email Request */}
-                        <div className="flow-section">
+                        <div className="flow-section" style={isConfirmMode ? { opacity: 0.3, pointerEvents: 'none' } : {}}>
                             <span className="step-indicator">[ Step 01 / Identity Verification ]</span>
                             <h2 className="section-heading">Email Address</h2>
 
@@ -129,16 +164,74 @@ const PasswordRecovery = () => {
                             </div>
                         </div>
 
-                        {/* Step 02 — Placeholder */}
+                        {/* Step 02 — Confirm New Password */}
                         <div className="right-container">
-                            <div className="flow-section" style={{ flex: 1, borderRight: 'none' }}>
+                            <div className="flow-section" style={{ flex: 1, borderRight: 'none', ...(isConfirmMode ? {} : { opacity: 0.3, pointerEvents: 'none' }) }}>
                                 <span className="step-indicator">[ Step 02 / Credential Update ]</span>
                                 <h2 className="section-heading">New Cipher</h2>
 
-                                <div style={{ padding: '32px 0', fontFamily: 'var(--font-sans)', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase', lineHeight: 1.8 }}>
-                                    This step is completed via the<br />secure link in your email.<br /><br />
-                                    Follow the link to set a new password.
-                                </div>
+                                {step2Success ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '20px' }}>
+                                        <div style={{ padding: '24px', border: '1px solid var(--border-color)', background: 'rgba(0,80,0,0.04)' }}>
+                                            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', textTransform: 'uppercase', marginBottom: '12px' }}>
+                                                ✓ Password Reset Complete
+                                            </p>
+                                            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', lineHeight: 1.6, opacity: 0.7 }}>
+                                                Your password has been updated. You can now log in with your new credentials.
+                                            </p>
+                                        </div>
+                                        <button className="btn-action-recovery" onClick={() => navigate('/auth')}>
+                                            Go to Login
+                                        </button>
+                                    </div>
+                                ) : isConfirmMode ? (
+                                    <form onSubmit={handleConfirmReset} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                                        <div className="form-group">
+                                            <label className="form-label">New Password</label>
+                                            <input
+                                                type="password"
+                                                className="recovery-input"
+                                                placeholder="MIN 8 CHARACTERS"
+                                                value={newPassword}
+                                                onChange={e => setNewPassword(e.target.value)}
+                                                required
+                                                minLength={8}
+                                                autoComplete="new-password"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Confirm Password</label>
+                                            <input
+                                                type="password"
+                                                className="recovery-input"
+                                                placeholder="RE-ENTER PASSWORD"
+                                                value={confirmPassword}
+                                                onChange={e => setConfirmPassword(e.target.value)}
+                                                required
+                                                minLength={8}
+                                                autoComplete="new-password"
+                                            />
+                                        </div>
+
+                                        {step2Error && (
+                                            <p style={{ color: '#b00', fontSize: '11px', textTransform: 'uppercase' }}>⚠ {step2Error}</p>
+                                        )}
+
+                                        <button
+                                            type="submit"
+                                            className="btn-action-recovery"
+                                            disabled={step2Loading}
+                                            style={{ opacity: step2Loading ? 0.6 : 1, cursor: step2Loading ? 'not-allowed' : 'pointer' }}
+                                        >
+                                            {step2Loading ? 'Resetting...' : 'Set New Password'}
+                                        </button>
+                                    </form>
+                                ) : (
+                                    <div style={{ padding: '32px 0', fontFamily: 'var(--font-sans)', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase', lineHeight: 1.8 }}>
+                                        This step is completed via the<br />secure link in your email.<br /><br />
+                                        Follow the link to set a new password.
+                                    </div>
+                                )}
 
                                 <div style={{ marginTop: '60px' }}>
                                     <span className="form-label" style={{ fontSize: '10px', opacity: 0.5 }}>Requirements</span>

@@ -4,6 +4,7 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import { jobsService, getApiErrorMessage } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import usePageTitle from '../hooks/usePageTitle';
+import Skeleton from '../components/Skeleton';
 import './JobBoard.css';
 
 const JobBoard = () => {
@@ -18,7 +19,7 @@ const JobBoard = () => {
     const [error, setError] = useState('');
     const [resetKey, setResetKey] = useState(0);
     const { user } = useAuthStore();
-    usePageTitle('Job Board');
+    usePageTitle('Job Board', 'Browse open positions from verified companies. Filter by skills, work mode, and experience level.');
 
     const renderMatchBadge = (score) => {
         let badgeClass = 'high-match';
@@ -181,8 +182,8 @@ const JobBoard = () => {
                     {/* ── Middle: Job Cards ── */}
                     <div className="jobs-list">
                         {isLoading && (
-                            <div style={{ padding: '32px', fontFamily: 'var(--font-sans)', fontSize: '11px', opacity: 0.5, textTransform: 'uppercase' }}>
-                                Loading positions...
+                            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '0' }}>
+                                <Skeleton.List count={5} />
                             </div>
                         )}
                         {!isLoading && error && (

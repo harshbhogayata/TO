@@ -16,6 +16,33 @@
     padding: 0;
 }
 
+/* ─── Skip-to-content link (a11y) ─────────────────────────────────────────── */
+.skip-link {
+    position: absolute;
+    top: -100px;
+    left: 16px;
+    z-index: 99999;
+    background: var(--text-black);
+    color: var(--text-white);
+    padding: 12px 24px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-decoration: none;
+    border: 1px solid var(--text-black);
+}
+.skip-link:focus {
+    top: 12px;
+}
+
+/* ─── Global focus-visible ring (a11y) ────────────────────────────────────── */
+*:focus-visible {
+    outline: 2px solid var(--text-black);
+    outline-offset: 2px;
+}
+
 body {
     background-color: var(--bg-beige);
     color: var(--text-black);
@@ -333,6 +360,12 @@ body {
     font-family: var(--font-serif);
     font-size: 16px;
     outline: none;
+}
+
+.form-input:focus-visible,
+.text-input:focus-visible {
+    outline: 2px solid var(--text-black);
+    outline-offset: -2px;
 }
 
 .form-input:focus,

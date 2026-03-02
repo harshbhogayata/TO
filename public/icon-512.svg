@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#1a1a1a"/>
+  <text x="256" y="290" font-family="Arial Black, sans-serif" font-size="150" font-weight="900" text-anchor="middle" fill="#E6E2D8" letter-spacing="-5">TO</text>
+  <text x="256" y="370" font-family="Arial, sans-serif" font-size="38" text-anchor="middle" fill="#E6E2D8" opacity="0.5" letter-spacing="8" text-transform="uppercase">ORBIT</text>
+</svg>

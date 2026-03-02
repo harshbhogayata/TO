@@ -8,7 +8,7 @@ import usePageTitle from '../hooks/usePageTitle';
 import './Settings.css';
 
 const Settings = () => {
-    usePageTitle('Settings');
+    usePageTitle('Settings', 'Manage your TalentOrbit account settings, security, and preferences.');
     const { addToast } = useToast();
     const navigate = useNavigate();
     const { logout, refreshToken, user } = useAuthStore();

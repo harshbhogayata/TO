@@ -6,13 +6,14 @@ import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import usePageTitle from '../hooks/usePageTitle';
+import Skeleton from '../components/Skeleton';
 import './DashboardShared.css';
 
 const UserDashboard = () => {
     const { user } = useAuthStore();
     const { addToast } = useToast();
     const navigate = useNavigate();
-    usePageTitle('Dashboard');
+    usePageTitle('Dashboard', 'Your TalentOrbit dashboard — track applications, messages, and career progress.');
     const [applications, setApplications] = useState([]);
     const [saved, setSaved] = useState([]);
     const [profile, setProfile] = useState(null);
@@ -129,7 +130,7 @@ const UserDashboard = () => {
                             <button className="btn-text" onClick={() => navigate('/jobs')}>Browse Jobs</button>
                         </div>
 
-                        {isLoading && <div style={{ padding: '32px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>Loading...</div>}
+                        {isLoading && <Skeleton.List count={4} />}
 
                         {!isLoading && applications.length === 0 && (
                             <div style={{ padding: '32px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>

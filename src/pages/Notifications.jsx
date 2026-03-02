@@ -3,13 +3,14 @@ import { useToast } from '../contexts/ToastContext';
 import DashboardLayout from '../layouts/DashboardLayout';
 import { notificationsService, getApiErrorMessage } from '../services/api';
 import usePageTitle from '../hooks/usePageTitle';
+import Skeleton from '../components/Skeleton';
 import './Notifications.css';
 
 const CATEGORIES = ['All', 'System', 'Message', 'Billing', 'Application'];
 
 const Notifications = () => {
     const { addToast } = useToast();
-    usePageTitle('Notifications');
+    usePageTitle('Notifications', 'Stay updated with application status changes, messages, and platform announcements.');
     const [notifications, setNotifications] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState('All');
@@ -102,9 +103,7 @@ const Notifications = () => {
 
                 {/* List */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0' }}>
-                    {isLoading && (
-                        <div style={{ padding: '40px 32px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>Loading...</div>
-                    )}
+                    {isLoading && <Skeleton.List count={6} />}
 
                     {!isLoading && filtered.length === 0 && (
                         <div style={{ padding: '60px 32px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>

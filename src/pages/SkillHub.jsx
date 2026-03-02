@@ -12,7 +12,7 @@ const SkillHub = () => {
     const { user } = useAuthStore();
     const { addToast } = useToast();
     const navigate = useNavigate();
-    usePageTitle('Skill Hub');
+    usePageTitle('Skill Hub', 'Explore courses and resources to develop in-demand skills and advance your career.');
     const [profile, setProfile] = useState(null);
     const [courses, setCourses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -69,7 +69,7 @@ const SkillHub = () => {
                         {courses.map((v) => (
                             <div key={v.id} className="video-item">
                                 <div className="thumbnail-placeholder">
-                                    <img src={v.img_url} alt={v.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <img loading="lazy" src={v.img_url} alt={v.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     <span className="duration-tag">{v.duration}</span>
                                     {v.is_coming_soon && (
                                         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

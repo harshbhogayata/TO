@@ -6,13 +6,14 @@ import { jobsService, getApiErrorMessage } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import usePageTitle from '../hooks/usePageTitle';
+import Skeleton from '../components/Skeleton';
 import './DashboardShared.css';
 
 const CompanyDashboard = () => {
     const { addToast } = useToast();
     const { user } = useAuthStore();
     const navigate = useNavigate();
-    usePageTitle('Company Dashboard');
+    usePageTitle('Company Dashboard', 'Manage job postings, review applicants, and grow your team with TalentOrbit.');
     const [jobs, setJobs] = useState([]);
     const [applications, setApplications] = useState({});
     const [isLoading, setIsLoading] = useState(true);
@@ -103,7 +104,7 @@ const CompanyDashboard = () => {
                         </button>
                     </div>
 
-                    {isLoading && <div style={{ padding: '32px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>Loading...</div>}
+                    {isLoading && <Skeleton.List count={4} />}
                     {!isLoading && jobs.length === 0 && (
                         <div style={{ padding: '32px', fontSize: '11px', opacity: 0.4, textTransform: 'uppercase' }}>
                             No job listings yet. Post your first role.

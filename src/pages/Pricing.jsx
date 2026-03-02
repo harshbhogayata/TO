@@ -78,7 +78,7 @@ const PLANS = [
 const Pricing = () => {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuthStore();
-    usePageTitle('Pricing');
+    usePageTitle('Pricing', 'Explore TalentOrbit pricing plans for talent seekers and companies. Free tier available, upgrade anytime.');
     const [loadingPlan, setLoadingPlan] = useState(null);
     const [error, setError] = useState('');
     const [currentTier, setCurrentTier] = useState('free');

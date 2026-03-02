@@ -48,7 +48,7 @@ class JobPost(models.Model):
 
     job_type = models.CharField(max_length=20, choices=JobType.choices, default=JobType.FULL_TIME)
     work_mode = models.CharField(max_length=20, choices=WorkMode.choices, default=WorkMode.HYBRID)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN, db_index=True)
     experience_level = models.CharField(max_length=20, choices=ExperienceLevel.choices, default=ExperienceLevel.MID)
 
     location = models.CharField(max_length=200, blank=True)
@@ -67,6 +67,10 @@ class JobPost(models.Model):
         ordering = ['-created_at']
         verbose_name = 'Job Post'
         verbose_name_plural = 'Job Posts'
+        indexes = [
+            models.Index(fields=['company', 'status'], name='idx_job_company_status'),
+            models.Index(fields=['-created_at', 'status'], name='idx_job_created_status'),
+        ]
 
     def __str__(self):
         return f'{self.title} @ {self.company.company_profile.legal_name}'

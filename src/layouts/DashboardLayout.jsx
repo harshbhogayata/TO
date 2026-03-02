@@ -10,10 +10,11 @@ const DashboardLayout = ({
 }) => {
     return (
         <>
+            <a href="#main-content" className="skip-link">Skip to content</a>
             <TapeBar {...tapeBarProps} />
             <div className="app-container">
                 <Sidebar />
-                <main className="main-content">
+                <main id="main-content" className="main-content" tabIndex={-1}>
                     {(pageTitleLine1 || pageTitleLine2 || headerRightContent) && (
                         <header className="content-header">
                             <h1 className="page-title">

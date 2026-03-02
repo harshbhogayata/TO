@@ -91,11 +91,15 @@ const Sidebar = () => {
                 />
             )}
 
-            <aside className={`sidebar ${mobileOpen ? 'sidebar-mobile-open' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <aside className={`sidebar ${mobileOpen ? 'sidebar-mobile-open' : ''}`} role="navigation" aria-label="Main navigation" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div
                     className="brand"
                     style={{ cursor: 'pointer' }}
                     onClick={() => { navigate('/'); setMobileOpen(false); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/'); setMobileOpen(false); } }}
+                    tabIndex={0}
+                    role="link"
+                    aria-label="TalentOrbit home"
                 >
                     Talent<br />Orbit
                 </div>
@@ -109,6 +113,10 @@ const Sidebar = () => {
                             marginBottom: '8px', cursor: 'pointer',
                         }}
                         onClick={() => { navigate(user.role === 'COMPANY' ? '/company/profile' : '/profile'); setMobileOpen(false); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(user.role === 'COMPANY' ? '/company/profile' : '/profile'); setMobileOpen(false); } }}
+                        tabIndex={0}
+                        role="link"
+                        aria-label={`${user.full_name || 'User'} profile`}
                     >
                         <div style={{
                             width: '36px', height: '36px', borderRadius: '50%',
@@ -119,7 +127,7 @@ const Sidebar = () => {
                             color: 'var(--text-white)', textTransform: 'uppercase',
                         }}>
                             {user.avatar ? (
-                                <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <img src={user.avatar} alt={`${user.full_name || 'User'} avatar`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (user.full_name || user.email || '?').charAt(0).toUpperCase()}
                         </div>
                         <div style={{ overflow: 'hidden' }}>
@@ -143,7 +151,7 @@ const Sidebar = () => {
 
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     {activeNav && activeNav.map((group, gIndex) => (
-                        <nav key={gIndex} className="nav-group">
+                        <nav key={gIndex} className="nav-group" role="list">
                             {group.map((item, index) => {
                                 const isActive = location.pathname === item.path;
                                 return (
@@ -151,6 +159,10 @@ const Sidebar = () => {
                                         key={index}
                                         className={`nav-item ${isActive ? 'active' : ''}`}
                                         onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(item.path); setMobileOpen(false); } }}
+                                        tabIndex={0}
+                                        role="listitem"
+                                        aria-current={isActive ? 'page' : undefined}
                                     >
                                         <span className="nav-num">[{item.num}]</span>
                                         <span className="nav-label">{item.label}</span>

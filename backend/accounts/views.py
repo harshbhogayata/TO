@@ -279,8 +279,13 @@ def password_reset_confirm(request):
     if not uid or not token or not new_password:
         return Response({'error': 'uid, token, and new_password are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if len(new_password) < 8:
-        return Response({'error': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+    # Run the full Django password validator suite (length, common, numeric, similarity)
+    from django.contrib.auth.password_validation import validate_password as _validate_pw
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    try:
+        _validate_pw(new_password)
+    except DjangoValidationError as e:
+        return Response({'error': e.messages}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         user_id = force_str(urlsafe_base64_decode(uid))
@@ -481,6 +486,7 @@ class ExtractResumeView(APIView):
 class TwoFactorSetupView(APIView):
     """GET /api/v1/auth/2fa/setup/ — Generate TOTP QR code securely"""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [AuthEndpointThrottle]
 
     def get(self, request):
         import pyotp
@@ -511,6 +517,7 @@ class TwoFactorSetupView(APIView):
 class TwoFactorVerifyView(APIView):
     """POST /api/v1/auth/2fa/verify/ — Confirm an OTP to enable 2FA"""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [AuthEndpointThrottle]
 
     def post(self, request):
         import pyotp
@@ -533,13 +540,24 @@ class TwoFactorVerifyView(APIView):
 
 
 class TwoFactorDisableView(APIView):
-    """POST /api/v1/auth/2fa/disable/ — Disable 2FA for the authenticated user."""
+    """POST /api/v1/auth/2fa/disable/ — Disable 2FA for the authenticated user.
+    Requires current password for re-authentication."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [AuthEndpointThrottle]
 
     def post(self, request):
         user = request.user
         if not user.is_2fa_enabled:
             return Response({'message': '2FA is already disabled.'})
+
+        # Re-authentication: require current password
+        password = request.data.get('password', '')
+        if not password or not user.check_password(password):
+            return Response(
+                {'error': 'Current password is required to disable 2FA.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         user.is_2fa_enabled = False
         user.totp_secret = None
         user.save(update_fields=['is_2fa_enabled', 'totp_secret'])
@@ -548,9 +566,17 @@ class TwoFactorDisableView(APIView):
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
+@throttle_classes([AuthEndpointThrottle])
 def deactivate_account(request):
-    """POST /api/v1/auth/deactivate/ — Deactivate the current user's account."""
+    """POST /api/v1/auth/deactivate/ — Deactivate the current user's account.
+    Requires current password for re-authentication."""
+    password = request.data.get('password', '')
     user = request.user
+    if not password or not user.check_password(password):
+        return Response(
+            {'error': 'Current password is required to deactivate your account.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     user.is_active = False
     user.save(update_fields=['is_active'])
 

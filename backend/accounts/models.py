@@ -146,7 +146,7 @@ class ContactMessage(models.Model):
     name = models.CharField(max_length=150)
     email = models.EmailField()
     subject = models.CharField(max_length=255, blank=True)
-    message = models.TextField()
+    message = models.TextField(max_length=5000)
     is_resolved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

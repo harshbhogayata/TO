@@ -111,7 +111,17 @@ const Pricing = () => {
         try {
             const { data } = await paymentsService.createCheckoutSession(planId);
             if (data?.url) {
-                window.location.href = data.url;
+                // Validate the URL is a legitimate Stripe checkout page
+                try {
+                    const checkoutUrl = new URL(data.url);
+                    if (checkoutUrl.hostname.endsWith('.stripe.com') || checkoutUrl.origin === window.location.origin) {
+                        window.location.href = data.url;
+                    } else {
+                        setError('Invalid checkout URL received. Please try again.');
+                    }
+                } catch {
+                    setError('Invalid checkout URL received. Please try again.');
+                }
             } else {
                 setError('Could not initiate checkout. Please try again.');
             }

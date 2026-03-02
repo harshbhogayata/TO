@@ -18,7 +18,7 @@ class NotificationReadView(views.APIView):
         try:
             notif = request.user.notifications.get(pk=pk)
             notif.is_read = True
-            notif.save()
+            notif.save(update_fields=['is_read'])
             return Response({'status': 'read'})
         except Notification.DoesNotExist:
             return Response(status=404)

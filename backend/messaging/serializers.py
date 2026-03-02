@@ -16,12 +16,37 @@ class MessageSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'sender', 'read', 'sent_at')
 
 
+# Allowed attachment types and size limit for messages
+_MSG_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+_MSG_ATTACHMENT_ALLOWED_TYPES = {
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+}
+
+
 class SendMessageSerializer(serializers.ModelSerializer):
     body = serializers.CharField(max_length=10000)
 
     class Meta:
         model = Message
         fields = ('thread', 'body', 'attachment')
+
+    def validate_attachment(self, value):
+        if value is None:
+            return value
+        if value.size > _MSG_ATTACHMENT_MAX_BYTES:
+            raise serializers.ValidationError(
+                f'Attachment too large. Maximum size is {_MSG_ATTACHMENT_MAX_BYTES // (1024*1024)} MB.'
+            )
+        content_type = getattr(value, 'content_type', '').split(';')[0].strip().lower()
+        if content_type and content_type not in _MSG_ATTACHMENT_ALLOWED_TYPES:
+            raise serializers.ValidationError(
+                'Unsupported file type. Allowed: images, PDF, Word, plain text.'
+            )
+        return value
 
     def create(self, validated_data):
         validated_data['sender'] = self.context['request'].user

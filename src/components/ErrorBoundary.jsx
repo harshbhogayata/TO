@@ -47,7 +47,7 @@ class ErrorBoundary extends Component {
                         </h1>
                         <p style={{ fontSize: '12px', lineHeight: 1.6, opacity: 0.6, marginBottom: '32px' }}>
                             An unexpected error occurred in the application. The technical details have been logged.
-                            {this.state.error && (
+                            {import.meta.env.DEV && this.state.error && (
                                 <span style={{ display: 'block', marginTop: '12px', fontFamily: 'monospace', fontSize: '11px', background: '#f0f0f0', padding: '8px', borderLeft: '3px solid #000' }}>
                                     {this.state.error.message}
                                 </span>

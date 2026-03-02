@@ -171,6 +171,8 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 
 class ContactMessageSerializer(serializers.ModelSerializer):
+    message = serializers.CharField(max_length=5000)
+
     class Meta:
         model = ContactMessage
         fields = ('id', 'name', 'email', 'subject', 'message', 'is_resolved', 'created_at')

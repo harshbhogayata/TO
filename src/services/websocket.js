@@ -5,10 +5,12 @@
  * Features:
  *  - Automatic reconnection with exponential backoff (capped at 30s)
  *  - JWT authentication via query-string token
- *  - Heartbeat / keepalive to detect dead connections
+ *  - Heartbeat / keepalive with server-side pong detection
  *  - Event-based API for consumers (onMessage, onOpen, onClose)
  *  - Graceful degradation — the app works without WebSocket
  *  - Singleton management — prevents duplicate connections
+ *  - Connection state tracking with visibility-aware reconnect
+ *  - Missed-heartbeat detection (dead connection recovery)
  */
 
 const WS_BASE = import.meta.env.VITE_WS_URL || (
@@ -16,6 +18,12 @@ const WS_BASE = import.meta.env.VITE_WS_URL || (
         ? `wss://${window.location.host}`
         : `ws://${window.location.host}`
 );
+
+/** Heartbeat interval in ms (must be < server-side timeout of 70s) */
+const HEARTBEAT_INTERVAL = 25_000;
+
+/** If no heartbeat.ack received within this window, consider connection dead */
+const HEARTBEAT_TIMEOUT = 10_000;
 
 /** @enum {string} */
 const ReadyState = {
@@ -52,8 +60,33 @@ class WebSocketManager {
         this._retryCount = 0;
         this._retryTimer = null;
         this._heartbeatTimer = null;
+        this._heartbeatTimeoutTimer = null;
         this._intentionalClose = false;
         this._state = ReadyState.CLOSED;
+        this._lastPongTime = 0;
+
+        // Reconnect when tab becomes visible (handles laptop sleep/resume)
+        this._visibilityHandler = () => {
+            if (document.visibilityState === 'visible' && !this.isConnected && !this._intentionalClose) {
+                this._retryCount = 0; // Reset backoff on visibility change
+                this.connect();
+            }
+        };
+
+        // Reconnect when network comes back online
+        this._onlineHandler = () => {
+            if (!this.isConnected && !this._intentionalClose) {
+                this._retryCount = 0;
+                this.connect();
+            }
+        };
+
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', this._visibilityHandler);
+        }
+        if (typeof window !== 'undefined') {
+            window.addEventListener('online', this._onlineHandler);
+        }
     }
 
     /** Current connection state */
@@ -96,6 +129,7 @@ class WebSocketManager {
         this._ws.onopen = () => {
             this._state = ReadyState.OPEN;
             this._retryCount = 0;
+            this._lastPongTime = Date.now();
             this._startHeartbeat();
             this.onOpen();
         };
@@ -103,6 +137,14 @@ class WebSocketManager {
         this._ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
+
+                // Handle heartbeat ack internally (don't bubble to consumer)
+                if (data.type === 'heartbeat.ack') {
+                    this._lastPongTime = Date.now();
+                    this._clearHeartbeatTimeout();
+                    return;
+                }
+
                 this.onMessage(data);
             } catch {
                 // Ignore non-JSON frames
@@ -150,6 +192,13 @@ class WebSocketManager {
         clearTimeout(this._retryTimer);
         this._retryCount = 0;
 
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('visibilitychange', this._visibilityHandler);
+        }
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('online', this._onlineHandler);
+        }
+
         if (this._ws) {
             this._state = ReadyState.CLOSING;
             this._ws.close(1000, 'Client disconnect');
@@ -162,9 +211,19 @@ class WebSocketManager {
      * Force reconnect (e.g. after token refresh).
      */
     reconnect() {
+        const wasIntentional = this._intentionalClose;
         this.disconnect();
         this._intentionalClose = false;
         this._retryCount = 0;
+
+        // Re-attach event listeners
+        if (typeof document !== 'undefined') {
+            document.addEventListener('visibilitychange', this._visibilityHandler);
+        }
+        if (typeof window !== 'undefined') {
+            window.addEventListener('online', this._onlineHandler);
+        }
+
         this.connect();
     }
 
@@ -172,6 +231,11 @@ class WebSocketManager {
 
     _scheduleReconnect() {
         if (this._retryCount >= this.maxRetries) {
+            return;
+        }
+
+        // Don't reconnect when tab is hidden (save resources)
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
             return;
         }
 
@@ -188,18 +252,40 @@ class WebSocketManager {
 
     _startHeartbeat() {
         this._stopHeartbeat();
-        // Ping every 25s to keep connection alive (most proxies timeout at 30-60s)
         this._heartbeatTimer = setInterval(() => {
             if (this._ws && this._ws.readyState === WebSocket.OPEN) {
                 this.send({ type: 'heartbeat' });
+                this._startHeartbeatTimeout();
             }
-        }, 25000);
+        }, HEARTBEAT_INTERVAL);
     }
 
     _stopHeartbeat() {
         if (this._heartbeatTimer) {
             clearInterval(this._heartbeatTimer);
             this._heartbeatTimer = null;
+        }
+        this._clearHeartbeatTimeout();
+    }
+
+    /**
+     * Start a timer that will force-close the connection if the server
+     * doesn't respond to our heartbeat within HEARTBEAT_TIMEOUT.
+     */
+    _startHeartbeatTimeout() {
+        this._clearHeartbeatTimeout();
+        this._heartbeatTimeoutTimer = setTimeout(() => {
+            if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+                // Server is unresponsive — force reconnect
+                this._ws.close(4408, 'Heartbeat timeout');
+            }
+        }, HEARTBEAT_TIMEOUT);
+    }
+
+    _clearHeartbeatTimeout() {
+        if (this._heartbeatTimeoutTimer) {
+            clearTimeout(this._heartbeatTimeoutTimer);
+            this._heartbeatTimeoutTimer = null;
         }
     }
 }

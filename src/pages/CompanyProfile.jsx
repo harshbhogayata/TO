@@ -20,7 +20,7 @@ const CompanyProfile = () => {
 
     useEffect(() => {
         authService.getMe().then(({ data }) => {
-            const p = data.profile || data.company_profile || {};
+            const p = data.profile || {};
             setProfile(p);
             setForm({
                 legal_name: p.legal_name || data.full_name || '',

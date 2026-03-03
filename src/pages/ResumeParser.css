@@ -1,0 +1,252 @@
+/* ── Resume Parser ─────────────────────────────────────────────────────────── */
+
+.rp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+/* Left — Upload Zone */
+.rp-upload-zone {
+    padding: 40px;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+}
+
+.rp-section-label {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 4px;
+    margin-bottom: 16px;
+    display: block;
+    font-weight: 600;
+}
+
+.rp-drop-box {
+    border: 2px dashed var(--border-color);
+    padding: 60px 40px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.rp-drop-box:hover,
+.rp-drop-box--active {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.rp-drop-box h3 {
+    font-family: var(--font-display);
+    font-size: 24px;
+    text-transform: uppercase;
+}
+
+.rp-drop-box p {
+    font-size: 12px;
+    opacity: 0.6;
+}
+
+.rp-progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-weight: 700;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.rp-progress-bar {
+    height: 8px;
+    background: #ccc;
+    width: 100%;
+    position: relative;
+    margin-top: 8px;
+}
+
+.rp-progress-fill {
+    position: absolute;
+    height: 100%;
+    background: var(--text-black);
+    transition: width 0.3s ease;
+}
+
+/* Raw Data Stream */
+.rp-raw-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.rp-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #2e7d32;
+}
+
+.rp-raw-data {
+    background: #fff;
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    font-family: monospace;
+    font-size: 11px;
+    white-space: pre-wrap;
+    color: #666;
+    height: 300px;
+    overflow-y: auto;
+}
+
+/* Right — Structured View */
+.rp-structured {
+    padding: 40px;
+    background: #f8f7f4;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    overflow-y: auto;
+}
+
+.rp-meta-tag {
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--text-black);
+    color: white;
+    padding: 2px 6px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: inline-block;
+}
+
+.rp-extracted-name {
+    font-family: var(--font-display);
+    font-size: 42px;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.rp-extracted-title {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    margin-top: 4px;
+}
+
+/* Skill Tags */
+.rp-skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.rp-skill-tag {
+    padding: 4px 10px;
+    border: 1px solid var(--border-color);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: #fff;
+}
+
+/* Work History Timeline */
+.rp-timeline {
+    position: relative;
+    padding-left: 24px;
+    border-left: 1px solid var(--border-color);
+}
+
+.rp-timeline-item {
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.rp-timeline-dot {
+    position: absolute;
+    left: -28px;
+    top: 6px;
+    width: 8px;
+    height: 8px;
+    background: var(--text-black);
+    border-radius: 50%;
+}
+
+.rp-timeline-company {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    text-transform: uppercase;
+}
+
+.rp-timeline-role {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 4px;
+}
+
+.rp-timeline-highlight {
+    font-size: 11px;
+    font-style: italic;
+    margin-top: 8px;
+}
+
+/* Confirm Button */
+.rp-confirm-btn {
+    background: var(--text-black);
+    color: white;
+    border: none;
+    padding: 16px;
+    width: 100%;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: background 0.3s ease;
+    margin-top: auto;
+}
+
+.rp-confirm-btn:hover { opacity: 0.9; }
+.rp-confirm-btn--success { background: #2e7d32; }
+
+.rp-empty-structured {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    flex: 1;
+    gap: 16px;
+    opacity: 0.4;
+}
+
+.rp-empty-structured h3 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    text-transform: uppercase;
+}
+
+.rp-empty-structured p {
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .rp-grid { grid-template-columns: 1fr; }
+    .rp-upload-zone {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 24px;
+    }
+    .rp-structured { padding: 24px; }
+    .rp-drop-box { padding: 40px 20px; }
+}

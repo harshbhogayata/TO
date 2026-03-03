@@ -103,10 +103,6 @@ def notify_thread_joined(user_id: int, thread_id: int):
     if layer is None:
         return
 
-    # We broadcast to the user's notification group since
-    # the ChatConsumer doesn't have a personal group.
-    # Instead, we send to all thread groups the user is in.
-    # A simpler approach: broadcast to user's personal group.
     group = f'user_{user_id}'
     try:
         async_to_sync(layer.group_send)(group, {
@@ -115,3 +111,35 @@ def notify_thread_joined(user_id: int, thread_id: int):
         })
     except Exception:
         logger.debug('Failed to notify thread join for user %s', user_id)
+
+
+def broadcast_presence(user_id: int, user_name: str, is_online: bool, contact_ids: list[int]):
+    """
+    Broadcast a presence change to a list of contacts.
+    Used when presence changes are detected outside of WebSocket consumers
+    (e.g. from a Celery task that checks stale connections).
+
+    Args:
+        user_id: The user whose presence changed.
+        user_name: Display name of the user.
+        is_online: Whether the user is now online.
+        contact_ids: List of user IDs to notify.
+    """
+    layer = _get_layer()
+    if layer is None:
+        return
+
+    from datetime import datetime, timezone
+    last_seen = None if is_online else datetime.now(timezone.utc).isoformat()
+
+    for uid in contact_ids:
+        try:
+            async_to_sync(layer.group_send)(f'user_{uid}', {
+                'type': 'presence_update',
+                'user_id': user_id,
+                'user_name': user_name,
+                'is_online': is_online,
+                'last_seen': last_seen,
+            })
+        except Exception:
+            pass  # Non-critical

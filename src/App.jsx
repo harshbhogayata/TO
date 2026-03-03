@@ -33,6 +33,7 @@ const Blog = lazy(() => import('./pages/Blog'));
 const Terms = lazy(() => import('./pages/Terms'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const JobDetail = lazy(() => import('./pages/JobDetail'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 
 // Protected — Talent
@@ -51,6 +52,13 @@ const ApplicantReview = lazy(() => import('./pages/ApplicantReview'));
 
 // Protected — Admin
 const AdminConsole = lazy(() => import('./pages/AdminConsole'));
+const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
+
+// Protected — Intelligence
+const RecommendedJobs = lazy(() => import('./pages/RecommendedJobs'));
+const ResumeParser = lazy(() => import('./pages/ResumeParser'));
+const CompanyAnalytics = lazy(() => import('./pages/CompanyAnalytics'));
+const SkillTaxonomy = lazy(() => import('./pages/SkillTaxonomy'));
 
 // Protected — Shared
 const Settings = lazy(() => import('./pages/Settings'));
@@ -84,6 +92,7 @@ function AppRoutes() {
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
                     <Route path="/jobs/:id" element={<JobDetail />} />
+                    <Route path="/search" element={<SearchPage />} />
                     <Route path="/payment/success" element={<PaymentSuccess />} />
                     <Route path="/payment/cancel" element={<PaymentCancel />} />
                     <Route path="/verify-email" element={<VerifyEmail />} />
@@ -119,6 +128,16 @@ function AppRoutes() {
                             <SavedJobs />
                         </ProtectedRoute>
                     } />
+                    <Route path="/recommendations" element={
+                        <ProtectedRoute allowedRoles={['TALENT']}>
+                            <RecommendedJobs />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/resume-parser" element={
+                        <ProtectedRoute allowedRoles={['TALENT']}>
+                            <ResumeParser />
+                        </ProtectedRoute>
+                    } />
 
                     {/* ── Company-only routes ───────────────────────── */}
                     <Route path="/company" element={
@@ -142,10 +161,22 @@ function AppRoutes() {
                         </ProtectedRoute>
                     } />
 
-                    {/* ── Admin-only routes ─────────────────────────── */}
+                    {/* ── Company analytics ──────────────────────────── */}
+                    <Route path="/company/analytics" element={
+                        <ProtectedRoute allowedRoles={['COMPANY']}>
+                            <CompanyAnalytics />
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ── Admin-only routes ─────────────────────────────── */}
                     <Route path="/admin" element={
                         <ProtectedRoute allowedRoles={['ADMIN']}>
                             <AdminConsole />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/analytics" element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <AdminAnalytics />
                         </ProtectedRoute>
                     } />
 
@@ -163,6 +194,11 @@ function AppRoutes() {
                     <Route path="/notifications" element={
                         <ProtectedRoute>
                             <Notifications />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/skills/taxonomy" element={
+                        <ProtectedRoute>
+                            <SkillTaxonomy />
                         </ProtectedRoute>
                     } />
 

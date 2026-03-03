@@ -7,42 +7,49 @@ const defaultTalentNav = [
     [
         { num: '01', label: 'My Dashboard', path: '/user' },
         { num: '02', label: 'Job Search', path: '/jobs' },
-        { num: '03', label: 'Skill Hub', path: '/skills' },
-        { num: '04', label: 'Applications', path: '/applications' },
-        { num: '05', label: 'Saved Jobs', path: '/saved' },
-        { num: '06', label: 'Messages', path: '/inbox' }
+        { num: '03', label: 'AI Recommendations', path: '/recommendations' },
+        { num: '04', label: 'Skill Hub', path: '/skills' },
+        { num: '05', label: 'Applications', path: '/applications' },
+        { num: '06', label: 'Saved Jobs', path: '/saved' },
+        { num: '07', label: 'Messages', path: '/inbox' }
     ],
     [
-        { num: '07', label: 'Notifications', path: '/notifications' },
-        { num: '08', label: 'Profile', path: '/profile' },
-        { num: '09', label: 'Settings', path: '/settings' }
+        { num: '08', label: 'Resume Parser', path: '/resume-parser' },
+        { num: '09', label: 'Skill Browser', path: '/skills/taxonomy' },
+        { num: '10', label: 'Notifications', path: '/notifications' },
+        { num: '11', label: 'Profile', path: '/profile' },
+        { num: '12', label: 'Settings', path: '/settings' }
     ]
 ];
 
 const defaultCompanyNav = [
     [
         { num: '01', label: 'Company Hub', path: '/company' },
-        { num: '02', label: 'Post a Job', path: '/company/post-job' },
-        { num: '03', label: 'Job Board', path: '/jobs' },
-        { num: '04', label: 'Company Profile', path: '/company/profile' },
-        { num: '05', label: 'Messages', path: '/inbox' }
+        { num: '02', label: 'Analytics', path: '/company/analytics' },
+        { num: '03', label: 'Post a Job', path: '/company/post-job' },
+        { num: '04', label: 'Job Board', path: '/jobs' },
+        { num: '05', label: 'Company Profile', path: '/company/profile' },
+        { num: '06', label: 'Messages', path: '/inbox' }
     ],
     [
-        { num: '06', label: 'Notifications', path: '/notifications' },
-        { num: '07', label: 'Settings', path: '/settings' }
+        { num: '07', label: 'Skill Browser', path: '/skills/taxonomy' },
+        { num: '08', label: 'Notifications', path: '/notifications' },
+        { num: '09', label: 'Settings', path: '/settings' }
     ]
 ];
 
 const defaultAdminNav = [
     [
         { num: '01', label: 'Admin Console', path: '/admin' },
-        { num: '02', label: 'Job Board', path: '/jobs' },
-        { num: '03', label: 'Messages', path: '/inbox' },
-        { num: '04', label: 'Notifications', path: '/notifications' },
-        { num: '05', label: 'About', path: '/about' }
+        { num: '02', label: 'Platform Analytics', path: '/admin/analytics' },
+        { num: '03', label: 'Job Board', path: '/jobs' },
+        { num: '04', label: 'Messages', path: '/inbox' },
+        { num: '05', label: 'Notifications', path: '/notifications' },
+        { num: '06', label: 'About', path: '/about' }
     ],
     [
-        { num: '06', label: 'Settings', path: '/settings' }
+        { num: '07', label: 'Skill Browser', path: '/skills/taxonomy' },
+        { num: '08', label: 'Settings', path: '/settings' }
     ]
 ];
 

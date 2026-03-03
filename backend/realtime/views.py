@@ -1,6 +1,6 @@
 """
 realtime/views.py
-REST endpoints for push notification token management.
+REST endpoints for push notification token management and user presence.
 """
 
 import logging
@@ -79,3 +79,44 @@ def unregister_push_token(request):
         return Response({'detail': 'Token not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     return Response({'status': 'unsubscribed'})
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def get_presence(request):
+    """
+    POST /api/v1/push/presence/
+    Get presence (online/offline/last-seen) for a list of user IDs.
+
+    Body:
+        { "user_ids": [1, 2, 3] }
+
+    Response:
+        {
+            "presence": {
+                "1": { "is_online": true, "last_seen": null },
+                "2": { "is_online": false, "last_seen": "2026-03-01T12:00:00+00:00" }
+            }
+        }
+
+    Clients call this on initial page load to populate presence state,
+    then rely on WebSocket presence events for real-time updates.
+    """
+    from .presence import get_bulk_presence
+
+    user_ids = request.data.get('user_ids', [])
+    if not isinstance(user_ids, list):
+        return Response(
+            {'detail': 'user_ids must be a list of integers.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Cap to prevent abuse
+    user_ids = [int(uid) for uid in user_ids[:100] if isinstance(uid, (int, str))]
+
+    presence = get_bulk_presence(user_ids)
+
+    # Convert int keys to string for JSON compatibility
+    return Response({
+        'presence': {str(k): v for k, v in presence.items()},
+    })

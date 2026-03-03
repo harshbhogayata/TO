@@ -4,6 +4,7 @@ Job Board data models for TalentOrbit.
 """
 from django.db import models
 from django.conf import settings
+from django.contrib.postgres.search import SearchVectorField
 
 
 class JobPost(models.Model):
@@ -57,6 +58,10 @@ class JobPost(models.Model):
     salary_currency = models.CharField(max_length=10, default='USD')
     skills_required = models.JSONField(default=list)
 
+    # Pre-computed full-text search vector — updated via signal on save.
+    # GIN-indexed for O(log n) lookups regardless of table size.
+    search_vector = SearchVectorField(null=True, blank=True, editable=False)
+
     application_deadline = models.DateField(null=True, blank=True)
     views_count = models.PositiveIntegerField(default=0)
 
@@ -71,6 +76,9 @@ class JobPost(models.Model):
             models.Index(fields=['company', 'status'], name='idx_job_company_status'),
             models.Index(fields=['-created_at', 'status'], name='idx_job_created_status'),
         ]
+        # NOTE: GIN index on search_vector is created via migration RunSQL
+        # because Django's Index class doesn't natively support GIN on SearchVectorField.
+        # See search/migrations/0002_gin_indexes.py
 
     def __str__(self):
         try:

@@ -83,16 +83,19 @@ class JobPostSerializer(serializers.ModelSerializer):
             return 0
         if request.user.role != 'TALENT' or not hasattr(request.user, 'talent_profile'):
             return 0
-            
-        talent_skills = set(s.lower() for s in request.user.talent_profile.skills)
-        job_skills = set(s.lower() for s in obj.skills_required)
-        
-        if not job_skills:
-            return 0
-            
-        match_count = len(talent_skills.intersection(job_skills))
-        score = int((match_count / len(job_skills)) * 100)
-        return min(score, 100)
+
+        try:
+            from intelligence.engine.hybrid import compute_match_score
+            result = compute_match_score(request.user, obj)
+            return int(result.get('final_score', 0))
+        except Exception:
+            # Graceful fallback — simple intersection if intelligence engine unavailable
+            talent_skills = set(s.lower() for s in request.user.talent_profile.skills)
+            job_skills = set(s.lower() for s in obj.skills_required)
+            if not job_skills:
+                return 0
+            match_count = len(talent_skills.intersection(job_skills))
+            return min(int((match_count / len(job_skills)) * 100), 100)
 
 
 class JobPostWriteSerializer(serializers.ModelSerializer):

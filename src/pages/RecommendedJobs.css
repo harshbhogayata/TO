@@ -1,0 +1,234 @@
+/* ── AI Recommended Jobs ───────────────────────────────────────────────────── */
+
+.rj-section-label {
+    font-family: var(--font-serif);
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    margin: 40px 40px 20px 40px;
+    padding-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Carousel */
+.rj-carousel {
+    padding: 0 0 0 40px;
+    margin-bottom: 40px;
+    overflow-x: auto;
+    display: flex;
+    gap: 20px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.rj-carousel::-webkit-scrollbar { display: none; }
+
+.rj-card {
+    min-width: 380px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.rj-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #2e7d32;
+    color: white;
+    padding: 8px 12px;
+    font-family: var(--font-display);
+    font-size: 20px;
+    border-left: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.rj-card-meta {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.rj-card-title {
+    font-family: var(--font-display);
+    font-size: 28px;
+    text-transform: uppercase;
+    line-height: 1.1;
+    margin-bottom: 16px;
+}
+
+.rj-card-salary {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: block;
+}
+
+/* Skill Tags */
+.rj-skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.rj-skill-tag {
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.rj-skill-tag--matched {
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: var(--text-black);
+    color: white;
+}
+
+/* Secondary Grid */
+.rj-grid {
+    padding: 0 40px 40px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.rj-grid-item {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.rj-grid-company {
+    font-family: var(--font-serif);
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.rj-grid-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    text-transform: uppercase;
+    margin: 4px 0;
+}
+
+.rj-match-indicator {
+    text-align: right;
+    border-left: 1px dashed var(--border-color);
+    padding-left: 20px;
+    flex-shrink: 0;
+}
+
+.rj-score-small {
+    font-family: var(--font-display);
+    font-size: 24px;
+    color: #2e7d32;
+    display: block;
+}
+
+.rj-label-tiny {
+    font-size: 8px;
+    text-transform: uppercase;
+    display: block;
+    font-weight: 800;
+}
+
+/* Analyze / View Button */
+.rj-btn {
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-black);
+    padding: 4px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-top: 12px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-family: var(--font-sans);
+}
+
+.rj-btn:hover {
+    background: var(--text-black);
+    color: white;
+}
+
+.rj-btn--full {
+    width: 100%;
+    margin-top: 24px;
+}
+
+/* Modal */
+.rj-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.rj-modal {
+    background: var(--bg-beige);
+    border: 1px solid var(--border-color);
+    padding: 40px;
+    max-width: 480px;
+    width: 100%;
+    position: relative;
+}
+
+.rj-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.rj-modal-analysis {
+    margin-top: 24px;
+    font-size: 12px;
+    font-family: var(--font-serif);
+    color: #444;
+    line-height: 1.6;
+}
+
+.rj-empty {
+    padding: 40px;
+    text-align: center;
+    font-size: 11px;
+    text-transform: uppercase;
+    opacity: 0.4;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .rj-grid { grid-template-columns: 1fr; padding: 0 20px 40px; }
+    .rj-section-label { margin: 24px 20px 16px; }
+    .rj-carousel { padding-left: 20px; }
+    .rj-card { min-width: 300px; }
+    .rj-modal { margin: 20px; padding: 24px; }
+}

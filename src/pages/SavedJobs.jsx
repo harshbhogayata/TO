@@ -62,7 +62,7 @@ const SavedJobs = () => {
             headerRightContent={
                 <div className="header-stats">
                     <div className="stat-block"><h3>Saved</h3><p>{savedJobs.length} Roles</p></div>
-                    <div className="stat-block"><h3>Applied</h3><p>{savedJobs.filter(s => s.has_applied).length} Submitted</p></div>
+                    <div className="stat-block"><h3>Applied</h3><p>{savedJobs.filter(s => s.job?.has_applied || s.has_applied).length} Submitted</p></div>
                 </div>
             }
         >

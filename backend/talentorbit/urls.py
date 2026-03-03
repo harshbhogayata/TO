@@ -49,6 +49,8 @@ urlpatterns = [
     path('api/v1/notifications/', include('notifications.urls')),
     path('api/v1/courses/', include('courses.urls')),
     path('api/v1/push/', include('realtime.urls')),
+    path('api/v1/search/', include('search.urls')),
+    path('api/v1/intelligence/', include('intelligence.urls')),
 ]
 
 # Serve uploaded media files in development

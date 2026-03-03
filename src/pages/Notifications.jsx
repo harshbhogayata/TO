@@ -141,7 +141,7 @@ const Notifications = () => {
                                 <div className="notif-category-tag">{n.category || 'System'}</div>
                                 <div className="notif-item-content" style={{ flex: 1 }}>
                                     <span className="notif-item-title">{n.title}</span>
-                                    <p className="notif-item-desc">{n.description || n.message || ''}</p>
+                                    <p className="notif-item-desc">{n.description || ''}</p>
                                     <span className="notif-time">{formatTime(n.created_at)}</span>
                                 </div>
                             </div>

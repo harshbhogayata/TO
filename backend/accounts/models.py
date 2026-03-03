@@ -6,6 +6,7 @@ Supports three distinct account types: TALENT, COMPANY, ADMIN.
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.db import models
 from django.utils import timezone
+from django.contrib.postgres.search import SearchVectorField
 
 
 class UserManager(BaseUserManager):
@@ -100,6 +101,9 @@ class TalentProfile(models.Model):
     portfolio_url = models.URLField(blank=True)
     skills = models.JSONField(default=list, help_text='Flat list of skill strings')
     is_open_to_work = models.BooleanField(default=True)
+
+    # Pre-computed full-text search vector — updated via signal on save.
+    search_vector = SearchVectorField(null=True, blank=True, editable=False)
     subscription_tier = models.CharField(
         max_length=50, default='free',
         choices=[('free', 'Free'), ('premium', 'Premium')]
@@ -130,6 +134,9 @@ class CompanyProfile(models.Model):
     headquarters = models.CharField(max_length=200, blank=True)
     website = models.URLField(blank=True)
     is_verified = models.BooleanField(default=False)
+
+    # Pre-computed full-text search vector — updated via signal on save.
+    search_vector = SearchVectorField(null=True, blank=True, editable=False)
     subscription_tier = models.CharField(
         max_length=50, default='free',
         choices=[('free', 'Free'), ('starter', 'Starter'), ('professional', 'Professional'), ('enterprise', 'Enterprise')]

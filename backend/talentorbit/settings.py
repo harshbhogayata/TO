@@ -60,6 +60,9 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'channels',
 
+    # PostgreSQL extensions
+    'django.contrib.postgres',
+
     # TalentOrbit apps
     'accounts',
     'jobs',
@@ -70,6 +73,8 @@ INSTALLED_APPS = [
     'courses',
     'payments',
     'realtime',
+    'search',
+    'intelligence',
 ]
 
 MIDDLEWARE = [
@@ -82,6 +87,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'intelligence.experiments.middleware.ExperimentMiddleware',
 ]
 
 ROOT_URLCONF = 'talentorbit.urls'
@@ -173,6 +179,13 @@ else:
 
 # ─── Firebase Cloud Messaging (push notifications) ────────────────────────────
 FIREBASE_CREDENTIALS_PATH = os.environ.get('FIREBASE_CREDENTIALS_PATH', '')
+
+# ─── WebSocket rate limiting ──────────────────────────────────────────────────
+WS_CONNECT_RATE_LIMIT = int(os.environ.get('WS_CONNECT_RATE_LIMIT', 20))   # max connects per IP per window
+WS_CONNECT_RATE_WINDOW = int(os.environ.get('WS_CONNECT_RATE_WINDOW', 60)) # seconds
+WS_MESSAGE_RATE_LIMIT = int(os.environ.get('WS_MESSAGE_RATE_LIMIT', 60))   # max messages per user per window
+WS_MESSAGE_RATE_WINDOW = int(os.environ.get('WS_MESSAGE_RATE_WINDOW', 60)) # seconds
+WS_MAX_CONNECTIONS_PER_USER = int(os.environ.get('WS_MAX_CONNECTIONS_PER_USER', 5))
 
 # ─── Custom User Model ────────────────────────────────────────────────────────
 AUTH_USER_MODEL = 'accounts.User'
@@ -401,6 +414,21 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'realtime': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'search': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'intelligence': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
 
@@ -455,6 +483,8 @@ CELERY_TASK_QUEUES = {
     'default': {},
     'emails': {},
     'notifications': {},
+    'intelligence': {},
+    'analytics': {},
     'dlq': {},                       # Dead-letter queue for manual triage
 }
 CELERY_TASK_ROUTES = {
@@ -465,6 +495,23 @@ CELERY_TASK_ROUTES = {
     'notifications.create_bulk_notifications': {'queue': 'notifications'},
     'notifications.send_application_notification': {'queue': 'notifications'},
     'notifications.send_message_notification': {'queue': 'notifications'},
+    # Intelligence — recommendation engine
+    'intelligence.retrain_tfidf_vectorizer': {'queue': 'intelligence'},
+    'intelligence.rebuild_interaction_matrix': {'queue': 'intelligence'},
+    'intelligence.warm_recommendation_cache': {'queue': 'intelligence'},
+    'intelligence.parse_resume_async': {'queue': 'intelligence'},
+    # Intelligence — NLP / taxonomy
+    'intelligence.rebuild_skill_entity_ruler': {'queue': 'intelligence'},
+    'intelligence.update_skill_taxonomy': {'queue': 'intelligence'},
+    'intelligence.discover_new_skills': {'queue': 'intelligence'},
+    # Intelligence — analytics / warehouse
+    'intelligence.compute_daily_funnel_snapshots': {'queue': 'analytics'},
+    'intelligence.compute_daily_platform_metrics': {'queue': 'analytics'},
+    'intelligence.compute_platform_benchmarks': {'queue': 'analytics'},
+    'intelligence.aggregate_period_snapshots': {'queue': 'analytics'},
+    # Intelligence — cleanup
+    'intelligence.cleanup_old_recommendation_logs': {'queue': 'default'},
+    'intelligence.cleanup_old_interactions': {'queue': 'default'},
 }
 
 # Celery Beat schedule — periodic housekeeping tasks
@@ -485,6 +532,74 @@ CELERY_BEAT_SCHEDULE = {
     'celery-health-heartbeat': {
         'task': 'talentorbit.tasks.celery_health_heartbeat',
         'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'default'},
+    },
+
+    # ── Intelligence — Recommendation Engine ──────────────────────────────
+    'retrain-tfidf-vectorizer': {
+        'task': 'intelligence.retrain_tfidf_vectorizer',
+        'schedule': crontab(hour=2, minute=0),
+        'options': {'queue': 'intelligence'},
+    },
+    'rebuild-interaction-matrix': {
+        'task': 'intelligence.rebuild_interaction_matrix',
+        'schedule': crontab(hour=2, minute=30),
+        'options': {'queue': 'intelligence'},
+    },
+    'warm-recommendation-cache': {
+        'task': 'intelligence.warm_recommendation_cache',
+        'schedule': crontab(minute=0, hour='*/4'),
+        'options': {'queue': 'intelligence'},
+    },
+
+    # ── Intelligence — NLP / Taxonomy ─────────────────────────────────────
+    'rebuild-skill-entity-ruler': {
+        'task': 'intelligence.rebuild_skill_entity_ruler',
+        'schedule': crontab(hour=2, minute=15),
+        'options': {'queue': 'intelligence'},
+    },
+    'update-skill-taxonomy': {
+        'task': 'intelligence.update_skill_taxonomy',
+        'schedule': crontab(hour=3, minute=0, day_of_week=0),  # Sunday
+        'options': {'queue': 'intelligence'},
+    },
+    'discover-new-skills': {
+        'task': 'intelligence.discover_new_skills',
+        'schedule': crontab(hour=3, minute=0, day_of_week=3),  # Wednesday
+        'options': {'queue': 'intelligence'},
+    },
+
+    # ── Intelligence — Analytics / Warehouse ──────────────────────────────
+    'compute-daily-funnel-snapshots': {
+        'task': 'intelligence.compute_daily_funnel_snapshots',
+        'schedule': crontab(hour=1, minute=0),
+        'options': {'queue': 'analytics'},
+    },
+    'compute-daily-platform-metrics': {
+        'task': 'intelligence.compute_daily_platform_metrics',
+        'schedule': crontab(hour=1, minute=30),
+        'options': {'queue': 'analytics'},
+    },
+    'compute-platform-benchmarks': {
+        'task': 'intelligence.compute_platform_benchmarks',
+        'schedule': crontab(hour=4, minute=0, day_of_week=1),  # Monday
+        'options': {'queue': 'analytics'},
+    },
+    'aggregate-period-snapshots': {
+        'task': 'intelligence.aggregate_period_snapshots',
+        'schedule': crontab(hour=5, minute=0, day_of_week=1),  # Monday
+        'options': {'queue': 'analytics'},
+    },
+
+    # ── Intelligence — Cleanup ────────────────────────────────────────────
+    'cleanup-old-recommendation-logs': {
+        'task': 'intelligence.cleanup_old_recommendation_logs',
+        'schedule': crontab(hour=4, minute=0, day_of_week=6),  # Saturday
+        'options': {'queue': 'default'},
+    },
+    'cleanup-old-interactions': {
+        'task': 'intelligence.cleanup_old_interactions',
+        'schedule': crontab(hour=4, minute=30, day_of_week=6),  # Saturday
         'options': {'queue': 'default'},
     },
 }

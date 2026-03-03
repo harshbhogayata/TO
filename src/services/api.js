@@ -146,9 +146,7 @@ export const authService = {
     registerTalent: (data) =>
         api.post('/auth/register/talent/', data),
     extractResume: (formData) =>
-        api.post('/auth/extract-resume/', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        }),
+        api.post('/intelligence/parse-resume/', formData),
     registerCompany: (data) =>
         api.post('/auth/register/company/', data),
     logout: (refresh) =>
@@ -156,13 +154,9 @@ export const authService = {
     getMe: () =>
         api.get('/auth/me/'),
     updateTalentProfile: (data) =>
-        api.patch('/auth/profile/talent/', data, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        }),
+        api.patch('/auth/profile/talent/', data),
     updateCompanyProfile: (data) =>
-        api.patch('/auth/profile/company/', data, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        }),
+        api.patch('/auth/profile/company/', data),
     changePassword: (data) =>
         api.post('/auth/change-password/', data),
     requestPasswordReset: (email) =>
@@ -242,4 +236,73 @@ export const notificationsService = {
 
 export const coursesService = {
     listCourses: () => api.get('/courses/'),
+};
+
+export const intelligenceService = {
+    // Recommendations
+    getRecommendedJobs: (limit = 20) =>
+        api.get('/intelligence/recommendations/jobs/', { params: { limit } }),
+    getMatchScore: (jobId) =>
+        api.get('/intelligence/match-score/', { params: { job: jobId } }),
+
+    // Interactions
+    recordInteraction: (jobId, interactionType, metadata = {}) =>
+        api.post('/intelligence/interactions/', {
+            job: jobId,
+            interaction_type: interactionType,
+            metadata,
+        }),
+
+    // Resume parser
+    parseResume: (formData) =>
+        api.post('/intelligence/parse-resume/', formData),
+    getParsedResume: () =>
+        api.get('/intelligence/parse-resume/'),
+    applyParsedResume: (data) =>
+        api.post('/intelligence/parse-resume/apply/', data),
+
+    // Skill taxonomy
+    getSkillTaxonomy: (params) =>
+        api.get('/intelligence/skills/taxonomy/', { params }),
+    getSkillSuggestions: (q) =>
+        api.get('/intelligence/skills/suggestions/', { params: { q } }),
+
+    // Company analytics
+    getAnalyticsOverview: () =>
+        api.get('/intelligence/analytics/overview/'),
+    getAnalyticsFunnel: (jobId) =>
+        api.get('/intelligence/analytics/funnel/', { params: jobId ? { job: jobId } : {} }),
+    getTimeToHire: () =>
+        api.get('/intelligence/analytics/time-to-hire/'),
+    getSourceAttribution: () =>
+        api.get('/intelligence/analytics/sources/'),
+    getTalentPool: () =>
+        api.get('/intelligence/analytics/talent-pool/'),
+    getBenchmarks: () =>
+        api.get('/intelligence/analytics/benchmarks/'),
+    getJobPerformance: () =>
+        api.get('/intelligence/analytics/jobs/'),
+    exportAnalytics: (format = 'json', dateFrom, dateTo) =>
+        api.get('/intelligence/analytics/export/', {
+            params: { format, date_from: dateFrom, date_to: dateTo },
+            responseType: format === 'csv' ? 'blob' : 'json',
+        }),
+
+    // Platform analytics (admin)
+    getPlatformMetrics: (days = 30) =>
+        api.get('/intelligence/analytics/platform/', { params: { days } }),
+    getPlatformGrowth: (days = 30) =>
+        api.get('/intelligence/analytics/platform/growth/', { params: { days } }),
+    getPlatformEngagement: (days = 30) =>
+        api.get('/intelligence/analytics/platform/engagement/', { params: { days } }),
+    getPlatformBenchmarks: () =>
+        api.get('/intelligence/analytics/platform/benchmarks/'),
+
+    // Experiments / A/B testing
+    getFeatureFlags: () =>
+        api.get('/intelligence/experiments/flags/'),
+    trackExperimentEvent: (event, properties = {}, experimentKey, variant) =>
+        api.post('/intelligence/experiments/track/', {
+            event, properties, experiment_key: experimentKey, variant,
+        }),
 };

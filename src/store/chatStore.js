@@ -8,18 +8,28 @@
  *  - Active thread messages
  *  - Typing indicators
  *  - Read receipts
- *  - Optimistic message sending
+ *  - Optimistic message sending with offline queue
+ *  - Message delivery acknowledgments
+ *  - User presence (online/offline/last-seen)
+ *  - Reconnect gap recovery (sync missed messages)
  */
 import { create } from 'zustand';
 import { WebSocketManager } from '../services/websocket';
 import { useAuthStore } from './authStore';
 import { messagingService } from '../services/api';
+import api from '../services/api';
 
 /** @type {WebSocketManager|null} */
 let _chatWs = null;
 
 /** Typing indicator debounce timers per thread */
 const _typingTimers = new Map();
+
+/** Timestamp of last received message (for reconnect sync) */
+let _lastMessageTimestamp = null;
+
+/** Offline message queue — messages sent while disconnected */
+const _offlineQueue = [];
 
 export const useChatStore = create((set, get) => ({
     // ── State ─────────────────────────────────────────────────────────────
@@ -32,6 +42,8 @@ export const useChatStore = create((set, get) => ({
     isSending: false,
     wsConnected: false,
     totalUnread: 0,
+    presence: {},             // { userId: { is_online: bool, last_seen: string|null } }
+    pendingAcks: new Set(),   // Message IDs waiting for delivery ack
 
     // ── Thread Management ─────────────────────────────────────────────────
 
@@ -46,12 +58,14 @@ export const useChatStore = create((set, get) => ({
             set({ threads, isLoadingThreads: false });
 
             // Calculate total unread
-            const userId = useAuthStore.getState().user?.id;
             const totalUnread = threads.reduce((sum, t) => sum + (t.unread_count || 0), 0);
             set({ totalUnread });
 
             // Connect WebSocket
             get().connectWebSocket();
+
+            // Fetch initial presence for all participants
+            get()._fetchInitialPresence(threads);
         } catch {
             set({ isLoadingThreads: false });
         }
@@ -69,6 +83,11 @@ export const useChatStore = create((set, get) => ({
             const { data } = await messagingService.getMessages(threadId);
             const messages = data.results || data;
             set({ messages, isLoadingMessages: false });
+
+            // Track last message timestamp for reconnect sync
+            if (messages.length > 0) {
+                _lastMessageTimestamp = messages[messages.length - 1].sent_at;
+            }
 
             // Update thread unread count locally
             set(state => ({
@@ -88,17 +107,19 @@ export const useChatStore = create((set, get) => ({
     },
 
     /**
-     * Send a message — optimistic update + WebSocket.
+     * Send a message — optimistic update + WebSocket with offline fallback.
      */
     sendMessage: async (threadId, body) => {
         const user = useAuthStore.getState().user;
         if (!body.trim() || !user) return null;
 
+        const trimmedBody = body.trim();
+
         // Try WebSocket first (lower latency)
         const wsSent = _chatWs?.send({
             type: 'chat.message',
             thread_id: threadId,
-            body: body.trim(),
+            body: trimmedBody,
         });
 
         if (!wsSent) {
@@ -107,7 +128,7 @@ export const useChatStore = create((set, get) => ({
             try {
                 const { data } = await messagingService.sendMessage({
                     thread: threadId,
-                    body: body.trim(),
+                    body: trimmedBody,
                 });
                 // Add to messages if this is the active thread
                 if (get().activeThreadId === threadId) {
@@ -116,7 +137,7 @@ export const useChatStore = create((set, get) => ({
                     }));
                 }
                 // Update thread preview
-                get()._updateThreadPreview(threadId, body.trim(), user.full_name);
+                get()._updateThreadPreview(threadId, trimmedBody, user.full_name);
                 return data;
             } catch (err) {
                 throw err;
@@ -197,6 +218,17 @@ export const useChatStore = create((set, get) => ({
         });
     },
 
+    // ── Presence ──────────────────────────────────────────────────────────
+
+    /**
+     * Get the online status of a specific user.
+     * @param {number} userId
+     * @returns {{ is_online: boolean, last_seen: string|null }}
+     */
+    getUserPresence: (userId) => {
+        return get().presence[userId] || { is_online: false, last_seen: null };
+    },
+
     // ── WebSocket ─────────────────────────────────────────────────────────
 
     connectWebSocket: () => {
@@ -209,6 +241,17 @@ export const useChatStore = create((set, get) => ({
             getToken: () => useAuthStore.getState().accessToken,
             onOpen: () => {
                 set({ wsConnected: true });
+
+                // Flush offline queue
+                while (_offlineQueue.length > 0) {
+                    const msg = _offlineQueue.shift();
+                    _chatWs?.send(msg);
+                }
+
+                // Sync missed messages if we have a last timestamp
+                if (_lastMessageTimestamp && get().activeThreadId) {
+                    get()._syncMissedMessages(get().activeThreadId, _lastMessageTimestamp);
+                }
             },
             onClose: () => {
                 set({ wsConnected: false });
@@ -244,6 +287,11 @@ export const useChatStore = create((set, get) => ({
                 const msg = data.message;
                 const { activeThreadId, messages } = get();
 
+                // Track timestamp for reconnect sync
+                if (msg.sent_at) {
+                    _lastMessageTimestamp = msg.sent_at;
+                }
+
                 // Add message to active thread if it matches
                 if (msg.thread_id === activeThreadId) {
                     // Avoid duplicates
@@ -278,6 +326,19 @@ export const useChatStore = create((set, get) => ({
                         },
                     };
                 });
+                break;
+            }
+
+            case 'chat.ack': {
+                // Server acknowledged message delivery
+                const { message_id, thread_id, sent_at } = data;
+                set(state => ({
+                    pendingAcks: (() => {
+                        const next = new Set(state.pendingAcks);
+                        next.delete(message_id);
+                        return next;
+                    })(),
+                }));
                 break;
             }
 
@@ -326,7 +387,7 @@ export const useChatStore = create((set, get) => ({
             }
 
             case 'chat.read': {
-                const { thread_id, user_id } = data;
+                const { thread_id } = data;
                 // Mark messages in active thread as read
                 if (thread_id === get().activeThreadId) {
                     set(state => ({
@@ -340,10 +401,84 @@ export const useChatStore = create((set, get) => ({
                 break;
             }
 
-            case 'error': {
-                console.warn('Chat WS error:', data.detail);
+            case 'presence': {
+                const { user_id, is_online, last_seen } = data;
+                set(state => ({
+                    presence: {
+                        ...state.presence,
+                        [user_id]: { is_online, last_seen },
+                    },
+                }));
                 break;
             }
+
+            case 'error': {
+                console.warn('Chat WS error:', data.code, data.detail);
+                break;
+            }
+        }
+    },
+
+    /**
+     * Sync messages missed during a WebSocket disconnect.
+     * @param {number} threadId
+     * @param {string} sinceTimestamp - ISO timestamp
+     */
+    _syncMissedMessages: async (threadId, sinceTimestamp) => {
+        try {
+            const { data } = await api.get(
+                `/messages/${threadId}/sync/`,
+                { params: { since: sinceTimestamp } }
+            );
+            const missed = data.messages || [];
+            if (missed.length === 0) return;
+
+            set(state => {
+                const existingIds = new Set(state.messages.map(m => m.id));
+                const newMessages = missed.filter(m => !existingIds.has(m.id));
+                if (newMessages.length === 0) return state;
+
+                const merged = [...state.messages, ...newMessages]
+                    .sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at));
+
+                // Update last timestamp
+                _lastMessageTimestamp = merged[merged.length - 1].sent_at;
+
+                return { messages: merged };
+            });
+        } catch {
+            // Non-critical — user can refresh to see missed messages
+        }
+    },
+
+    /**
+     * Fetch initial presence for all unique participants across threads.
+     * @param {Array} threads
+     */
+    _fetchInitialPresence: async (threads) => {
+        const userIds = new Set();
+        const currentUserId = useAuthStore.getState().user?.id;
+        for (const thread of threads) {
+            for (const p of (thread.participants || [])) {
+                if (p.id !== currentUserId) {
+                    userIds.add(p.id);
+                }
+            }
+        }
+
+        if (userIds.size === 0) return;
+
+        try {
+            const { data } = await api.post('/push/presence/', {
+                user_ids: [...userIds],
+            });
+            const presenceMap = {};
+            for (const [uid, info] of Object.entries(data.presence || {})) {
+                presenceMap[Number(uid)] = info;
+            }
+            set({ presence: presenceMap });
+        } catch {
+            // Non-critical
         }
     },
 
@@ -383,6 +518,8 @@ export const useChatStore = create((set, get) => ({
     reset: () => {
         _chatWs?.disconnect();
         _chatWs = null;
+        _lastMessageTimestamp = null;
+        _offlineQueue.length = 0;
         _typingTimers.forEach(timer => clearTimeout(timer));
         _typingTimers.clear();
         set({
@@ -395,6 +532,8 @@ export const useChatStore = create((set, get) => ({
             isSending: false,
             wsConnected: false,
             totalUnread: 0,
+            presence: {},
+            pendingAcks: new Set(),
         });
     },
 }));

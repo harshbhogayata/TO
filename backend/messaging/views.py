@@ -187,3 +187,66 @@ def unread_count(request):
         sender=request.user
     ).count()
     return Response({'unread': total_unread})
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def sync_messages(request, thread_id):
+    """
+    GET /api/messages/<thread_id>/sync/?since=<ISO timestamp>
+    Fetch messages created after a given timestamp for reconnection gap recovery.
+
+    This endpoint is called by the frontend after a WebSocket reconnect to
+    fetch any messages that were sent while the connection was down.
+
+    Query params:
+        since (required): ISO 8601 timestamp. Only messages after this time are returned.
+        limit (optional): Max messages to return (default 100, max 500).
+
+    Returns:
+        { "messages": [...], "has_more": bool }
+    """
+    from django.shortcuts import get_object_or_404
+    from datetime import datetime, timezone as tz
+    from django.utils.dateparse import parse_datetime
+
+    # Verify user is a participant
+    thread = get_object_or_404(
+        Thread, pk=thread_id, participants=request.user
+    )
+
+    since_str = request.query_params.get('since')
+    if not since_str:
+        return Response(
+            {'detail': 'The "since" query parameter is required (ISO 8601 timestamp).'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    since_dt = parse_datetime(since_str)
+    if since_dt is None:
+        return Response(
+            {'detail': 'Invalid "since" timestamp. Use ISO 8601 format.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Ensure timezone-aware
+    if since_dt.tzinfo is None:
+        since_dt = since_dt.replace(tzinfo=tz.utc)
+
+    limit = min(int(request.query_params.get('limit', 100)), 500)
+
+    messages_qs = thread.messages.filter(
+        sent_at__gt=since_dt
+    ).select_related('sender').order_by('sent_at')[:limit + 1]
+
+    messages_list = list(messages_qs)
+    has_more = len(messages_list) > limit
+    if has_more:
+        messages_list = messages_list[:limit]
+
+    serialized = MessageSerializer(messages_list, many=True).data
+
+    return Response({
+        'messages': serialized,
+        'has_more': has_more,
+    })

@@ -13,6 +13,11 @@ const AuthPage = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // 2FA state
+    const [twoFARequired, setTwoFARequired] = useState(false);
+    const [tempToken, setTempToken] = useState('');
+    const [totpCode, setTotpCode] = useState('');
+
     const navigate = useNavigate();
     const location = useLocation();
     const { setAuth, user, isAuthenticated } = useAuthStore();
@@ -25,6 +30,12 @@ const AuthPage = () => {
         }
     }, [isAuthenticated, user, navigate]);
 
+    const redirectAfterLogin = (role) => {
+        const from = location.state?.from?.pathname;
+        const dashboardMap = { TALENT: '/user', COMPANY: '/company', ADMIN: '/admin' };
+        navigate(from || dashboardMap[role] || '/', { replace: true });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -32,14 +43,34 @@ const AuthPage = () => {
 
         try {
             const { data } = await authService.loginUser(email, password);
-            setAuth(data.user, data.access, data.refresh);
 
-            // Navigate to the page they originally tried to access, or their dashboard
-            const from = location.state?.from?.pathname;
-            const dashboardMap = { TALENT: '/user', COMPANY: '/company', ADMIN: '/admin' };
-            navigate(from || dashboardMap[data.user.role] || '/', { replace: true });
+            // Check if 2FA is required
+            if (data.requires_2fa) {
+                setTempToken(data.temp_token);
+                setTwoFARequired(true);
+                return;
+            }
+
+            setAuth(data.user, data.access, data.refresh);
+            redirectAfterLogin(data.user.role);
         } catch (err) {
             setError(getApiErrorMessage(err, 'Invalid credentials. Please try again.'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handle2FASubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+
+        try {
+            const { data } = await authService.login2FA(tempToken, totpCode);
+            setAuth(data.user, data.access, data.refresh);
+            redirectAfterLogin(data.user.role);
+        } catch (err) {
+            setError(getApiErrorMessage(err, 'Invalid 2FA code. Please try again.'));
         } finally {
             setIsLoading(false);
         }
@@ -103,32 +134,55 @@ const AuthPage = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label className="form-label">Identification / Email</label>
-                            <input
-                                type="email"
-                                className="form-input"
-                                placeholder="Enter credentials..."
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                autoComplete="email"
-                            />
-                        </div>
+                    <form onSubmit={twoFARequired ? handle2FASubmit : handleSubmit}>
+                        {!twoFARequired ? (
+                            <>
+                                <div className="form-group">
+                                    <label className="form-label">Identification / Email</label>
+                                    <input
+                                        type="email"
+                                        className="form-input"
+                                        placeholder="Enter credentials..."
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        autoComplete="email"
+                                    />
+                                </div>
 
-                        <div className="form-group">
-                            <label className="form-label">Security Key / Password</label>
-                            <input
-                                type="password"
-                                className="form-input"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                autoComplete="current-password"
-                            />
-                        </div>
+                                <div className="form-group">
+                                    <label className="form-label">Security Key / Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-input"
+                                        placeholder="••••••••"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        autoComplete="current-password"
+                                    />
+                                </div>
+                            </>
+                        ) : (
+                            <div className="form-group">
+                                <label className="form-label">2FA Verification Code</label>
+                                <input
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Enter 6-digit code..."
+                                    value={totpCode}
+                                    onChange={(e) => setTotpCode(e.target.value)}
+                                    required
+                                    autoComplete="one-time-code"
+                                    maxLength={6}
+                                    inputMode="numeric"
+                                    pattern="[0-9]*"
+                                />
+                                <p style={{ fontSize: '10px', opacity: 0.5, marginTop: '8px', fontFamily: 'var(--font-sans)', textTransform: 'uppercase' }}>
+                                    Enter the code from your authenticator app
+                                </p>
+                            </div>
+                        )}
 
                         <button
                             type="submit"
@@ -136,18 +190,28 @@ const AuthPage = () => {
                             disabled={isLoading}
                             style={{ opacity: isLoading ? 0.7 : 1, cursor: isLoading ? 'not-allowed' : 'pointer' }}
                         >
-                            {isLoading ? 'Authenticating...' : 'Authenticate'}
+                            {isLoading ? 'Authenticating...' : twoFARequired ? 'Verify Code' : 'Authenticate'}
                         </button>
                     </form>
 
                     <div className="form-footer">
-                        <span
-                            className="link-text"
-                            onClick={() => navigate('/recovery')}
-                            style={{ cursor: 'pointer' }}
-                        >
-                            Forgot Credentials?
-                        </span>
+                        {twoFARequired ? (
+                            <span
+                                className="link-text"
+                                onClick={() => { setTwoFARequired(false); setTempToken(''); setTotpCode(''); setError(''); }}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                ← Back to Login
+                            </span>
+                        ) : (
+                            <span
+                                className="link-text"
+                                onClick={() => navigate('/recovery')}
+                                style={{ cursor: 'pointer' }}
+                            >
+                                Forgot Credentials?
+                            </span>
+                        )}
                         <span>
                             Request Access — <span
                                 className="link-text"

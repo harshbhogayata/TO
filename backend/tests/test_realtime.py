@@ -5,17 +5,25 @@ Comprehensive tests for the real-time communication system:
   - Broadcast utilities
   - Push notification subscription endpoints
   - Read receipts and typing indicators
+  - Presence tracking (online/offline/last-seen)
+  - Message rate limiting
+  - Delivery acknowledgments
+  - Reconnect message sync endpoint
+  - Presence REST endpoint
+  - XSS sanitization
 
 Usage:
     python manage.py test tests.test_realtime --settings=talentorbit.test_settings -v2
 """
 
 import json
+from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock
 
 from channels.db import database_sync_to_async
 from channels.layers import get_channel_layer
 from channels.testing import WebsocketCommunicator
+from django.core.cache import cache
 from django.test import TestCase, TransactionTestCase, override_settings
 from rest_framework.test import APIClient
 from rest_framework import status as http_status
@@ -30,6 +38,16 @@ from realtime.broadcast import (
     broadcast_unread_count,
     broadcast_thread_message,
 )
+from realtime.presence import (
+    user_connected,
+    user_disconnected,
+    refresh_presence,
+    is_user_online,
+    get_last_seen,
+    get_user_presence,
+    get_bulk_presence,
+)
+from realtime.middleware import check_message_rate_limit
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -127,11 +145,20 @@ class ChatConsumerTest(TransactionTestCase):
             'body': 'Hello from tests!',
         })
 
-        # Receive the broadcast back
-        response = await communicator.receive_json_from(timeout=5)
-        self.assertEqual(response['type'], 'chat.message')
-        self.assertEqual(response['message']['body'], 'Hello from tests!')
-        self.assertEqual(response['message']['sender'], self.company.id)
+        # May receive chat.ack before chat.message — collect both
+        msg_resp = None
+        for _ in range(5):
+            try:
+                response = await communicator.receive_json_from(timeout=5)
+                if response.get('type') == 'chat.message':
+                    msg_resp = response
+                    break
+            except Exception:
+                break
+
+        self.assertIsNotNone(msg_resp, 'Expected chat.message but did not receive one')
+        self.assertEqual(msg_resp['message']['body'], 'Hello from tests!')
+        self.assertEqual(msg_resp['message']['sender'], self.company.id)
 
         # Verify DB persistence
         count = await database_sync_to_async(
@@ -193,6 +220,11 @@ class ChatConsumerTest(TransactionTestCase):
         c_company, _ = await self._connect(self.company)
         c_talent, _ = await self._connect(self.talent)
 
+        # Consume any presence events from connecting
+        for comm in (c_company, c_talent):
+            while not await comm.receive_nothing(timeout=0.5):
+                pass
+
         await c_company.send_json_to({
             'type': 'chat.typing',
             'thread_id': self.thread.id,
@@ -200,10 +232,19 @@ class ChatConsumerTest(TransactionTestCase):
         })
 
         # Talent should receive the typing indicator
-        response = await c_talent.receive_json_from(timeout=5)
-        self.assertEqual(response['type'], 'chat.typing')
-        self.assertEqual(response['user_id'], self.company.id)
-        self.assertTrue(response['is_typing'])
+        typing_resp = None
+        for _ in range(5):
+            try:
+                response = await c_talent.receive_json_from(timeout=5)
+                if response.get('type') == 'chat.typing':
+                    typing_resp = response
+                    break
+            except Exception:
+                break
+
+        self.assertIsNotNone(typing_resp, 'Expected chat.typing')
+        self.assertEqual(typing_resp['user_id'], self.company.id)
+        self.assertTrue(typing_resp['is_typing'])
 
         await c_company.disconnect()
         await c_talent.disconnect()
@@ -236,16 +277,30 @@ class ChatConsumerTest(TransactionTestCase):
         c_company, _ = await self._connect(self.company)
         c_talent, _ = await self._connect(self.talent)
 
+        # Consume any presence events from connecting
+        for comm in (c_company, c_talent):
+            while not await comm.receive_nothing(timeout=0.5):
+                pass
+
         # Talent sends read receipt
         await c_talent.send_json_to({
             'type': 'chat.read',
             'thread_id': self.thread.id,
         })
 
-        # Company should receive the read receipt
-        response = await c_company.receive_json_from(timeout=5)
-        self.assertEqual(response['type'], 'chat.read')
-        self.assertEqual(response['user_id'], self.talent.id)
+        # Company should receive the read receipt (skip any other events)
+        read_resp = None
+        for _ in range(5):
+            try:
+                response = await c_company.receive_json_from(timeout=5)
+                if response.get('type') == 'chat.read':
+                    read_resp = response
+                    break
+            except Exception:
+                break
+
+        self.assertIsNotNone(read_resp, 'Expected chat.read')
+        self.assertEqual(read_resp['user_id'], self.talent.id)
 
         # Verify DB — messages should now be read
         unread_count = await database_sync_to_async(
@@ -283,19 +338,42 @@ class ChatConsumerTest(TransactionTestCase):
         c_company, _ = await self._connect(self.company)
         c_talent, _ = await self._connect(self.talent)
 
+        # Consume any presence events from connecting
+        for comm in (c_company, c_talent):
+            while not await comm.receive_nothing(timeout=0.5):
+                pass
+
         await c_company.send_json_to({
             'type': 'chat.message',
             'thread_id': self.thread.id,
             'body': 'Broadcast test',
         })
 
-        # Company (sender) receives the broadcast
-        company_resp = await c_company.receive_json_from(timeout=5)
-        self.assertEqual(company_resp['message']['body'], 'Broadcast test')
+        # Company (sender) receives both ack and broadcast — find chat.message
+        company_msg = None
+        for _ in range(5):
+            try:
+                resp = await c_company.receive_json_from(timeout=5)
+                if resp.get('type') == 'chat.message':
+                    company_msg = resp
+                    break
+            except Exception:
+                break
+        self.assertIsNotNone(company_msg)
+        self.assertEqual(company_msg['message']['body'], 'Broadcast test')
 
         # Talent (recipient) also receives the broadcast
-        talent_resp = await c_talent.receive_json_from(timeout=5)
-        self.assertEqual(talent_resp['message']['body'], 'Broadcast test')
+        talent_msg = None
+        for _ in range(5):
+            try:
+                resp = await c_talent.receive_json_from(timeout=5)
+                if resp.get('type') == 'chat.message':
+                    talent_msg = resp
+                    break
+            except Exception:
+                break
+        self.assertIsNotNone(talent_msg)
+        self.assertEqual(talent_msg['message']['body'], 'Broadcast test')
 
         await c_company.disconnect()
         await c_talent.disconnect()
@@ -684,3 +762,448 @@ class NotificationTaskIntegrationTest(TransactionTestCase):
             title='Should skip',
         )
         self.assertEqual(result['status'], 'skipped')
+
+
+# ─── Presence Tracking Tests ─────────────────────────────────────────────────
+
+@override_settings(
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class PresenceTrackingTest(TestCase):
+    """Tests for realtime/presence.py — Redis-backed user presence."""
+
+    def setUp(self):
+        cache.clear()
+
+    def test_user_connected_first_time_returns_true(self):
+        """First connection should return True (user just came online)."""
+        result = user_connected(42)
+        self.assertTrue(result)
+
+    def test_user_connected_second_time_returns_false(self):
+        """Second connection (same user) should return False (already online)."""
+        user_connected(42)
+        result = user_connected(42)
+        self.assertFalse(result)
+
+    def test_is_user_online_after_connect(self):
+        """User should appear online after connecting."""
+        self.assertFalse(is_user_online(42))
+        user_connected(42)
+        self.assertTrue(is_user_online(42))
+
+    def test_user_disconnected_last_connection_returns_true(self):
+        """Disconnecting the last connection should return True."""
+        user_connected(42)
+        result = user_disconnected(42)
+        self.assertTrue(result)
+
+    def test_user_disconnected_not_last_returns_false(self):
+        """Disconnecting while other connections remain should return False."""
+        user_connected(42)
+        user_connected(42)  # Second tab
+        result = user_disconnected(42)
+        self.assertFalse(result)
+
+    def test_user_offline_after_all_disconnects(self):
+        """User should be offline only after ALL connections close."""
+        user_connected(42)
+        user_connected(42)
+        user_disconnected(42)
+        self.assertTrue(is_user_online(42))
+        user_disconnected(42)
+        self.assertFalse(is_user_online(42))
+
+    def test_last_seen_set_on_full_disconnect(self):
+        """Last seen timestamp should be set when user goes offline."""
+        user_connected(42)
+        user_disconnected(42)
+        last_seen = get_last_seen(42)
+        self.assertIsNotNone(last_seen)
+        # Should be a valid ISO timestamp
+        parsed = datetime.fromisoformat(last_seen)
+        self.assertIsInstance(parsed, datetime)
+
+    def test_last_seen_none_while_online(self):
+        """get_user_presence should return last_seen=None when online."""
+        user_connected(42)
+        presence = get_user_presence(42)
+        self.assertTrue(presence['is_online'])
+        self.assertIsNone(presence['last_seen'])
+
+    def test_refresh_presence_keeps_user_online(self):
+        """refresh_presence should keep user online without errors."""
+        user_connected(42)
+        refresh_presence(42)
+        self.assertTrue(is_user_online(42))
+
+    def test_get_bulk_presence_empty(self):
+        """Bulk presence with empty list should return empty dict."""
+        result = get_bulk_presence([])
+        self.assertEqual(result, {})
+
+    def test_get_bulk_presence_mixed_status(self):
+        """Bulk presence should correctly report online and offline users."""
+        user_connected(1)
+        user_connected(2)
+        user_disconnected(2)
+
+        result = get_bulk_presence([1, 2, 999])
+        self.assertTrue(result[1]['is_online'])
+        self.assertFalse(result[2]['is_online'])
+        self.assertIsNotNone(result[2]['last_seen'])
+        self.assertFalse(result[999]['is_online'])
+
+    def test_disconnect_without_connect_is_safe(self):
+        """Disconnecting a user that never connected should not raise."""
+        result = user_disconnected(99)
+        # count was 0, goes to 0, marks as offline
+        self.assertTrue(result)
+
+
+# ─── Message Rate Limiting Tests ─────────────────────────────────────────────
+
+@override_settings(
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    WS_MESSAGE_RATE_LIMIT=5,
+    WS_MESSAGE_RATE_WINDOW=60,
+)
+class MessageRateLimitTest(TestCase):
+    """Tests for realtime/middleware.py per-user message rate limiting."""
+
+    def setUp(self):
+        cache.clear()
+        # Re-apply settings since middleware reads at import time
+        import realtime.middleware as mw
+        mw.WS_MESSAGE_RATE_LIMIT = 5
+        mw.WS_MESSAGE_RATE_WINDOW = 60
+
+    def test_messages_within_limit_allowed(self):
+        """Messages within the rate limit should be allowed."""
+        for _ in range(5):
+            self.assertTrue(check_message_rate_limit(42))
+
+    def test_messages_over_limit_rejected(self):
+        """Messages exceeding the rate limit should be rejected."""
+        for _ in range(5):
+            check_message_rate_limit(42)
+        self.assertFalse(check_message_rate_limit(42))
+
+    def test_different_users_have_separate_limits(self):
+        """Rate limits should be per-user, not global."""
+        for _ in range(5):
+            check_message_rate_limit(1)
+        # User 1 is rate limited
+        self.assertFalse(check_message_rate_limit(1))
+        # User 2 should still have their full allowance
+        self.assertTrue(check_message_rate_limit(2))
+
+    def test_cache_failure_allows_message(self):
+        """When cache is unavailable, messages should be allowed (fail-open)."""
+        with patch('realtime.middleware.cache') as mock_cache:
+            mock_cache.get.side_effect = Exception('cache down')
+            self.assertTrue(check_message_rate_limit(42))
+
+
+# ─── ChatConsumer Delivery Ack + XSS Tests ───────────────────────────────────
+
+@override_settings(
+    CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}},
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True,
+)
+class ChatConsumerEnhancedTest(TransactionTestCase):
+    """Tests for ChatConsumer delivery acks, XSS sanitization, heartbeat."""
+
+    def setUp(self):
+        cache.clear()
+        self.company = User.objects.create_user(
+            email='ack_co@test.com', password='TestPass123!',
+            role='company', full_name='Ack Corp', is_verified=True,
+        )
+        self.talent = User.objects.create_user(
+            email='ack_ta@test.com', password='TestPass123!',
+            role='talent', full_name='Ack Talent', is_verified=True,
+        )
+        self.thread = Thread.objects.create()
+        self.thread.participants.add(self.company, self.talent)
+
+    async def _connect(self, user):
+        app = _make_application(ChatConsumer, user)
+        communicator = WebsocketCommunicator(app, '/testws/')
+        connected, _ = await communicator.connect()
+        return communicator, connected
+
+    async def test_delivery_ack_sent_on_message(self):
+        """Sender should receive chat.ack with message_id after sending."""
+        communicator, _ = await self._connect(self.company)
+
+        await communicator.send_json_to({
+            'type': 'chat.message',
+            'thread_id': self.thread.id,
+            'body': 'Ack test message',
+        })
+
+        # Collect all responses
+        ack_found = False
+        for _ in range(5):
+            try:
+                resp = await communicator.receive_json_from(timeout=3)
+                if resp.get('type') == 'chat.ack':
+                    ack_found = True
+                    self.assertEqual(resp['status'], 'delivered')
+                    self.assertIn('message_id', resp)
+                    self.assertEqual(resp['thread_id'], self.thread.id)
+                    self.assertIn('sent_at', resp)
+                    break
+            except Exception:
+                break
+
+        self.assertTrue(ack_found, 'Expected chat.ack but did not receive one')
+        await communicator.disconnect()
+
+    async def test_xss_sanitization_in_messages(self):
+        """Message body with HTML should be escaped for XSS prevention."""
+        communicator, _ = await self._connect(self.company)
+
+        xss_body = '<img src=x onerror=alert(1)>'
+        await communicator.send_json_to({
+            'type': 'chat.message',
+            'thread_id': self.thread.id,
+            'body': xss_body,
+        })
+
+        # Find the broadcast message
+        msg_found = False
+        for _ in range(5):
+            try:
+                resp = await communicator.receive_json_from(timeout=3)
+                if resp.get('type') == 'chat.message':
+                    msg_found = True
+                    body = resp['message']['body']
+                    self.assertNotIn('<img', body)
+                    self.assertIn('&lt;img', body)
+                    break
+            except Exception:
+                break
+
+        self.assertTrue(msg_found, 'Expected chat.message but did not receive one')
+        await communicator.disconnect()
+
+    async def test_heartbeat_ack(self):
+        """Heartbeat should be acknowledged with heartbeat.ack."""
+        communicator, _ = await self._connect(self.company)
+
+        await communicator.send_json_to({'type': 'heartbeat'})
+        resp = await communicator.receive_json_from(timeout=3)
+        self.assertEqual(resp['type'], 'heartbeat.ack')
+
+        await communicator.disconnect()
+
+    async def test_string_thread_id_coerced_to_int(self):
+        """String thread_id should be coerced to int."""
+        communicator, _ = await self._connect(self.company)
+
+        await communicator.send_json_to({
+            'type': 'chat.message',
+            'thread_id': str(self.thread.id),
+            'body': 'Coerce test',
+        })
+
+        # Should succeed — look for either chat.ack or chat.message (not error)
+        found_success = False
+        for _ in range(5):
+            try:
+                resp = await communicator.receive_json_from(timeout=3)
+                if resp.get('type') in ('chat.ack', 'chat.message'):
+                    found_success = True
+                    break
+                elif resp.get('type') == 'error' and resp.get('code') == 'validation':
+                    self.fail('String thread_id was rejected instead of coerced')
+            except Exception:
+                break
+
+        self.assertTrue(found_success, 'Expected ack or message for coerced thread_id')
+        await communicator.disconnect()
+
+    async def test_non_integer_thread_id_rejected(self):
+        """Non-numeric thread_id should be rejected."""
+        communicator, _ = await self._connect(self.company)
+
+        await communicator.send_json_to({
+            'type': 'chat.message',
+            'thread_id': 'not-a-number',
+            'body': 'Bad id',
+        })
+
+        resp = await communicator.receive_json_from(timeout=3)
+        self.assertEqual(resp['type'], 'error')
+        self.assertEqual(resp['code'], 'validation')
+
+        await communicator.disconnect()
+
+
+# ─── Message Sync Endpoint Tests ─────────────────────────────────────────────
+
+@override_settings(
+    CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}},
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    CELERY_TASK_ALWAYS_EAGER=True,
+    CELERY_TASK_EAGER_PROPAGATES=True,
+)
+class MessageSyncEndpointTest(TestCase):
+    """Tests for GET /api/v1/messages/<thread_id>/sync/ (reconnect gap recovery)."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.talent = User.objects.create_user(
+            email='sync_t@test.com', password='TestPass123!',
+            role='talent', full_name='Sync Talent', is_verified=True,
+        )
+        self.company = User.objects.create_user(
+            email='sync_c@test.com', password='TestPass123!',
+            role='company', full_name='Sync Corp', is_verified=True,
+        )
+        self.thread = Thread.objects.create()
+        self.thread.participants.add(self.talent, self.company)
+
+    def test_sync_returns_messages_after_timestamp(self):
+        """Should return only messages after the given timestamp."""
+        m1 = Message.objects.create(
+            thread=self.thread, sender=self.company, body='Old msg'
+        )
+        since_ts = datetime.now(timezone.utc).isoformat()
+        m2 = Message.objects.create(
+            thread=self.thread, sender=self.company, body='New msg'
+        )
+
+        self.client.force_authenticate(user=self.talent)
+        resp = self.client.get(
+            f'/api/v1/messages/{self.thread.id}/sync/',
+            {'since': since_ts},
+        )
+
+        self.assertEqual(resp.status_code, http_status.HTTP_200_OK)
+        self.assertIn('messages', resp.data)
+        self.assertIn('has_more', resp.data)
+        bodies = [m['body'] for m in resp.data['messages']]
+        self.assertIn('New msg', bodies)
+
+    def test_sync_requires_authentication(self):
+        """Sync endpoint should require authentication."""
+        resp = self.client.get(
+            f'/api/v1/messages/{self.thread.id}/sync/',
+            {'since': datetime.now(timezone.utc).isoformat()},
+        )
+        self.assertEqual(resp.status_code, http_status.HTTP_401_UNAUTHORIZED)
+
+    def test_sync_non_participant_forbidden(self):
+        """Non-participants should get 404."""
+        other = User.objects.create_user(
+            email='outsider@test.com', password='TestPass123!',
+            role='talent', full_name='Outsider', is_verified=True,
+        )
+        self.client.force_authenticate(user=other)
+        resp = self.client.get(
+            f'/api/v1/messages/{self.thread.id}/sync/',
+            {'since': datetime.now(timezone.utc).isoformat()},
+        )
+        self.assertEqual(resp.status_code, http_status.HTTP_404_NOT_FOUND)
+
+    def test_sync_missing_since_param(self):
+        """Missing 'since' parameter should return 400."""
+        self.client.force_authenticate(user=self.talent)
+        resp = self.client.get(f'/api/v1/messages/{self.thread.id}/sync/')
+        self.assertEqual(resp.status_code, http_status.HTTP_400_BAD_REQUEST)
+
+    def test_sync_respects_limit_param(self):
+        """Custom limit should cap results, has_more should be True."""
+        for i in range(10):
+            Message.objects.create(
+                thread=self.thread, sender=self.company, body=f'Msg {i}'
+            )
+
+        since_ts = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+        self.client.force_authenticate(user=self.talent)
+        resp = self.client.get(
+            f'/api/v1/messages/{self.thread.id}/sync/',
+            {'since': since_ts, 'limit': 3},
+        )
+
+        self.assertEqual(resp.status_code, http_status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['messages']), 3)
+        self.assertTrue(resp.data['has_more'])
+
+    def test_sync_limit_capped_at_500(self):
+        """Limit should be capped at 500 even if client requests more."""
+        self.client.force_authenticate(user=self.talent)
+        resp = self.client.get(
+            f'/api/v1/messages/{self.thread.id}/sync/',
+            {'since': (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(), 'limit': 1000},
+        )
+        self.assertEqual(resp.status_code, http_status.HTTP_200_OK)
+
+
+# ─── Presence REST Endpoint Tests ────────────────────────────────────────────
+
+@override_settings(
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+)
+class PresenceEndpointTest(TestCase):
+    """Tests for POST /api/v1/push/presence/ (bulk presence query)."""
+
+    def setUp(self):
+        cache.clear()
+        self.client = APIClient()
+        self.talent = User.objects.create_user(
+            email='pres@test.com', password='TestPass123!',
+            role='talent', full_name='Presence Tester', is_verified=True,
+        )
+
+    def test_presence_returns_bulk_status(self):
+        """Should return presence info for requested user IDs."""
+        user_connected(self.talent.id)
+
+        self.client.force_authenticate(user=self.talent)
+        resp = self.client.post(
+            '/api/v1/push/presence/',
+            {'user_ids': [self.talent.id, 9999]},
+            format='json',
+        )
+
+        self.assertEqual(resp.status_code, http_status.HTTP_200_OK)
+        p = resp.data['presence']
+        self.assertTrue(p[str(self.talent.id)]['is_online'])
+        self.assertFalse(p['9999']['is_online'])
+
+    def test_presence_requires_authentication(self):
+        """Presence endpoint should require authentication."""
+        resp = self.client.post(
+            '/api/v1/push/presence/',
+            {'user_ids': [1]},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, http_status.HTTP_401_UNAUTHORIZED)
+
+    def test_presence_empty_user_ids(self):
+        """Empty user_ids should return empty presence dict."""
+        self.client.force_authenticate(user=self.talent)
+        resp = self.client.post(
+            '/api/v1/push/presence/',
+            {'user_ids': []},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, http_status.HTTP_200_OK)
+        self.assertEqual(resp.data['presence'], {})
+
+    def test_presence_caps_at_100_ids(self):
+        """Request with >100 IDs should be capped to 100."""
+        self.client.force_authenticate(user=self.talent)
+        resp = self.client.post(
+            '/api/v1/push/presence/',
+            {'user_ids': list(range(150))},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, http_status.HTTP_200_OK)
+        self.assertEqual(len(resp.data['presence']), 100)

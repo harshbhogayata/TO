@@ -7,6 +7,7 @@
  *  - Notification list with optimistic read marking
  *  - Unread count (synced with WebSocket)
  *  - Push notification permission & token registration
+ *  - Reconnect-aware unread refresh
  */
 import { create } from 'zustand';
 import { WebSocketManager } from '../services/websocket';
@@ -16,6 +17,9 @@ import api from '../services/api';
 
 /** @type {WebSocketManager|null} */
 let _notifWs = null;
+
+/** Track whether this is a reconnect (not the first connect) */
+let _hasConnectedOnce = false;
 
 export const useNotificationStore = create((set, get) => ({
     // ── State ─────────────────────────────────────────────────────────────
@@ -174,6 +178,13 @@ export const useNotificationStore = create((set, get) => ({
             getToken: () => useAuthStore.getState().accessToken,
             onOpen: () => {
                 set({ wsConnected: true });
+
+                // On reconnect, refresh unread count from server to catch
+                // anything missed during the disconnect window.
+                if (_hasConnectedOnce) {
+                    get()._refreshFromServer();
+                }
+                _hasConnectedOnce = true;
             },
             onClose: () => {
                 set({ wsConnected: false });
@@ -198,13 +209,18 @@ export const useNotificationStore = create((set, get) => ({
         switch (data.type) {
             case 'notification': {
                 const notif = data.notification;
+
+                // Avoid duplicates (e.g. after reconnect sync)
+                const exists = get().notifications.some(n => n.id === notif.id);
+                if (exists) break;
+
                 // Prepend new notification
                 set(state => ({
                     notifications: [notif, ...state.notifications],
                     unreadCount: state.unreadCount + 1,
                 }));
 
-                // Show browser notification if permitted
+                // Show browser notification if permitted and tab is hidden
                 if (Notification.permission === 'granted' && document.hidden) {
                     try {
                         new Notification(notif.title, {
@@ -224,6 +240,37 @@ export const useNotificationStore = create((set, get) => ({
                 set({ unreadCount: data.count });
                 break;
             }
+
+            case 'presence': {
+                // Forward presence events to the chat store for centralized
+                // presence state.  We import lazily to avoid circular deps.
+                import('./chatStore').then(({ useChatStore }) => {
+                    const { user_id, is_online, last_seen } = data;
+                    useChatStore.setState(state => ({
+                        presence: {
+                            ...state.presence,
+                            [user_id]: { is_online, last_seen },
+                        },
+                    }));
+                });
+                break;
+            }
+        }
+    },
+
+    /**
+     * Re-fetch the notification list from the server. Used after WebSocket
+     * reconnect to ensure nothing was missed.
+     * @internal
+     */
+    _refreshFromServer: async () => {
+        try {
+            const { data } = await notificationsService.myNotifications();
+            const notifications = data.results || data;
+            const unreadCount = notifications.filter(n => !n.is_read).length;
+            set({ notifications, unreadCount });
+        } catch {
+            // Best-effort — existing state is still usable
         }
     },
 
@@ -231,6 +278,7 @@ export const useNotificationStore = create((set, get) => ({
     reset: () => {
         _notifWs?.disconnect();
         _notifWs = null;
+        _hasConnectedOnce = false;
         set({
             notifications: [],
             unreadCount: 0,

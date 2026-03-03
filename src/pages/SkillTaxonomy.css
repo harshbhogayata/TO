@@ -1,0 +1,241 @@
+/* ── Skill Taxonomy Browser ─────────────────────────────────────────────────── */
+
+.st-explorer {
+    display: grid;
+    grid-template-columns: 280px 320px 1fr;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+/* Column */
+.st-column {
+    border-right: 1px solid var(--border-color);
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.st-column:last-child { border-right: none; }
+
+.st-column-header {
+    padding: 16px 24px;
+    background: var(--bg-dark);
+    color: var(--text-white);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* List Items */
+.st-list-item {
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.st-list-item:hover { background: rgba(255, 255, 255, 0.5); }
+
+.st-list-item--selected {
+    padding: 16px 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: var(--bg-dark);
+    color: var(--text-white);
+}
+
+.st-item-name {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    text-transform: uppercase;
+}
+
+.st-item-count {
+    font-size: 10px;
+    opacity: 0.6;
+    font-weight: 600;
+}
+
+/* Skill Detail Pane */
+.st-detail-pane {
+    padding: 40px;
+    overflow-y: auto;
+    background: white;
+}
+
+.st-detail-header {
+    margin-bottom: 32px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 16px;
+}
+
+.st-category-path {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    opacity: 0.6;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.st-detail-title {
+    font-family: var(--font-display);
+    font-size: 48px;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.st-section-title {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 4px;
+    margin-bottom: 16px;
+    margin-top: 32px;
+    display: block;
+}
+
+/* Proficiency Grid */
+.st-prof-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.st-prof-level {
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.st-prof-level:hover { background: rgba(0, 0, 0, 0.05); }
+
+.st-prof-level--active {
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    background: #2e7d32;
+    color: white;
+}
+
+.st-prof-num {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 24px;
+}
+
+.st-prof-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* Related Skill Graph */
+.st-graph {
+    height: 200px;
+    border: 1px dashed var(--border-color);
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-beige);
+    position: relative;
+}
+
+.st-node {
+    padding: 8px 16px;
+    background: var(--bg-dark);
+    color: white;
+    font-size: 11px;
+    text-transform: uppercase;
+    position: absolute;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+/* Add to Profile Button */
+.st-add-btn {
+    margin-top: 40px;
+    background: var(--bg-dark);
+    color: var(--text-white);
+    border: none;
+    padding: 20px;
+    width: 100%;
+    font-family: var(--font-sans);
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    letter-spacing: 2px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.st-add-btn:hover { background: #222; }
+.st-add-btn--success { background: #2e7d32; }
+.st-add-btn--success:hover { background: #2e7d32; }
+
+.st-add-note {
+    margin-top: 24px;
+    font-size: 11px;
+    opacity: 0.5;
+    font-style: italic;
+}
+
+.st-empty {
+    padding: 32px;
+    font-size: 11px;
+    opacity: 0.4;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.st-detail-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    opacity: 0.4;
+}
+
+.st-detail-empty h3 {
+    font-family: var(--font-display);
+    font-size: 28px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.st-detail-empty p {
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1024px) {
+    .st-explorer {
+        grid-template-columns: 240px 1fr;
+    }
+    .st-column:nth-child(3) { display: none; }
+}
+
+@media (max-width: 768px) {
+    .st-explorer { grid-template-columns: 1fr; }
+    .st-column { border-right: none; border-bottom: 1px solid var(--border-color); }
+    .st-detail-pane { padding: 24px; }
+}

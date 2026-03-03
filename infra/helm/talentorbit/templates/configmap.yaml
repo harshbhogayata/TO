@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "talentorbit.fullname" . }}-config
+  namespace: {{ include "talentorbit.namespace" . }}
+  labels:
+    {{- include "talentorbit.labels" . | nindent 4 }}
+data:
+  DEBUG: {{ .Values.config.debug | quote }}
+  ALLOWED_HOSTS: {{ .Values.config.allowedHosts | quote }}
+  FRONTEND_URL: {{ .Values.config.frontendUrl | quote }}
+  CORS_ALLOWED_ORIGINS: {{ .Values.config.corsAllowedOrigins | quote }}
+  DEFAULT_FROM_EMAIL: {{ .Values.config.defaultFromEmail | quote }}
+  R2_BUCKET_NAME: {{ .Values.config.r2BucketName | quote }}
+  R2_ENDPOINT_URL: {{ .Values.config.r2EndpointUrl | quote }}
+  R2_CUSTOM_DOMAIN: {{ .Values.config.r2CustomDomain | quote }}
+  EMAIL_BACKEND: {{ .Values.config.emailBackend | quote }}
+  EMAIL_HOST: {{ .Values.config.emailHost | quote }}
+  EMAIL_PORT: {{ .Values.config.emailPort | quote }}
+  SENTRY_DSN: {{ .Values.config.sentryDsn | quote }}
+  SENTRY_TRACES_SAMPLE_RATE: {{ .Values.config.sentryTracesSampleRate | quote }}
+  POSTHOG_HOST: {{ .Values.config.posthogHost | quote }}
+  {{- if .Values.pgbouncer.enabled }}
+  # When PgBouncer is enabled, point Django at PgBouncer instead of direct PG
+  PGBOUNCER_HOST: {{ include "talentorbit.fullname" . }}-pgbouncer
+  PGBOUNCER_PORT: {{ .Values.pgbouncer.service.port | quote }}
+  {{- end }}

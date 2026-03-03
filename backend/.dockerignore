@@ -1,0 +1,52 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+*.egg
+dist/
+build/
+
+# ── Virtual environments ─────────────────────────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── IDE / Editor ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# ── Git ───────────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Test / Coverage ───────────────────────────────────────────────────────────
+.pytest_cache/
+htmlcov/
+.coverage
+*.cover
+
+# ── Local databases & media (not for production image) ────────────────────────
+db.sqlite3
+media/
+
+# ── Environment files (secrets injected at runtime, not baked into image) ─────
+.env
+.env.*
+
+# ── Documentation ─────────────────────────────────────────────────────────────
+*.md
+LICENSE
+docs/
+
+# ── CI/CD ─────────────────────────────────────────────────────────────────────
+.github/

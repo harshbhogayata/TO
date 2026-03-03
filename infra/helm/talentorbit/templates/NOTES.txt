@@ -1,0 +1,53 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                        TalentOrbit — Deployment Summary                     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Chart:       {{ .Chart.Name }}-{{ .Chart.Version }}
+Release:     {{ .Release.Name }}
+Namespace:   {{ include "talentorbit.namespace" . }}
+Environment: {{ .Values.global.environment }}
+
+─── Components ────────────────────────────────────────────────────────────────
+
+  API Server:   {{ .Values.api.replicaCount }} replica(s)
+                {{- if .Values.api.autoscaling.enabled }} (HPA: {{ .Values.api.autoscaling.minReplicas }}-{{ .Values.api.autoscaling.maxReplicas }}){{ end }}
+  Celery Worker: {{ .Values.worker.replicaCount }} replica(s)
+                {{- if .Values.worker.autoscaling.enabled }} (HPA: {{ .Values.worker.autoscaling.minReplicas }}-{{ .Values.worker.autoscaling.maxReplicas }}){{ end }}
+  Celery Beat:  {{ if .Values.beat.enabled }}1 replica (singleton){{ else }}DISABLED{{ end }}
+  PgBouncer:    {{ if .Values.pgbouncer.enabled }}{{ .Values.pgbouncer.replicaCount }} replica(s) ({{ .Values.pgbouncer.poolMode }} mode){{ else }}DISABLED{{ end }}
+
+─── Access ────────────────────────────────────────────────────────────────────
+
+{{- if .Values.ingress.enabled }}
+  {{- range .Values.ingress.hosts }}
+  URL: https://{{ .host }}
+  {{- end }}
+{{- else }}
+  # Port-forward to access locally:
+  kubectl port-forward -n {{ include "talentorbit.namespace" . }} \
+    svc/{{ include "talentorbit.fullname" . }}-api 8000:{{ .Values.api.service.port }}
+{{- end }}
+
+  Health:    curl https://{{ (index .Values.ingress.hosts 0).host }}/health/
+  Ready:     curl https://{{ (index .Values.ingress.hosts 0).host }}/health/ready/
+  Detailed:  curl -H "Authorization: Bearer $TOKEN" \
+             https://{{ (index .Values.ingress.hosts 0).host }}/health/detailed/
+
+─── Useful Commands ───────────────────────────────────────────────────────────
+
+  # Watch pod status
+  kubectl get pods -n {{ include "talentorbit.namespace" . }} -w
+
+  # View API logs
+  kubectl logs -n {{ include "talentorbit.namespace" . }} -l app.kubernetes.io/component=api -f
+
+  # View worker logs
+  kubectl logs -n {{ include "talentorbit.namespace" . }} -l app.kubernetes.io/component=worker -f
+
+  # Run management commands
+  kubectl exec -n {{ include "talentorbit.namespace" . }} \
+    deploy/{{ include "talentorbit.fullname" . }}-api -- python manage.py <command>
+
+  # Scale manually (overrides HPA temporarily)
+  kubectl scale -n {{ include "talentorbit.namespace" . }} \
+    deploy/{{ include "talentorbit.fullname" . }}-api --replicas=5

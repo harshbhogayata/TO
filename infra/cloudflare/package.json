@@ -1,0 +1,17 @@
+{
+  "name": "talentorbit-edge-cache",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker — TalentOrbit edge API caching layer",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "tail": "wrangler tail",
+    "kv:purge-tag": "node scripts/purge-tag.js"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

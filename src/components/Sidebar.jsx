@@ -14,12 +14,20 @@ const defaultTalentNav = [
         { num: '07', label: 'Messages', path: '/inbox' }
     ],
     [
-        { num: '08', label: 'Resume Parser', path: '/resume-parser' },
-        { num: '09', label: 'Skill Browser', path: '/skills/taxonomy' },
-        { num: '10', label: 'Notifications', path: '/notifications' },
-        { num: '11', label: 'Profile', path: '/profile' },
-        { num: '12', label: 'Settings', path: '/settings' },
-        { num: '13', label: 'Privacy Center', path: '/privacy-center' }
+        { num: '08', label: 'Courses', path: '/courses' },
+        { num: '09', label: 'My Learning', path: '/my-learning' },
+        { num: '10', label: 'Assessments', path: '/assessments' },
+        { num: '11', label: 'My Assessments', path: '/my-assessments' },
+        { num: '12', label: 'Skill Badges', path: '/badges' }
+    ],
+    [
+        { num: '13', label: 'Resume Parser', path: '/resume-parser' },
+        { num: '14', label: 'Skill Browser', path: '/skills/taxonomy' },
+        { num: '15', label: 'Notifications', path: '/notifications' },
+        { num: '16', label: 'Profile', path: '/profile' },
+        { num: '17', label: 'Settings', path: '/settings' },
+        { num: '18', label: 'Privacy Center', path: '/privacy-center' },
+        { num: '19', label: 'Company Reviews', path: '/reviews' }
     ]
 ];
 
@@ -33,11 +41,19 @@ const defaultCompanyNav = [
         { num: '06', label: 'Messages', path: '/inbox' }
     ],
     [
-        { num: '07', label: 'Team', path: '/company/team' },
-        { num: '08', label: 'Skill Browser', path: '/skills/taxonomy' },
-        { num: '09', label: 'Notifications', path: '/notifications' },
-        { num: '10', label: 'Settings', path: '/settings' },
-        { num: '11', label: 'Privacy Center', path: '/privacy-center' }
+        { num: '07', label: 'Assessments', path: '/company/assessments' },
+        { num: '08', label: 'Question Banks', path: '/company/question-banks' },
+        { num: '09', label: 'Course Catalog', path: '/courses' },
+        { num: '10', label: 'Reviews', path: '/reviews' },
+        { num: '11', label: 'Developer Portal', path: '/company/developer' },
+        { num: '12', label: 'API Keys', path: '/company/api-keys' },
+        { num: '13', label: 'Webhooks', path: '/company/webhooks' },
+        { num: '14', label: 'OAuth Apps', path: '/company/oauth-apps' },
+        { num: '15', label: 'Team', path: '/company/team' },
+        { num: '16', label: 'Skill Browser', path: '/skills/taxonomy' },
+        { num: '17', label: 'Notifications', path: '/notifications' },
+        { num: '18', label: 'Settings', path: '/settings' },
+        { num: '19', label: 'Privacy Center', path: '/privacy-center' }
     ]
 ];
 

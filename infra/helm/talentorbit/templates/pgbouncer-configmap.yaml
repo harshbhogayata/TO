@@ -1,0 +1,91 @@
+{{- if .Values.pgbouncer.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "talentorbit.fullname" . }}-pgbouncer-config
+  namespace: {{ include "talentorbit.namespace" . }}
+  labels:
+    {{- include "talentorbit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pgbouncer
+data:
+  pgbouncer.ini: |
+    ;; ─────────────────────────────────────────────────────────────────────
+    ;; TalentOrbit PgBouncer Configuration
+    ;;
+    ;; Pool mode: transaction (best for Django ORM — releases connection
+    ;; after each transaction, not each session).
+    ;;
+    ;; This is NOT a pgbouncer.ini you run standalone — it is mounted
+    ;; into the PgBouncer container via ConfigMap.
+    ;; ─────────────────────────────────────────────────────────────────────
+
+    [databases]
+    {{- range $name, $db := .Values.pgbouncer.databases }}
+    {{ $name }} = host={{ $db.host }} port={{ $db.port | default 5432 }} dbname={{ $db.dbname }}
+    {{- end }}
+
+    [pgbouncer]
+    ;; Listening
+    listen_addr = 0.0.0.0
+    listen_port = 5432
+    unix_socket_dir =
+
+    ;; Authentication
+    auth_type = md5
+    auth_file = /etc/pgbouncer/userlist.txt
+
+    ;; Pool configuration
+    pool_mode = {{ .Values.pgbouncer.poolMode }}
+    default_pool_size = {{ .Values.pgbouncer.defaultPoolSize }}
+    min_pool_size = {{ .Values.pgbouncer.minPoolSize }}
+    reserve_pool_size = {{ .Values.pgbouncer.reservePoolSize }}
+    reserve_pool_timeout = {{ .Values.pgbouncer.reservePoolTimeout }}
+    max_client_conn = {{ .Values.pgbouncer.maxClientConnections }}
+    max_db_connections = {{ .Values.pgbouncer.maxDbConnections }}
+    {{- if .Values.pgbouncer.maxUserConnections }}
+    max_user_connections = {{ .Values.pgbouncer.maxUserConnections }}
+    {{- end }}
+
+    ;; Timeouts
+    server_idle_timeout = {{ .Values.pgbouncer.serverIdleTimeout }}
+    server_lifetime = {{ .Values.pgbouncer.serverLifetime }}
+    server_connect_timeout = {{ .Values.pgbouncer.serverConnectTimeout }}
+    query_timeout = {{ .Values.pgbouncer.queryTimeout }}
+    query_wait_timeout = {{ .Values.pgbouncer.queryWaitTimeout }}
+    client_idle_timeout = {{ .Values.pgbouncer.clientIdleTimeout }}
+    client_login_timeout = {{ .Values.pgbouncer.clientLoginTimeout }}
+
+    ;; TLS (to upstream PostgreSQL)
+    server_tls_sslmode = prefer
+    server_tls_protocols = tlsv1.2,tlsv1.3
+
+    ;; Logging
+    log_connections = 0
+    log_disconnections = 0
+    log_pooler_errors = 1
+    log_stats = 1
+    stats_period = 60
+    verbose = 0
+
+    ;; Admin / stats
+    admin_users = {{ .Values.pgbouncer.adminUsers }}
+    stats_users = {{ .Values.pgbouncer.statsUsers }}
+
+    ;; DNS
+    dns_max_ttl = 15
+    dns_nxdomain_ttl = 15
+
+    ;; Hardening
+    ignore_startup_parameters = extra_float_digits,options
+    disable_pqexec = 0
+    application_name_add_host = 1
+
+  userlist.txt: |
+    "{{ .Values.pgbouncer.auth.username }}" "{{ .Values.pgbouncer.auth.password }}"
+    {{- if .Values.pgbouncer.statsPassword }}
+    "{{ .Values.pgbouncer.statsUsers }}" "{{ .Values.pgbouncer.statsPassword }}"
+    {{- end }}
+    {{- if .Values.pgbouncer.adminPassword }}
+    "{{ .Values.pgbouncer.adminUsers }}" "{{ .Values.pgbouncer.adminPassword }}"
+    {{- end }}
+{{- end }}

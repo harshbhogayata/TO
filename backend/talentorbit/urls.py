@@ -52,6 +52,9 @@ urlpatterns = [
     path('api/v1/search/', include('search.urls')),
     path('api/v1/intelligence/', include('intelligence.urls')),
     path('api/v1/compliance/', include('compliance.urls')),
+    path('api/v1/assessments/', include('assessments.urls')),
+    path('api/v1/reviews/', include('reviews.urls')),
+    path('api/v1/developer/', include('developer.urls')),
 
     # RFC 9116 security.txt
     path('.well-known/security.txt', include(([

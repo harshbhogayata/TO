@@ -1,0 +1,404 @@
+/* ================================================================
+   WebhookManager  •  BEM prefix: wm-
+   ================================================================ */
+
+/* ── Layout ──────────────────────────────────────────────────── */
+.wm-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 32px;
+    padding: 24px 0;
+}
+
+/* ── Endpoints table ─────────────────────────────────────────── */
+.wm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.wm-table thead th {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: rgba(255,255,255,0.35);
+}
+.wm-table tbody td {
+    padding: 14px;
+    border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.04));
+    vertical-align: top;
+}
+.wm-table tbody tr:hover {
+    background: rgba(255,255,255,0.02);
+}
+.wm-table tbody tr.wm-row--selected {
+    background: rgba(207,142,109,0.06);
+    border-left: 3px solid #cf8e6d;
+}
+
+/* ── Endpoint URL ────────────────────────────────────────────── */
+.wm-endpoint-url {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    color: #e0e0e0;
+    word-break: break-all;
+}
+
+/* ── Events (inline tags) ────────────────────────────────────── */
+.wm-event-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    margin: 2px 3px 2px 0;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: rgba(255,255,255,0.6);
+}
+
+/* ── Status badge ────────────────────────────────────────────── */
+.wm-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+.wm-status-badge--active {
+    background: rgba(80,200,120,0.12);
+    color: #50c878;
+    border: 1px solid rgba(80,200,120,0.2);
+}
+.wm-status-badge--failing {
+    background: rgba(255,107,107,0.12);
+    color: #ff6b6b;
+    border: 1px solid rgba(255,107,107,0.2);
+}
+.wm-status-badge--disabled {
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.35);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.wm-btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.wm-test-btn, .wm-edit-btn, .wm-delete-btn {
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid;
+}
+.wm-test-btn {
+    border-color: rgba(207,142,109,0.3);
+    background: transparent;
+    color: #cf8e6d;
+}
+.wm-test-btn:hover {
+    background: rgba(207,142,109,0.12);
+}
+.wm-edit-btn {
+    border-color: rgba(255,255,255,0.12);
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+}
+.wm-edit-btn:hover {
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+}
+.wm-delete-btn {
+    border-color: rgba(255,107,107,0.25);
+    background: transparent;
+    color: #ff6b6b;
+}
+.wm-delete-btn:hover {
+    background: rgba(255,107,107,0.12);
+}
+
+/* ── Right panel: Delivery Log ───────────────────────────────── */
+.wm-panel {
+    background: rgba(255,255,255,0.015);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 20px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+}
+.wm-panel__title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 16px;
+}
+.wm-delivery-item {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: start;
+}
+.wm-delivery-item:last-child {
+    border-bottom: none;
+}
+.wm-delivery__event {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #e0e0e0;
+}
+.wm-delivery__timestamp {
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    margin-top: 3px;
+}
+.wm-delivery__status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+}
+.wm-delivery__status--success {
+    background: rgba(80,200,120,0.1);
+    color: #50c878;
+}
+.wm-delivery__status--fail {
+    background: rgba(255,107,107,0.1);
+    color: #ff6b6b;
+}
+.wm-delivery__meta {
+    font-size: 10px;
+    color: rgba(255,255,255,0.25);
+    margin-top: 2px;
+}
+
+/* ── Signing Secret ──────────────────────────────────────────── */
+.wm-secret-block {
+    margin-top: 20px;
+    padding: 14px;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 6px;
+}
+.wm-secret-block__label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.3);
+    margin-bottom: 8px;
+}
+.wm-secret-block__value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #cf8e6d;
+    word-break: break-all;
+}
+.wm-secret-block__copy {
+    margin-top: 8px;
+    padding: 4px 12px;
+    background: transparent;
+    border: 1px solid rgba(207,142,109,0.3);
+    color: #cf8e6d;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.wm-secret-block__copy:hover {
+    background: rgba(207,142,109,0.1);
+}
+
+/* ── Create/Edit Modal ───────────────────────────────────────── */
+.wm-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: wmFadeIn 0.15s ease;
+}
+@keyframes wmFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.wm-modal {
+    width: 520px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #1e1e1e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 32px;
+}
+.wm-modal h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+.wm-modal-field {
+    margin-bottom: 18px;
+}
+.wm-modal-field label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 6px;
+}
+.wm-input {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 5px;
+    color: #e0e0e0;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+.wm-input:focus {
+    outline: none;
+    border-color: rgba(207,142,109,0.4);
+}
+.wm-event-checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.wm-event-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    cursor: pointer;
+}
+.wm-event-checkbox-item input[type="checkbox"] {
+    accent-color: #cf8e6d;
+}
+.wm-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+}
+.wm-modal-cancel {
+    padding: 8px 20px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6);
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.wm-modal-submit {
+    padding: 8px 24px;
+    background: #cf8e6d;
+    border: none;
+    color: #000;
+    font-weight: 700;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.wm-modal-submit:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── Ping test response ──────────────────────────────────────── */
+.wm-ping-result {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    animation: wmFadeIn 0.2s ease;
+}
+.wm-ping-result--success {
+    background: rgba(80,200,120,0.08);
+    border: 1px solid rgba(80,200,120,0.2);
+    color: #50c878;
+}
+.wm-ping-result--fail {
+    background: rgba(255,107,107,0.08);
+    border: 1px solid rgba(255,107,107,0.2);
+    color: #ff6b6b;
+}
+
+/* ── Empty / Error ───────────────────────────────────────────── */
+.wm-empty {
+    text-align: center;
+    padding: 60px 24px;
+    color: rgba(255,255,255,0.25);
+    font-size: 13px;
+}
+.wm-error-banner {
+    padding: 12px 18px;
+    background: rgba(255,107,107,0.08);
+    border: 1px solid rgba(255,107,107,0.2);
+    border-radius: 6px;
+    color: #ff6b6b;
+    font-size: 13px;
+    margin-bottom: 18px;
+}
+
+/* ── Header actions ──────────────────────────────────────────── */
+.wm-header-actions {
+    display: flex;
+    gap: 10px;
+}
+.wm-create-btn {
+    padding: 8px 20px;
+    background: #cf8e6d;
+    border: none;
+    color: #000;
+    font-weight: 700;
+    font-size: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    letter-spacing: 0.3px;
+}
+.wm-create-btn:hover {
+    opacity: 0.85;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .wm-layout {
+        grid-template-columns: 1fr;
+    }
+    .wm-table {
+        font-size: 11px;
+    }
+    .wm-table thead th,
+    .wm-table tbody td {
+        padding: 8px;
+    }
+}

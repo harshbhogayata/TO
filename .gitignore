@@ -38,6 +38,10 @@ yarn-error.log*
 # Build output and dist
 dist/
 
+# Test output files
+test_out*.txt
+test_output*.txt
+
 # Logs and IDE
 *.log
 .DS_Store

@@ -1,0 +1,39 @@
+{{- if .Values.pgbouncer.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "talentorbit.fullname" . }}-pgbouncer
+  namespace: {{ include "talentorbit.namespace" . }}
+  labels:
+    {{- include "talentorbit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pgbouncer
+  {{- with .Values.pgbouncer.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.pgbouncer.service.type }}
+  ports:
+    - port: {{ .Values.pgbouncer.service.port }}
+      targetPort: 5432
+      protocol: TCP
+      name: pgbouncer
+  selector:
+    {{- include "talentorbit.componentLabels" (dict "root" . "component" "pgbouncer") | nindent 4 }}
+---
+{{- if .Values.pgbouncer.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "talentorbit.fullname" . }}-pgbouncer
+  namespace: {{ include "talentorbit.namespace" . }}
+  labels:
+    {{- include "talentorbit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pgbouncer
+spec:
+  minAvailable: {{ .Values.pgbouncer.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "talentorbit.componentLabels" (dict "root" . "component" "pgbouncer") | nindent 6 }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,57 @@
+###############################################################################
+# TalentOrbit — Cloudflare Worker (Edge API Cache)
+#
+# Intelligent edge caching for TalentOrbit API responses.
+# Reduces origin load by caching safe, public-facing endpoints at the edge
+# while preserving real-time accuracy for authenticated/mutable endpoints.
+#
+# Caching strategy:
+#   1. Public endpoints (job listings, blog, course catalog) → cached at edge
+#   2. Authenticated endpoints → pass-through (no cache)
+#   3. Health endpoints → cached briefly (5s) to reduce probe load
+#   4. Static assets → long-lived immutable cache
+#   5. WebSocket upgrades → pass-through
+#
+# Deploy:
+#   cd infra/cloudflare
+#   npx wrangler deploy
+###############################################################################
+name = "talentorbit-edge-cache"
+main = "src/index.js"
+compatibility_date = "2025-12-01"
+
+# ── Account & Zone ────────────────────────────────────────────────────────────
+# Set via environment or wrangler.toml overrides per environment.
+# account_id = ""
+# zone_id = ""
+
+# ── KV Namespace (edge key-value store for cache metadata) ────────────────────
+[[kv_namespaces]]
+binding = "EDGE_CACHE"
+id = ""                     # Created via: wrangler kv:namespace create "EDGE_CACHE"
+preview_id = ""             # Created via: wrangler kv:namespace create "EDGE_CACHE" --preview
+
+# ── Environment: Staging ──────────────────────────────────────────────────────
+[env.staging]
+name = "talentorbit-edge-cache-staging"
+route = { pattern = "api.staging.talentorbit.com/*", zone_name = "talentorbit.com" }
+vars = { ENVIRONMENT = "staging", ORIGIN = "https://api-staging.internal.talentorbit.com", DEFAULT_TTL = "60", MAX_TTL = "300" }
+
+[[env.staging.kv_namespaces]]
+binding = "EDGE_CACHE"
+id = ""
+
+# ── Environment: Production ───────────────────────────────────────────────────
+[env.production]
+name = "talentorbit-edge-cache-production"
+route = { pattern = "api.talentorbit.com/*", zone_name = "talentorbit.com" }
+vars = { ENVIRONMENT = "production", ORIGIN = "https://api.internal.talentorbit.com", DEFAULT_TTL = "120", MAX_TTL = "600" }
+
+[[env.production.kv_namespaces]]
+binding = "EDGE_CACHE"
+id = ""
+
+# ── Observability ─────────────────────────────────────────────────────────────
+[observability]
+enabled = true
+head_sampling_rate = 0.1

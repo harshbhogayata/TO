@@ -1,0 +1,57 @@
+/* ── CertificateVerify.css ────────────────────────────────── */
+.cvr-page { padding: 32px; max-width: 700px; margin: 0 auto; }
+.cvr-skeleton { text-align: center; }
+
+.cvr-search-form { text-align: center; margin-bottom: 32px; }
+.cvr-search-form h3 { font-family: var(--font-display); font-size: 20px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+.cvr-search-form p { font-size: 13px; color: #666; margin-bottom: 16px; }
+.cvr-search-row { display: flex; gap: 8px; justify-content: center; }
+.cvr-search-input {
+    padding: 10px 16px;
+    border: 1px solid var(--border-color);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    width: 300px;
+    outline: none;
+}
+.cvr-search-input:focus { border-color: #000; }
+.cvr-search-btn {
+    padding: 10px 24px;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+}
+.cvr-search-btn:disabled { opacity: 0.4; }
+
+/* Result */
+.cvr-result {
+    text-align: center;
+    padding: 40px 32px;
+    border: 2px solid var(--border-color);
+    margin-bottom: 32px;
+}
+.cvr-result--valid { border-color: #4CAF50; }
+.cvr-result--invalid { border-color: #F44336; }
+.cvr-result__icon { font-size: 48px; margin-bottom: 12px; }
+.cvr-result--valid .cvr-result__icon { color: #4CAF50; }
+.cvr-result--invalid .cvr-result__icon { color: #F44336; }
+.cvr-result h2 { font-family: var(--font-display); font-size: 20px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+
+.cvr-result__details { text-align: left; max-width: 400px; margin: 0 auto; }
+.cvr-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    font-size: 13px;
+}
+.cvr-detail-label { text-transform: uppercase; letter-spacing: 1px; font-size: 11px; color: #888; }
+.cvr-detail-value { font-weight: 500; }
+
+.cvr-footer { text-align: center; margin-top: 24px; }
+.cvr-link { color: #000; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }

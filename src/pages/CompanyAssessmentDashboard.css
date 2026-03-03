@@ -1,0 +1,115 @@
+/* ── CompanyAssessmentDashboard.css ───────────────────────── */
+.cad-page { padding: 0 32px 48px; }
+
+.cad-header-stats { display: flex; gap: 16px; }
+.cad-stat { text-align: center; }
+.cad-stat__val { display: block; font-family: var(--font-display); font-size: 20px; }
+.cad-stat__label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+
+/* Tabs */
+.cad-tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); }
+.cad-tab {
+    padding: 10px 20px; background: none; border: none;
+    border-bottom: 2px solid transparent;
+    font-family: var(--font-sans); font-size: 12px;
+    text-transform: uppercase; letter-spacing: 1px;
+    cursor: pointer; color: #666;
+}
+.cad-tab.active { color: #000; border-bottom-color: #000; }
+.cad-tab__count { color: #999; }
+
+.cad-error { background: #fff0f0; border: 1px solid #f88; padding: 12px; margin-bottom: 20px; color: #c00; font-size: 13px; }
+
+/* Toolbar */
+.cad-toolbar { display: flex; gap: 10px; margin-bottom: 20px; }
+.cad-invite-btn, .cad-export-btn {
+    padding: 8px 20px; background: #000; color: #fff; border: none;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
+}
+
+.cad-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+/* Assessment card */
+.cad-assess-card { border: 1px solid var(--border-color); padding: 20px; }
+.cad-assess-card__header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.cad-assess-card__header h4 { font-family: var(--font-serif); font-size: 15px; flex: 1; }
+.cad-assess-status {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 1px;
+    padding: 2px 8px; border: 1px solid var(--border-color);
+}
+.cad-assess-status.published { border-color: #4CAF50; color: #4CAF50; }
+.cad-assess-status.draft { border-color: #FF9800; color: #FF9800; }
+.cad-assess-card__meta { display: flex; gap: 12px; font-size: 11px; color: #666; margin-bottom: 8px; text-transform: capitalize; }
+.cad-assess-card__stats { display: flex; gap: 16px; font-size: 11px; color: #555; margin-bottom: 10px; }
+.cad-assess-card__link { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #000; }
+
+/* Results table */
+.cad-results-table-wrap { overflow-x: auto; }
+.cad-results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cad-results-table th {
+    text-align: left; padding: 10px 14px;
+    font-family: var(--font-serif); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 1px;
+    border-bottom: 2px solid var(--border-color);
+    color: #888;
+}
+.cad-results-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.cad-result-status {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px; padding: 2px 8px;
+}
+.cad-result-status.pass { background: #4CAF50; color: #fff; }
+.cad-result-status.fail { background: #F44336; color: #fff; }
+.cad-results-table a { color: #000; font-size: 11px; text-transform: uppercase; }
+.cad-empty-row { text-align: center; color: #888; padding: 32px !important; }
+
+/* Create form */
+.cad-create-form { max-width: 700px; }
+.cad-create-form h3 { font-family: var(--font-display); font-size: 18px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 24px; }
+.cad-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.cad-field { display: flex; flex-direction: column; gap: 6px; }
+.cad-field label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #555; }
+.cad-field input, .cad-field select, .cad-field textarea {
+    padding: 10px 12px; border: 1px solid var(--border-color);
+    font-family: var(--font-sans); font-size: 13px; outline: none;
+}
+.cad-field input:focus, .cad-field select:focus, .cad-field textarea:focus { border-color: #000; }
+.cad-field--checkbox { flex-direction: row; align-items: center; }
+.cad-field--checkbox label { display: flex; align-items: center; gap: 8px; }
+.cad-field--checkbox input { accent-color: #000; }
+.cad-create-btn {
+    padding: 12px 32px; background: #000; color: #fff; border: none;
+    font-family: var(--font-display); font-size: 12px;
+    text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+}
+.cad-create-btn:disabled { opacity: 0.5; }
+
+/* Modal */
+.cad-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.cad-modal {
+    background: #fff; padding: 32px; width: 500px; max-width: 90vw;
+    max-height: 80vh; overflow-y: auto;
+}
+.cad-modal h3 { font-family: var(--font-display); font-size: 16px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+.cad-modal__actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.cad-modal__cancel {
+    padding: 10px 20px; border: 1px solid var(--border-color); background: transparent;
+    font-size: 12px; text-transform: uppercase; cursor: pointer;
+}
+.cad-modal__send {
+    padding: 10px 24px; background: #000; color: #fff; border: none;
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;
+}
+.cad-modal__send:disabled { opacity: 0.5; }
+
+.cad-empty { text-align: center; padding: 48px 0; font-size: 14px; color: #888; }

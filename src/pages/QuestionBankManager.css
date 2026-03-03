@@ -1,0 +1,395 @@
+/* ── QuestionBankManager.css ────────────────────────────────── */
+.qbm-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    height: 100%;
+}
+
+.qbm-header-stats { display: flex; gap: 24px; }
+.qbm-stat-block h3 {
+    font-family: var(--font-serif);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+.qbm-stat-block p {
+    font-family: var(--font-display);
+    font-size: 18px;
+}
+
+/* ── Bank List Panel (left) ─────────────────────────────────── */
+.qbm-bank-panel {
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.qbm-bank-search {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.qbm-bank-search-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    outline: none;
+}
+.qbm-bank-search-input:focus { border-color: #000; }
+
+.qbm-bank-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 0;
+}
+
+.qbm-bank-card {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.qbm-bank-card:hover { background: rgba(0,0,0,0.02); }
+.qbm-bank-card--active { background: rgba(0,0,0,0.04); border-left: 3px solid #000; }
+
+.qbm-bank-card__name {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+.qbm-bank-card__meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888;
+}
+.qbm-bank-card__tag {
+    display: inline-block;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: #000;
+    color: #fff;
+    padding: 2px 8px;
+    margin-top: 6px;
+}
+.qbm-bank-card__vis {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 1px solid var(--border-color);
+    padding: 2px 8px;
+    margin-top: 6px;
+    margin-left: 6px;
+}
+
+.qbm-bank-actions {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+}
+.qbm-create-bank-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.qbm-create-bank-btn:hover { opacity: 0.85; }
+
+/* ── Main Content (right) ───────────────────────────────────── */
+.qbm-content { display: flex; flex-direction: column; overflow: hidden; }
+
+/* Tabs */
+.qbm-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 24px;
+}
+.qbm-tab {
+    padding: 14px 20px;
+    font-family: var(--font-serif);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    color: #888;
+    transition: all 0.15s;
+}
+.qbm-tab:hover { color: #000; }
+.qbm-tab--active { color: #000; border-bottom-color: #000; }
+
+/* Content panels */
+.qbm-tab-content { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* ── Questions List ─────────────────────────────────────────── */
+.qbm-questions-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 12px;
+}
+.qbm-toolbar-left { display: flex; gap: 12px; align-items: center; }
+.qbm-toolbar-select {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    outline: none;
+}
+.qbm-add-question-btn {
+    padding: 8px 16px;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.qbm-add-question-btn:hover { opacity: 0.85; }
+
+.qbm-question-list { display: flex; flex-direction: column; gap: 12px; }
+
+.qbm-question-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border: 1px solid var(--border-color);
+    transition: box-shadow 0.2s;
+}
+.qbm-question-item:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+.qbm-question-info { flex: 1; min-width: 0; }
+.qbm-question-title {
+    font-family: var(--font-serif);
+    font-size: 14px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.qbm-question-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888;
+}
+.qbm-question-meta span { display: flex; align-items: center; gap: 3px; }
+
+.qbm-question-actions { display: flex; gap: 8px; margin-left: 16px; }
+.qbm-action-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.qbm-action-btn:hover { border-color: #000; }
+.qbm-action-btn--approve { background: #000; color: #fff; border-color: #000; }
+.qbm-action-btn--approve:hover { opacity: 0.85; }
+.qbm-action-btn--danger:hover { border-color: #c00; color: #c00; }
+
+/* Difficulty badges */
+.qbm-diff-badge {
+    display: inline-block;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border: 1px solid var(--border-color);
+}
+.qbm-diff-badge--1 { background: #e8f5e9; border-color: #a5d6a7; }
+.qbm-diff-badge--2 { background: #f1f8e9; border-color: #c5e1a5; }
+.qbm-diff-badge--3 { background: #fff3e0; border-color: #ffcc80; }
+.qbm-diff-badge--4 { background: #fbe9e7; border-color: #ffab91; }
+.qbm-diff-badge--5 { background: #fce4ec; border-color: #ef9a9a; }
+
+/* ── Calibration Tab ────────────────────────────────────────── */
+.qbm-calibration-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+.qbm-calibration-card {
+    border: 1px solid var(--border-color);
+    padding: 20px;
+}
+.qbm-calibration-card h4 {
+    font-family: var(--font-serif);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 16px;
+}
+.qbm-calibration-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 12px;
+}
+.qbm-calibration-bar-wrap {
+    flex: 1;
+    margin: 0 12px;
+    height: 6px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.qbm-calibration-bar {
+    height: 100%;
+    background: #000;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+/* ── Approval Queue Tab ─────────────────────────────────────── */
+.qbm-approval-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.qbm-bulk-approve-btn {
+    padding: 8px 16px;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.qbm-bulk-approve-btn:hover { opacity: 0.85; }
+.qbm-bulk-approve-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.qbm-approval-count {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #888;
+}
+
+/* ── Empty / Error States ───────────────────────────────────── */
+.qbm-error-banner {
+    background: #fff0f0;
+    border: 1px solid #f88;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #c00;
+}
+.qbm-empty {
+    text-align: center;
+    padding: 48px 0;
+    font-size: 14px;
+    color: #888;
+}
+
+/* ── Create Bank Modal ──────────────────────────────────────── */
+.qbm-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.qbm-modal {
+    background: var(--bg-cream, #faf9f6);
+    border: 1px solid var(--border-color);
+    width: 480px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 32px;
+}
+.qbm-modal h2 {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    margin-bottom: 24px;
+}
+.qbm-modal-field { margin-bottom: 16px; }
+.qbm-modal-field label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.qbm-modal-field input,
+.qbm-modal-field select,
+.qbm-modal-field textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 13px;
+    outline: none;
+}
+.qbm-modal-field input:focus,
+.qbm-modal-field select:focus,
+.qbm-modal-field textarea:focus { border-color: #000; }
+.qbm-modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.qbm-modal-cancel {
+    padding: 10px 20px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+}
+.qbm-modal-cancel:hover { border-color: #000; }
+.qbm-modal-submit {
+    padding: 10px 20px;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.qbm-modal-submit:hover { opacity: 0.85; }
+.qbm-modal-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 960px) {
+    .qbm-layout { grid-template-columns: 1fr; }
+    .qbm-bank-panel { display: none; }
+}

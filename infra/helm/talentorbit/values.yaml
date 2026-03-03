@@ -1,0 +1,504 @@
+###############################################################################
+# TalentOrbit Helm Chart — Default Values
+#
+# These are development/baseline defaults. Override per environment with:
+#   values-staging.yaml
+#   values-production.yaml
+#
+# Secrets should be injected via:
+#   1. Sealed Secrets (recommended)
+#   2. External Secrets Operator (AWS SM / Vault)
+#   3. --set-string on the command line (CI/CD)
+###############################################################################
+
+# ── Global ────────────────────────────────────────────────────────────────────
+global:
+  environment: development
+  imageRegistry: ""                      # e.g. "ghcr.io/talentorbit"
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+
+# ── Namespace ─────────────────────────────────────────────────────────────────
+namespace:
+  create: true
+  name: talentorbit
+  labels: {}
+  annotations: {}
+
+# ── Service Account ───────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  name: ""                               # auto-generated if empty
+  annotations: {}
+  # For IRSA (AWS) or Workload Identity (GCP):
+  #   annotations:
+  #     eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/talentorbit
+
+# ── Container Image ───────────────────────────────────────────────────────────
+image:
+  repository: talentorbit/api
+  tag: ""                                # defaults to Chart.appVersion
+  pullPolicy: IfNotPresent
+
+# ── Configuration (non-secret) ────────────────────────────────────────────────
+config:
+  debug: "False"
+  allowedHosts: "*"
+  databaseUrl: ""                        # postgres://user:pass@host:5432/db
+  redisUrl: ""                           # redis://:pass@host:6379/0
+  channelsRedisUrl: ""                   # redis://:pass@host:6379/1
+  celeryBrokerUrl: ""                    # redis://:pass@host:6379/2
+  frontendUrl: "https://talentorbit.com"
+  corsAllowedOrigins: "https://talentorbit.com"
+  defaultFromEmail: "noreply@talentorbit.com"
+  # Object storage (Cloudflare R2)
+  r2BucketName: "talentorbit-media"
+  r2EndpointUrl: ""
+  r2CustomDomain: ""
+  # Email
+  emailBackend: "django.core.mail.backends.smtp.EmailBackend"
+  emailHost: "smtp.resend.com"
+  emailPort: "465"
+  # Sentry
+  sentryDsn: ""
+  sentryTracesSampleRate: "0.1"
+  # PostHog
+  posthogApiKey: ""
+  posthogHost: "https://us.i.posthog.com"
+
+# ── Secrets ───────────────────────────────────────────────────────────────────
+# If externalSecrets.enabled, these are ignored in favour of the ESO provider.
+secrets:
+  secretKey: ""                          # Django SECRET_KEY
+  databaseUrl: ""                        # overrides config.databaseUrl
+  stripeSecretKey: ""
+  stripeWebhookSecret: ""
+  r2AccessKeyId: ""
+  r2SecretAccessKey: ""
+  resendApiKey: ""
+  firebaseCredentials: ""                # Base64-encoded JSON
+  posthogApiKey: ""
+
+externalSecrets:
+  enabled: false
+  refreshInterval: "1h"
+  provider: ""                           # aws-secretsmanager | vault | gcp-sm
+  # AWS Secrets Manager
+  aws:
+    region: "us-east-1"
+    secretName: "talentorbit/production"
+  # HashiCorp Vault
+  vault:
+    server: "https://vault.internal:8200"
+    path: "secret/data/talentorbit"
+
+# ═════════════════════════════════════════════════════════════════════════════
+# API SERVER (Daphne ASGI — HTTP + WebSocket)
+# ═════════════════════════════════════════════════════════════════════════════
+api:
+  replicaCount: 2
+  command:
+    - daphne
+    - "-b"
+    - "0.0.0.0"
+    - "-p"
+    - "8000"
+    - "--proxy-headers"
+    - "--access-log"
+    - "-"
+    - "talentorbit.asgi:application"
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 768Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+    # Custom metrics (requires prometheus-adapter)
+    customMetrics: []
+    #   - type: Pods
+    #     pods:
+    #       metric:
+    #         name: http_requests_per_second
+    #       target:
+    #         type: AverageValue
+    #         averageValue: "100"
+    behavior:
+      scaleUp:
+        stabilizationWindowSeconds: 60
+        policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 60
+          - type: Pods
+            value: 4
+            periodSeconds: 60
+        selectPolicy: Max
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 25
+            periodSeconds: 120
+        selectPolicy: Min
+
+  pdb:
+    enabled: true
+    minAvailable: 1
+    # maxUnavailable: 1               # Alternative to minAvailable
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8000
+    annotations: {}
+
+  livenessProbe:
+    httpGet:
+      path: /health/live/
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready/
+      port: 8000
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    successThreshold: 1
+
+  startupProbe:
+    httpGet:
+      path: /health/live/
+      port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 30
+
+  # Init container: run migrations before the API starts
+  migrate:
+    enabled: true
+    command: ["python", "manage.py", "migrate", "--noinput"]
+
+  # Lifecycle hooks for graceful shutdown
+  lifecycle:
+    preStop:
+      exec:
+        command: ["/bin/sh", "-c", "sleep 10"]
+
+  terminationGracePeriodSeconds: 45
+
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values: ["api"]
+            topologyKey: kubernetes.io/hostname
+
+  topologySpreadConstraints: []
+  podAnnotations: {}
+  podLabels: {}
+  extraEnv: []
+  extraVolumes: []
+  extraVolumeMounts: []
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CELERY WORKER
+# ═════════════════════════════════════════════════════════════════════════════
+worker:
+  replicaCount: 2
+  command:
+    - celery
+    - "-A"
+    - "talentorbit"
+    - "worker"
+    - "--loglevel=info"
+    - "--queues=default,emails,notifications,intelligence,analytics,compliance,dlq"
+    - "--concurrency=4"
+    - "--max-tasks-per-child=200"
+    - "--without-heartbeat"
+    - "--without-mingle"
+    - "--without-gossip"
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 15
+    targetCPUUtilization: 75
+    targetMemoryUtilization: 85
+    # Scale on Celery queue length (requires prometheus + celery-exporter)
+    customMetrics: []
+    #   - type: External
+    #     external:
+    #       metric:
+    #         name: celery_queue_length
+    #         selector:
+    #           matchLabels:
+    #             queue: default
+    #       target:
+    #         type: AverageValue
+    #         averageValue: "50"
+    behavior:
+      scaleUp:
+        stabilizationWindowSeconds: 30
+        policies:
+          - type: Pods
+            value: 3
+            periodSeconds: 60
+        selectPolicy: Max
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 20
+            periodSeconds: 120
+        selectPolicy: Min
+
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+  livenessProbe:
+    exec:
+      command:
+        - celery
+        - "-A"
+        - "talentorbit"
+        - "inspect"
+        - "ping"
+        - "--timeout"
+        - "10"
+    initialDelaySeconds: 30
+    periodSeconds: 60
+    timeoutSeconds: 15
+    failureThreshold: 3
+
+  # Workers don't need readiness — they pull from queue
+  readinessProbe: {}
+
+  lifecycle:
+    preStop:
+      exec:
+        # Warm shutdown: stop consuming, finish current tasks
+        command: ["/bin/sh", "-c", "celery -A talentorbit control cancel_consumer default && sleep 30"]
+
+  terminationGracePeriodSeconds: 120
+
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values: ["worker"]
+            topologyKey: kubernetes.io/hostname
+
+  podAnnotations: {}
+  podLabels: {}
+  extraEnv: []
+
+# ═════════════════════════════════════════════════════════════════════════════
+# CELERY BEAT (singleton scheduler)
+# ═════════════════════════════════════════════════════════════════════════════
+beat:
+  enabled: true
+  # CRITICAL: always exactly 1 replica — duplicate Beats = duplicate tasks
+  replicaCount: 1
+  command:
+    - celery
+    - "-A"
+    - "talentorbit"
+    - "beat"
+    - "--loglevel=info"
+    - "--scheduler=django_celery_beat.schedulers:DatabaseScheduler"
+    - "--pidfile=/tmp/celerybeat.pid"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  nodeSelector: {}
+  tolerations: []
+  podAnnotations: {}
+  podLabels: {}
+  extraEnv: []
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PGBOUNCER (connection pooling)
+# ═════════════════════════════════════════════════════════════════════════════
+pgbouncer:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: bitnami/pgbouncer
+    tag: "1.22.0"
+    pullPolicy: IfNotPresent
+
+  # Pool mode: transaction = release connection after each transaction
+  # (best for Django's ORM which doesn't use prepared statements)
+  poolMode: transaction
+  maxClientConnections: 400
+  defaultPoolSize: 25
+  minPoolSize: 5
+  reservePoolSize: 5
+  reservePoolTimeout: 3
+  maxDbConnections: 50
+  maxUserConnections: 0
+  serverIdleTimeout: 600
+  serverLifetime: 3600
+  serverConnectTimeout: 15
+  queryTimeout: 120
+  queryWaitTimeout: 60
+  clientIdleTimeout: 0
+  clientLoginTimeout: 60
+  # Stats collection for monitoring
+  statsUsers: "pgbouncer_stats"
+  statsPassword: ""
+  # Admin access
+  adminUsers: "pgbouncer_admin"
+  adminPassword: ""
+
+  databases:
+    talentorbit:
+      host: ""                           # e.g. "rds-endpoint.aws.com"
+      port: 5432
+      dbname: talentorbit
+
+  auth:
+    username: talentorbit
+    password: ""                         # from secret
+
+  service:
+    type: ClusterIP
+    port: 5432
+    annotations: {}
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+  nodeSelector: {}
+  tolerations: []
+
+# ═════════════════════════════════════════════════════════════════════════════
+# INGRESS
+# ═════════════════════════════════════════════════════════════════════════════
+ingress:
+  enabled: true
+  className: nginx                       # or "cloudflare" for CF Tunnel
+  annotations:
+    # nginx-ingress defaults
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "20"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "3"
+    # CORS handled by Django, not ingress
+    # SSL redirect
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: api.talentorbit.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: talentorbit-tls
+      hosts:
+        - api.talentorbit.com
+
+# ═════════════════════════════════════════════════════════════════════════════
+# NETWORK POLICY (zero-trust pod isolation)
+# ═════════════════════════════════════════════════════════════════════════════
+networkPolicy:
+  enabled: true
+  # API pods: accept ingress from ingress controller + internal pods
+  api:
+    allowIngressFrom:
+      - namespaceSelector:
+          matchLabels:
+            kubernetes.io/metadata.name: ingress-nginx
+      - podSelector: {}                  # within same namespace
+  # Worker/Beat: no ingress needed (they only make outbound connections)
+  worker:
+    allowIngressFrom: []
+  # PgBouncer: only from API and Worker pods
+  pgbouncer:
+    allowIngressFrom:
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/component: api
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/component: worker
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/component: beat
+
+# ═════════════════════════════════════════════════════════════════════════════
+# MONITORING
+# ═════════════════════════════════════════════════════════════════════════════
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    path: /health/detailed/
+    namespace: ""
+  prometheusRule:
+    enabled: false
+    rules: []

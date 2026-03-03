@@ -1,0 +1,223 @@
+###############################################################################
+# TalentOrbit Helm — Production Overrides
+#
+# Usage:
+#   helm upgrade talentorbit ./infra/helm/talentorbit \
+#     -f infra/helm/talentorbit/values-production.yaml \
+#     --namespace talentorbit --create-namespace \
+#     --set secrets.secretKey=$SECRET_KEY \
+#     --set secrets.databaseUrl=$DATABASE_URL \
+#     --set secrets.stripeSecretKey=$STRIPE_SECRET_KEY
+###############################################################################
+
+global:
+  environment: production
+
+namespace:
+  name: talentorbit
+
+config:
+  debug: "False"
+  allowedHosts: "api.talentorbit.com,talentorbit.com"
+  frontendUrl: "https://talentorbit.com"
+  corsAllowedOrigins: "https://talentorbit.com,https://www.talentorbit.com"
+  sentryTracesSampleRate: "0.1"
+
+# ── API: high-availability production config ──────────────────────────────────
+api:
+  replicaCount: 3
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilization: 65
+    targetMemoryUtilization: 75
+    behavior:
+      scaleUp:
+        stabilizationWindowSeconds: 30
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 30
+          - type: Pods
+            value: 6
+            periodSeconds: 30
+        selectPolicy: Max
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 10
+            periodSeconds: 120
+        selectPolicy: Min
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+
+  pdb:
+    enabled: true
+    minAvailable: 2
+
+  # Spread across availability zones
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/component: api
+
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values: ["api"]
+          topologyKey: kubernetes.io/hostname
+
+# ── Worker: production queue processing ───────────────────────────────────────
+worker:
+  replicaCount: 3
+  command:
+    - celery
+    - "-A"
+    - "talentorbit"
+    - "worker"
+    - "--loglevel=warning"
+    - "--queues=default,emails,notifications,intelligence,analytics,compliance,dlq"
+    - "--concurrency=8"
+    - "--max-tasks-per-child=500"
+    - "--without-heartbeat"
+    - "--without-mingle"
+    - "--without-gossip"
+    - "--prefetch-multiplier=1"
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 768Mi
+    limits:
+      cpu: "2"
+      memory: 1536Mi
+
+  pdb:
+    enabled: true
+    minAvailable: 2
+
+  terminationGracePeriodSeconds: 180
+
+# ── Beat: production scheduler ────────────────────────────────────────────────
+beat:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# ── PgBouncer: production pooling ─────────────────────────────────────────────
+pgbouncer:
+  enabled: true
+  replicaCount: 2
+  poolMode: transaction
+  defaultPoolSize: 25
+  maxClientConnections: 400
+  maxDbConnections: 100
+  minPoolSize: 10
+  reservePoolSize: 10
+  reservePoolTimeout: 3
+  serverLifetime: 3600
+  serverIdleTimeout: 300
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 96Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+# ── Ingress: production TLS ───────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "5"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # HSTS
+    nginx.ingress.kubernetes.io/server-snippet: |
+      add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    # cert-manager
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: api.talentorbit.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: talentorbit-prod-tls
+      hosts:
+        - api.talentorbit.com
+
+networkPolicy:
+  enabled: true
+
+monitoring:
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+  prometheusRule:
+    enabled: true
+    rules:
+      - alert: TalentOrbitAPIHighErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{namespace="talentorbit",status=~"5.."}[5m]))
+          / sum(rate(http_server_requests_seconds_count{namespace="talentorbit"}[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "API 5xx error rate above 5%"
+      - alert: TalentOrbitCeleryQueueBacklog
+        expr: celery_queue_length{namespace="talentorbit"} > 1000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery queue backlog exceeds 1000 tasks"
+      - alert: TalentOrbitPgBouncerPoolExhausted
+        expr: pgbouncer_pools_server_active{namespace="talentorbit"} / pgbouncer_pools_server_maxconn{namespace="talentorbit"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PgBouncer pool >90% utilised"

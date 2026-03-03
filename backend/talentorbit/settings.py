@@ -76,6 +76,9 @@ INSTALLED_APPS = [
     'search',
     'intelligence',
     'compliance',
+    'assessments',
+    'reviews',
+    'developer',
 ]
 
 MIDDLEWARE = [
@@ -142,6 +145,15 @@ else:
                 'CONN_MAX_AGE': 600,
             }
         }
+
+# ─── Read Replica (optional) ─────────────────────────────────────────────────
+# When DATABASE_REPLICA_URL is set, reads are routed to the replica automatically
+# via PrimaryReplicaRouter. Compliance, payments, and auth tables always read
+# from the primary to guarantee strong consistency.
+_replica_url = os.environ.get('DATABASE_REPLICA_URL', '')
+if _replica_url:
+    DATABASES['replica'] = _dju.parse(_replica_url, conn_max_age=600)
+    DATABASE_ROUTERS = ['talentorbit.db_router.PrimaryReplicaRouter']
 
 # ─── Cache (Upstash Redis) ────────────────────────────────────────────────────
 _redis_url = os.environ.get('UPSTASH_REDIS_URL', '')
@@ -315,6 +327,13 @@ REST_FRAMEWORK = {
         'compliance_audit': '60/hour',
         'compliance_audit_integrity': '5/hour',
         'compliance_policy_create': '10/hour',
+        # ── Developer Platform per-endpoint throttles ───────────────────
+        'developer_key_create': '10/hour',
+        'developer_key_rotate': '10/hour',
+        'developer_webhook_create': '10/hour',
+        'developer_webhook_test': '20/hour',
+        'developer_oauth_create': '5/hour',
+        'developer_oauth_revoke': '10/hour',
     },
     'EXCEPTION_HANDLER': 'talentorbit.exceptions.custom_exception_handler',
 }
@@ -505,6 +524,7 @@ CELERY_TASK_QUEUES = {
     'intelligence': {},
     'analytics': {},
     'compliance': {},                  # GDPR export/deletion, team invites
+    'assessments': {},               # Code grading, result computation
     'dlq': {},                       # Dead-letter queue for manual triage
 }
 CELERY_TASK_ROUTES = {
@@ -542,6 +562,13 @@ CELERY_TASK_ROUTES = {
     'compliance.tasks.expire_team_invitations_task': {'queue': 'compliance'},
     'compliance.tasks.audit_chain_integrity_check_task': {'queue': 'compliance'},
     'compliance.tasks.ip_anomaly_detection_task': {'queue': 'compliance'},
+    # Assessments — grading, results, housekeeping
+    'assessments.tasks.grade_code_answer': {'queue': 'assessments'},
+    'assessments.tasks.compute_attempt_result': {'queue': 'assessments'},
+    'assessments.tasks.recompute_assessment_stats': {'queue': 'assessments'},
+    'assessments.tasks.auto_submit_expired_attempts': {'queue': 'assessments'},
+    'assessments.tasks.expire_invitations': {'queue': 'assessments'},
+    'assessments.tasks.cleanup_abandoned_attempts': {'queue': 'default'},
 }
 
 # Celery Beat schedule — periodic housekeeping tasks
@@ -659,4 +686,25 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute='*/30'),  # Every 30 minutes
         'options': {'queue': 'compliance'},
     },
+
+    # ── Assessments — Grading & Housekeeping ──────────────────────────────
+    'auto-submit-expired-attempts': {
+        'task': 'assessments.tasks.auto_submit_expired_attempts',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes
+        'options': {'queue': 'assessments'},
+    },
+    'expire-assessment-invitations': {
+        'task': 'assessments.tasks.expire_invitations',
+        'schedule': crontab(hour='*/6', minute=10),  # Every 6 hours
+        'options': {'queue': 'assessments'},
+    },
+    'cleanup-abandoned-attempts': {
+        'task': 'assessments.tasks.cleanup_abandoned_attempts',
+        'schedule': crontab(hour=4, minute=45),  # Daily at 04:45
+        'options': {'queue': 'default'},
+    },
 }
+
+# ─── Judge0 CE (sandboxed code execution) ─────────────────────────────────────
+JUDGE0_API_URL = os.environ.get('JUDGE0_API_URL', 'http://judge0:2358')
+JUDGE0_API_KEY = os.environ.get('JUDGE0_API_KEY', '')

@@ -1,0 +1,361 @@
+/* ═══════════════════════════════════════════════════════════════
+   APIKeysManager.css — API key management page
+   BEM prefix: ak-
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Header ───────────────────────────────────────────────── */
+.ak-header-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.ak-create-btn {
+    background: var(--text-black, #111);
+    color: var(--bg-cream, #f0f0f0);
+    border: none;
+    padding: 14px 24px;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: opacity 0.15s;
+}
+
+.ak-create-btn:hover {
+    opacity: 0.85;
+}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.ak-layout {
+    display: flex;
+    min-height: calc(100vh - 220px);
+}
+
+.ak-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* ── Keys Table ───────────────────────────────────────────── */
+.ak-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ak-table th {
+    text-align: left;
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border-color, #000);
+    font-family: var(--font-sans);
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.ak-table td {
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border-color, #000);
+    vertical-align: middle;
+}
+
+/* Key name */
+.ak-key-name {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Key prefix */
+.ak-key-prefix {
+    font-family: 'Fira Code', 'Courier New', monospace;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 4px 8px;
+    font-size: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Scope tags */
+.ak-scope-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--text-black, #000);
+    color: var(--bg-cream, #fff);
+    padding: 2px 6px;
+    margin-right: 4px;
+    margin-bottom: 4px;
+    letter-spacing: 0.3px;
+}
+
+/* Sparkline */
+.ak-sparkline {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 30px;
+    width: 100px;
+}
+
+.ak-sparkline__bar {
+    background: var(--text-black, #111);
+    width: 4px;
+    min-height: 2px;
+    transition: height 0.3s;
+}
+
+/* Date meta */
+.ak-date-meta {
+    font-size: 11px;
+    text-transform: uppercase;
+    line-height: 1.6;
+}
+
+.ak-date-meta strong {
+    font-weight: 700;
+}
+
+.ak-date-meta span {
+    opacity: 0.6;
+}
+
+/* Action buttons */
+.ak-revoke-btn {
+    background: none;
+    border: 1px solid #c62828;
+    color: #c62828;
+    padding: 6px 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+}
+
+.ak-revoke-btn:hover {
+    background: #c62828;
+    color: #fff;
+}
+
+.ak-rotate-btn {
+    background: none;
+    border: 1px solid var(--border-color, #000);
+    color: var(--text-black, #000);
+    padding: 6px 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    cursor: pointer;
+    margin-right: 8px;
+    transition: all 0.2s;
+}
+
+.ak-rotate-btn:hover {
+    background: var(--text-black, #000);
+    color: var(--bg-cream, #fff);
+}
+
+/* ── Settings Pane ────────────────────────────────────────── */
+.ak-settings-pane {
+    padding: 40px 28px;
+    border-top: 2px solid var(--border-color, #000);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+@media (max-width: 900px) {
+    .ak-settings-pane {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ak-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ak-field-label {
+    font-family: var(--font-display);
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ak-input {
+    background: transparent;
+    border: 1px solid var(--border-color, #000);
+    padding: 12px;
+    font-family: var(--font-sans);
+    font-size: 14px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+}
+
+.ak-input:focus {
+    border-color: var(--text-black, #000);
+}
+
+.ak-input::placeholder {
+    opacity: 0.4;
+}
+
+/* Scope checkboxes */
+.ak-checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.ak-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.ak-checkbox-item input[type="checkbox"] {
+    accent-color: #000;
+}
+
+/* ── Create Key Modal ─────────────────────────────────────── */
+.ak-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.ak-modal {
+    background: var(--bg-cream, #e6e2d8);
+    border: 1px solid var(--border-color, #000);
+    padding: 40px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.ak-modal h2 {
+    font-family: var(--font-display);
+    font-size: 32px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    letter-spacing: 1px;
+}
+
+.ak-modal-field {
+    margin-bottom: 20px;
+}
+
+.ak-modal-field label {
+    display: block;
+    font-family: var(--font-serif);
+    font-size: 12px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.ak-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 28px;
+}
+
+.ak-modal-cancel {
+    background: transparent;
+    border: 1px solid var(--border-color, #000);
+    padding: 12px 20px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+}
+
+.ak-modal-submit {
+    background: var(--text-black, #000);
+    color: var(--bg-cream, #fff);
+    border: none;
+    padding: 12px 20px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+}
+
+.ak-modal-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Raw key display ──────────────────────────────────────── */
+.ak-raw-key-banner {
+    background: #1a1a1a;
+    color: #d1d1d1;
+    padding: 20px 28px;
+    border: 1px solid var(--border-color, #000);
+    margin: 20px 28px;
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.ak-raw-key-banner__text {
+    word-break: break-all;
+    flex: 1;
+}
+
+.ak-raw-key-banner__copy {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff;
+    padding: 6px 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* ── Empty state ──────────────────────────────────────────── */
+.ak-empty {
+    padding: 60px 28px;
+    text-align: center;
+    opacity: 0.5;
+    font-size: 14px;
+}
+
+/* ── Error banner ─────────────────────────────────────────── */
+.ak-error-banner {
+    background: #ffebee;
+    color: #c62828;
+    padding: 14px 28px;
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid #c62828;
+}

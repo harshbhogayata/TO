@@ -1,0 +1,66 @@
+/* ── AssessmentDetail.css ─────────────────────────────────── */
+.ad-page { padding: 0 32px 48px; max-width: 860px; }
+.ad-skeleton { padding: 32px; }
+.ad-error { padding: 48px; text-align: center; color: #c00; }
+
+.ad-start-btn {
+    padding: 10px 24px; background: #000; color: #fff; border: none;
+    font-family: var(--font-display); font-size: 12px;
+    text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+}
+.ad-start-btn:hover { opacity: 0.85; }
+.ad-start-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.ad-start-btn--large { padding: 14px 36px; font-size: 14px; }
+
+/* Overview */
+.ad-overview { margin-bottom: 28px; }
+.ad-overview__badges { display: flex; gap: 8px; margin-bottom: 16px; }
+.ad-badge {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+    padding: 3px 10px; color: #fff;
+}
+.ad-badge--type { background: #333; }
+.ad-description { font-size: 14px; line-height: 1.7; }
+
+/* Info grid */
+.ad-info-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 14px; margin-bottom: 28px;
+}
+.ad-info-block {
+    border: 1px solid var(--border-color); padding: 14px;
+}
+.ad-info-block h4 {
+    font-family: var(--font-serif); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px;
+}
+.ad-info-block p { font-size: 14px; }
+
+/* Skills */
+.ad-skills { margin-bottom: 28px; }
+.ad-section-title {
+    font-family: var(--font-display); font-size: 16px;
+    text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;
+}
+.ad-skill-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.ad-skill-tag {
+    font-size: 11px; border: 1px solid var(--border-color); padding: 4px 12px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* Instructions */
+.ad-instructions { margin-bottom: 28px; }
+.ad-instructions-list { padding-left: 20px; font-size: 13px; line-height: 1.8; }
+
+/* Previous attempts */
+.ad-attempts { margin-bottom: 28px; }
+.ad-attempts-list {}
+.ad-attempt-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; border: 1px solid var(--border-color); margin-bottom: 6px;
+    font-size: 12px;
+}
+
+/* CTA */
+.ad-cta { text-align: center; margin-top: 32px; }

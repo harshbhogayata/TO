@@ -1,0 +1,85 @@
+/* ── SkillBadgeProfile.css ────────────────────────────────── */
+.sbp-page { padding: 0 32px 48px; }
+.sbp-skeleton { text-align: center; padding: 32px; }
+.sbp-error { padding: 48px; text-align: center; color: #c00; }
+
+.sbp-header-stats { display: flex; gap: 20px; }
+.sbp-stat { text-align: center; }
+.sbp-stat__val { display: block; font-family: var(--font-display); font-size: 22px; }
+.sbp-stat__label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+
+/* Profile header */
+.sbp-profile-header { text-align: center; margin-bottom: 36px; }
+.sbp-avatar {
+    width: 100px; height: 100px; border-radius: 50%;
+    overflow: hidden; margin: 0 auto 16px;
+    border: 2px solid var(--border-color);
+    display: flex; align-items: center; justify-content: center;
+    background: #f0f0f0;
+}
+.sbp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.sbp-avatar__initial { font-family: var(--font-display); font-size: 36px; }
+.sbp-name { font-family: var(--font-display); font-size: 24px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
+.sbp-subtitle { font-size: 13px; color: #888; }
+
+/* Skill groups */
+.sbp-skill-group { margin-bottom: 32px; }
+.sbp-skill-group__title {
+    font-family: var(--font-display); font-size: 14px;
+    text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;
+}
+.sbp-badges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+.sbp-badge-card {
+    border: 1px solid var(--border-color); padding: 24px; text-align: center;
+    transition: box-shadow 0.2s;
+}
+.sbp-badge-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+.sbp-badge-card__icon { font-size: 32px; margin-bottom: 8px; }
+.sbp-badge-card__title { font-family: var(--font-serif); font-size: 14px; margin-bottom: 4px; }
+.sbp-badge-card__level { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 4px; }
+.sbp-badge-card__date { font-size: 10px; color: #aaa; margin-bottom: 10px; }
+.sbp-badge-card__actions { display: flex; justify-content: center; gap: 10px; }
+.sbp-badge-link {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+    color: #000; text-decoration: none;
+}
+.sbp-badge-link:hover { text-decoration: underline; }
+.sbp-badge-share {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+    background: none; border: 1px solid var(--border-color); padding: 2px 8px; cursor: pointer;
+}
+
+/* Empty */
+.sbp-empty { text-align: center; padding: 48px; }
+.sbp-cta-btn {
+    display: inline-block; margin-top: 16px;
+    padding: 10px 24px; background: #000; color: #fff;
+    text-decoration: none; font-family: var(--font-display); font-size: 12px;
+    text-transform: uppercase; letter-spacing: 2px;
+}
+
+/* Recent results */
+.sbp-recent-results { margin-top: 32px; }
+.sbp-section-title {
+    font-family: var(--font-display); font-size: 14px;
+    text-transform: uppercase; letter-spacing: 2px;
+    margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;
+}
+.sbp-results-list {}
+.sbp-result-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; border: 1px solid var(--border-color); margin-bottom: 6px;
+    font-size: 12px;
+}
+.sbp-result-row.passed { border-left: 3px solid #4CAF50; }
+.sbp-result-row.failed { border-left: 3px solid #F44336; }
+.sbp-result-row__title { flex: 1; }
+.sbp-result-row__score { width: 60px; text-align: center; }
+.sbp-result-row__badge { width: 60px; text-align: center; font-size: 10px; text-transform: uppercase; }
+.sbp-result-row__badge.pass { color: #4CAF50; }
+.sbp-result-row__badge.fail { color: #F44336; }

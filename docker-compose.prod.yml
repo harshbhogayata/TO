@@ -1,0 +1,98 @@
+###############################################################################
+# TalentOrbit — Production Docker Compose
+#
+# This file is used for:
+#   1. Render Docker deployments (via render.yaml referencing this)
+#   2. Self-hosted production (VPS / Oracle Cloud Free Tier / etc.)
+#   3. Local production simulation: docker compose -f docker-compose.prod.yml up
+#
+# Differences from dev:
+#   - Uses the multi-stage production Dockerfile
+#   - No source code volumes (code is baked into the image)
+#   - No debug ports
+#   - Nginx reverse proxy in front
+#   - Resource limits defined
+#   - Restart policies for resilience
+#
+# All secrets come from .env file or orchestrator-injected env vars.
+###############################################################################
+
+name: talentorbit-prod
+
+x-backend-base: &backend-base
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+    target: prod
+  env_file:
+    - ./backend/.env
+  restart: unless-stopped
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+      reservations:
+        memory: 256M
+
+services:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # REVERSE PROXY
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  nginx:
+    build:
+      context: ./infra/nginx
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-80}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # APPLICATION
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  api:
+    <<: *backend-base
+    command: ["/app/scripts/entrypoint.sh"]
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  worker:
+    <<: *backend-base
+    command: ["/app/scripts/celery-worker.sh"]
+    healthcheck:
+      test: ["CMD", "celery", "-A", "talentorbit", "inspect", "ping", "--timeout", "5"]
+      interval: 60s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+        reservations:
+          memory: 384M
+
+  beat:
+    <<: *backend-base
+    command: ["/app/scripts/celery-beat.sh"]
+    deploy:
+      replicas: 1       # CRITICAL: Only one Beat instance
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M

@@ -75,6 +75,17 @@ class AuditAction:
     MESSAGE_SEND = 'MESSAGE_SEND'
     THREAD_CREATE = 'THREAD_CREATE'
 
+    # Developer Platform
+    API_KEY_CREATE = 'API_KEY_CREATE'
+    API_KEY_REVOKE = 'API_KEY_REVOKE'
+    API_KEY_ROTATE = 'API_KEY_ROTATE'
+    WEBHOOK_CREATE = 'WEBHOOK_CREATE'
+    WEBHOOK_UPDATE = 'WEBHOOK_UPDATE'
+    WEBHOOK_DELETE = 'WEBHOOK_DELETE'
+    WEBHOOK_TEST_PING = 'WEBHOOK_TEST_PING'
+    OAUTH_APP_CREATE = 'OAUTH_APP_CREATE'
+    OAUTH_APP_REVOKE = 'OAUTH_APP_REVOKE'
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Audit Log — Categories
@@ -93,6 +104,7 @@ class AuditCategory:
     COMPLIANCE = 'COMPLIANCE'
     TEAM = 'TEAM'
     SYSTEM = 'SYSTEM'
+    DEVELOPER = 'DEVELOPER'
 
 
 # ──────────────────────────────────────────────────────────────────────────────

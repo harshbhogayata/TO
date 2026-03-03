@@ -1,0 +1,46 @@
+###############################################################################
+# TalentOrbit Backend — Development Dockerfile
+#
+# Differences from production:
+#   - Includes dev dependencies (debugger, test tools)
+#   - Source code mounted as volume (not copied)
+#   - Hot-reload enabled via Django runserver / Daphne --reload
+#   - Runs as root for convenience (volume permission issues on Windows/Mac)
+###############################################################################
+
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBUG=True
+
+# System dependencies (including build tools for pip install)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        libpq-dev \
+        libpq5 \
+        libmagic1 \
+        curl \
+        git \
+        tini \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Python dependencies
+COPY requirements.txt requirements-dev.txt* ./
+RUN pip install -r requirements.txt \
+    && if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi \
+    && pip install \
+        debugpy \
+        django-debug-toolbar \
+        ipython \
+        watchfiles
+
+EXPOSE 8000
+EXPOSE 5678
+
+ENTRYPOINT ["tini", "--"]
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

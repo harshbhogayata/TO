@@ -1,0 +1,338 @@
+/* ═══════════════════════════════════════════════════════════════
+   DeveloperPortal.css — Developer documentation & API portal
+   BEM prefix: dp-
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Layout ───────────────────────────────────────────────── */
+.dp-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr 320px;
+    min-height: calc(100vh - 220px);
+}
+
+@media (max-width: 1100px) {
+    .dp-layout {
+        grid-template-columns: 1fr;
+    }
+    .dp-sidebar,
+    .dp-right-panel {
+        display: none;
+    }
+}
+
+/* ── Endpoint Sidebar ─────────────────────────────────────── */
+.dp-sidebar {
+    border-right: 1px solid var(--border-color, #000);
+    overflow-y: auto;
+}
+
+.dp-sidebar__title {
+    padding: 24px 24px;
+    border-bottom: 1px solid var(--border-color, #000);
+    font-family: var(--font-display);
+    font-size: 20px;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.02);
+    letter-spacing: 1px;
+}
+
+.dp-endpoint-item {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border-color, #000);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s;
+}
+
+.dp-endpoint-item:hover,
+.dp-endpoint-item--active {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.dp-method-badge {
+    font-family: var(--font-sans);
+    font-weight: 800;
+    font-size: 10px;
+    padding: 2px 6px;
+    border: 1px solid var(--border-color, #000);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.dp-method-badge--get {
+    background: var(--text-black, #000);
+    color: var(--bg-cream, #fff);
+}
+
+.dp-method-badge--post {
+    background: var(--bg-cream, #fff);
+    color: var(--text-black, #000);
+}
+
+.dp-method-badge--del {
+    background: #c62828;
+    color: #fff;
+}
+
+.dp-method-badge--patch {
+    background: #ef6c00;
+    color: #fff;
+}
+
+.dp-endpoint-path {
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Center Content ───────────────────────────────────────── */
+.dp-center {
+    border-right: 1px solid var(--border-color, #000);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.dp-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color, #000);
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.dp-tab {
+    padding: 16px 24px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-right: 1px solid var(--border-color, #000);
+    transition: background 0.15s;
+}
+
+.dp-tab:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.dp-tab--active {
+    background: var(--text-black, #000);
+    color: var(--bg-cream, #fff);
+}
+
+/* Quick Start / Auth */
+.dp-section {
+    padding: 32px 28px;
+}
+
+.dp-section__title {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.dp-section__text {
+    font-size: 13px;
+    line-height: 1.7;
+    opacity: 0.8;
+    max-width: 600px;
+    margin-bottom: 24px;
+}
+
+/* Code Block */
+.dp-code-block {
+    background: #1a1a1a;
+    color: #d1d1d1;
+    padding: 24px;
+    font-family: 'Fira Code', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    border: 1px solid var(--border-color, #000);
+    margin-bottom: 24px;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+.dp-code-keyword {
+    color: #cf8e6d;
+}
+
+.dp-code-string {
+    color: #6aab73;
+}
+
+.dp-code-comment {
+    color: #7a7e85;
+}
+
+/* Rate Limit Table */
+.dp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-sans);
+    font-size: 12px;
+}
+
+.dp-table th {
+    text-align: left;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border-color, #000);
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.dp-table td {
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* ── Right Panel ──────────────────────────────────────────── */
+.dp-right-panel {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.dp-right-panel__title {
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color, #000);
+    font-family: var(--font-display);
+    font-size: 20px;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.02);
+    letter-spacing: 1px;
+}
+
+/* SDK Cards */
+.dp-sdk-grid {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dp-sdk-card {
+    border: 1px solid var(--border-color, #000);
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dp-sdk-card:hover {
+    background: var(--text-black, #000);
+    color: var(--bg-cream, #fff);
+}
+
+.dp-sdk-card__name {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    text-transform: uppercase;
+}
+
+.dp-sdk-card__version {
+    font-size: 10px;
+    font-weight: 700;
+    opacity: 0.6;
+}
+
+/* Changelog */
+.dp-changelog-section {
+    border-top: 1px solid var(--border-color, #000);
+}
+
+.dp-changelog-item {
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dp-changelog-item__date {
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.6;
+    margin-bottom: 4px;
+}
+
+.dp-changelog-item__version {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.dp-changelog-item__desc {
+    font-size: 12px;
+    opacity: 0.7;
+    line-height: 1.5;
+}
+
+/* ── Header Stats ─────────────────────────────────────────── */
+.dp-header-stats {
+    display: flex;
+    gap: 32px;
+}
+
+.dp-stat-block h3 {
+    font-family: var(--font-serif);
+    font-size: 12px;
+    text-transform: uppercase;
+    opacity: 0.6;
+    margin-bottom: 4px;
+}
+
+.dp-stat-block p {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Auth Flow Diagram */
+.dp-auth-flow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 0;
+    flex-wrap: wrap;
+}
+
+.dp-auth-step {
+    border: 1px solid var(--border-color, #000);
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dp-auth-arrow {
+    font-size: 16px;
+    opacity: 0.4;
+}
+
+/* ── Skeleton ─────────────────────────────────────────────── */
+.dp-skeleton {
+    background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.06) 75%);
+    background-size: 200% 100%;
+    animation: dp-shimmer 1.4s ease-in-out infinite;
+    border-radius: 2px;
+}
+
+@keyframes dp-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

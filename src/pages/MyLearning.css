@@ -1,0 +1,74 @@
+/* ── MyLearning.css ───────────────────────────────────────── */
+.ml-page { padding: 0 32px 48px; }
+
+.ml-header-stats { display: flex; gap: 20px; }
+.ml-stat { text-align: center; }
+.ml-stat__val { display: block; font-family: var(--font-display); font-size: 22px; }
+.ml-stat__label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+
+/* Tabs */
+.ml-tabs { display: flex; gap: 4px; margin-bottom: 28px; border-bottom: 1px solid var(--border-color); }
+.ml-tab {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-family: var(--font-sans);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    color: #666;
+    transition: color 0.2s, border-color 0.2s;
+}
+.ml-tab.active { color: #000; border-bottom-color: #000; }
+.ml-tab__count { color: #999; }
+
+.ml-error { background: #fff0f0; border: 1px solid #f88; padding: 12px; margin-bottom: 20px; color: #c00; font-size: 13px; }
+
+/* Grid */
+.ml-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+/* Enrollment card */
+.ml-card {
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+.ml-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.ml-card__thumb { width: 100%; height: 140px; object-fit: cover; display: block; }
+.ml-card__body { padding: 16px 20px; }
+.ml-card__status-badge {
+    display: inline-block;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #fff;
+    padding: 2px 8px;
+    margin-bottom: 8px;
+}
+.ml-card__title { font-family: var(--font-serif); font-size: 14px; margin-bottom: 12px; line-height: 1.3; }
+.ml-card__progress-bar { height: 4px; background: rgba(0,0,0,0.1); margin-bottom: 6px; }
+.ml-card__progress-fill { height: 100%; background: #000; transition: width 0.3s; }
+.ml-card__pct { font-size: 11px; color: #888; }
+
+/* Certificate card */
+.ml-cert-card {
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+.ml-cert-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.ml-cert-card__icon { font-size: 36px; margin-bottom: 12px; }
+.ml-cert-card__title { font-family: var(--font-serif); font-size: 14px; margin-bottom: 6px; }
+.ml-cert-card__date { font-size: 11px; color: #888; margin-bottom: 4px; }
+.ml-cert-card__id { font-size: 10px; color: #aaa; font-family: monospace; }
+
+.ml-empty { text-align: center; padding: 48px 0; font-size: 14px; color: #888; }

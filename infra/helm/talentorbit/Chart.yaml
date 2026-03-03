@@ -1,0 +1,45 @@
+###############################################################################
+# TalentOrbit — Helm Chart
+#
+# Deploys the full TalentOrbit platform to Kubernetes:
+#   - Django API (Daphne ASGI — HTTP + WebSocket)
+#   - Celery Worker (auto-scaled by queue depth)
+#   - Celery Beat (singleton scheduler)
+#   - PgBouncer (connection pooling sidecar)
+#   - Ingress (Cloudflare / nginx-ingress)
+#   - NetworkPolicy (zero-trust pod isolation)
+#   - HorizontalPodAutoscaler (CPU + memory + custom metrics)
+#   - PodDisruptionBudget (high-availability guarantees)
+#
+# Usage:
+#   helm install talentorbit ./infra/helm/talentorbit \
+#     -f infra/helm/talentorbit/values-production.yaml \
+#     --namespace talentorbit --create-namespace
+#
+#   helm upgrade talentorbit ./infra/helm/talentorbit \
+#     -f infra/helm/talentorbit/values-production.yaml \
+#     --namespace talentorbit
+###############################################################################
+apiVersion: v2
+name: talentorbit
+description: >-
+  TalentOrbit HR-tech SaaS platform — Django API, Celery workers, WebSocket
+  support, PgBouncer connection pooling, and full observability stack.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.27.0-0"
+home: https://talentorbit.com
+icon: https://talentorbit.com/icon-512.png
+maintainers:
+  - name: TalentOrbit Engineering
+    email: infra@talentorbit.com
+keywords:
+  - hr-tech
+  - django
+  - celery
+  - websocket
+  - saas
+annotations:
+  artifacthub.io/license: Proprietary
+  artifacthub.io/containsSecurityUpdates: "false"

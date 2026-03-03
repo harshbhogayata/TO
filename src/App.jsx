@@ -65,6 +65,36 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Inbox = lazy(() => import('./pages/Inbox'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 
+// Protected — Courses / LMS
+const CourseCatalog = lazy(() => import('./pages/CourseCatalog'));
+const CourseDetail = lazy(() => import('./pages/CourseDetail'));
+const LessonPlayer = lazy(() => import('./pages/LessonPlayer'));
+const MyLearning = lazy(() => import('./pages/MyLearning'));
+const CourseProgress = lazy(() => import('./pages/CourseProgress'));
+const CertificateView = lazy(() => import('./pages/CertificateView'));
+const CertificateVerify = lazy(() => import('./pages/CertificateVerify'));
+
+// Protected — Assessments
+const AssessmentCatalog = lazy(() => import('./pages/AssessmentCatalog'));
+const AssessmentDetail = lazy(() => import('./pages/AssessmentDetail'));
+const AssessmentPlayer = lazy(() => import('./pages/AssessmentPlayer'));
+const AssessmentResults = lazy(() => import('./pages/AssessmentResults'));
+const MyAssessments = lazy(() => import('./pages/MyAssessments'));
+const SkillBadgeProfile = lazy(() => import('./pages/SkillBadgeProfile'));
+const BadgeVerify = lazy(() => import('./pages/BadgeVerify'));
+const CompanyAssessmentDashboard = lazy(() => import('./pages/CompanyAssessmentDashboard'));
+
+// Protected — Reviews & Question Banks
+const CompanyReviews = lazy(() => import('./pages/CompanyReviews'));
+const WriteReview = lazy(() => import('./pages/WriteReview'));
+const QuestionBankManager = lazy(() => import('./pages/QuestionBankManager'));
+
+// Protected — Developer Platform
+const DeveloperPortal = lazy(() => import('./pages/DeveloperPortal'));
+const APIKeysManager = lazy(() => import('./pages/APIKeysManager'));
+const WebhookManager = lazy(() => import('./pages/WebhookManager'));
+const OAuthAppManager = lazy(() => import('./pages/OAuthAppManager'));
+
 // Protected — Compliance
 const PrivacyCenter = lazy(() => import('./pages/PrivacyCenter'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
@@ -187,6 +217,118 @@ function AppRoutes() {
                     } />
 
                     {/* ── Compliance / Trust routes ──────────────────── */}
+
+                    {/* ── Courses / LMS routes ──────────────────────── */}
+                    <Route path="/courses" element={
+                        <ProtectedRoute allowedRoles={['TALENT', 'COMPANY', 'ADMIN']}>
+                            <CourseCatalog />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/courses/:id" element={
+                        <ProtectedRoute allowedRoles={['TALENT', 'COMPANY', 'ADMIN']}>
+                            <CourseDetail />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/courses/:courseId/lessons/:lessonId" element={
+                        <ProtectedRoute allowedRoles={['TALENT']}>
+                            <LessonPlayer />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/courses/:courseId/progress" element={
+                        <ProtectedRoute allowedRoles={['TALENT']}>
+                            <CourseProgress />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/my-learning" element={
+                        <ProtectedRoute allowedRoles={['TALENT']}>
+                            <MyLearning />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/certificates/:certId" element={
+                        <ProtectedRoute allowedRoles={['TALENT']}>
+                            <CertificateView />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/certificates/verify/:certificateId" element={<CertificateVerify />} />
+
+                    {/* ── Assessments routes ────────────────────────── */}
+                    <Route path="/assessments" element={
+                        <ProtectedRoute allowedRoles={['TALENT', 'COMPANY', 'ADMIN']}>
+                            <AssessmentCatalog />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/assessments/:id" element={
+                        <ProtectedRoute allowedRoles={['TALENT', 'COMPANY', 'ADMIN']}>
+                            <AssessmentDetail />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/assessments/:assessmentId/attempt/:attemptId" element={
+                        <ProtectedRoute allowedRoles={['TALENT']}>
+                            <AssessmentPlayer />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/assessments/:assessmentId/results/:resultId" element={
+                        <ProtectedRoute allowedRoles={['TALENT', 'COMPANY', 'ADMIN']}>
+                            <AssessmentResults />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/my-assessments" element={
+                        <ProtectedRoute allowedRoles={['TALENT']}>
+                            <MyAssessments />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/badges" element={
+                        <ProtectedRoute allowedRoles={['TALENT']}>
+                            <SkillBadgeProfile />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/badges/verify/:badgeId" element={<BadgeVerify />} />
+                    <Route path="/company/assessments" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <CompanyAssessmentDashboard />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/company/question-banks" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <QuestionBankManager />
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ── Reviews routes ──────────────────────────────── */}
+                    <Route path="/reviews/:companyId" element={
+                        <ProtectedRoute allowedRoles={['TALENT', 'COMPANY', 'ADMIN']}>
+                            <CompanyReviews />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/reviews/:companyId/write" element={
+                        <ProtectedRoute allowedRoles={['TALENT']}>
+                            <WriteReview />
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ── Developer Platform routes ──────────────────── */}
+                    <Route path="/company/developer" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <DeveloperPortal />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/company/api-keys" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <APIKeysManager />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/company/webhooks" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <WebhookManager />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/company/oauth-apps" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <OAuthAppManager />
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ── Compliance / Trust routes (continued) ──────── */}
                     <Route path="/privacy-center" element={
                         <ProtectedRoute>
                             <PrivacyCenter />

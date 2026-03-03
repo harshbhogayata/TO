@@ -1,0 +1,164 @@
+{{- if .Values.networkPolicy.enabled -}}
+# ─── API: accept traffic from ingress controller + internal namespace ─────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "talentorbit.fullname" . }}-api
+  namespace: {{ include "talentorbit.namespace" . }}
+  labels:
+    {{- include "talentorbit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "talentorbit.componentLabels" (dict "root" . "component" "api") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        {{- toYaml .Values.networkPolicy.api.allowIngressFrom | nindent 8 }}
+      ports:
+        - port: 8000
+          protocol: TCP
+  egress:
+    # DNS
+    - to: []
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # PgBouncer
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: pgbouncer
+      ports:
+        - port: 5432
+          protocol: TCP
+    # Redis (external)
+    - to: []
+      ports:
+        - port: 6379
+          protocol: TCP
+    # HTTPS (Stripe, Sentry, PostHog, R2, email, etc.)
+    - to: []
+      ports:
+        - port: 443
+          protocol: TCP
+        - port: 465
+          protocol: TCP
+---
+# ─── Worker: no ingress, egress to PgBouncer + Redis + HTTPS ─────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "talentorbit.fullname" . }}-worker
+  namespace: {{ include "talentorbit.namespace" . }}
+  labels:
+    {{- include "talentorbit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "talentorbit.componentLabels" (dict "root" . "component" "worker") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []                            # Workers pull from queue; no inbound
+  egress:
+    - to: []
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: pgbouncer
+      ports:
+        - port: 5432
+          protocol: TCP
+    - to: []
+      ports:
+        - port: 6379
+          protocol: TCP
+        - port: 443
+          protocol: TCP
+        - port: 465
+          protocol: TCP
+---
+# ─── Beat: same as worker ────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "talentorbit.fullname" . }}-beat
+  namespace: {{ include "talentorbit.namespace" . }}
+  labels:
+    {{- include "talentorbit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: beat
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "talentorbit.componentLabels" (dict "root" . "component" "beat") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress:
+    - to: []
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: pgbouncer
+      ports:
+        - port: 5432
+          protocol: TCP
+    - to: []
+      ports:
+        - port: 6379
+          protocol: TCP
+---
+# ─── PgBouncer: ingress from API/Worker/Beat only, egress to PostgreSQL ──────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "talentorbit.fullname" . }}-pgbouncer
+  namespace: {{ include "talentorbit.namespace" . }}
+  labels:
+    {{- include "talentorbit.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pgbouncer
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "talentorbit.componentLabels" (dict "root" . "component" "pgbouncer") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        {{- toYaml .Values.networkPolicy.pgbouncer.allowIngressFrom | nindent 8 }}
+      ports:
+        - port: 5432
+          protocol: TCP
+  egress:
+    # DNS
+    - to: []
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # PostgreSQL (external managed instance)
+    - to: []
+      ports:
+        - port: 5432
+          protocol: TCP
+{{- end }}

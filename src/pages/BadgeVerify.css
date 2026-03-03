@@ -1,0 +1,41 @@
+/* ── BadgeVerify.css ──────────────────────────────────────── */
+.bv-page { padding: 32px; max-width: 600px; margin: 0 auto; }
+.bv-skeleton { text-align: center; }
+
+.bv-search-form { text-align: center; margin-bottom: 32px; }
+.bv-search-form h3 { font-family: var(--font-display); font-size: 20px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+.bv-search-form p { font-size: 13px; color: #666; margin-bottom: 16px; }
+.bv-search-row { display: flex; gap: 8px; justify-content: center; }
+.bv-search-input {
+    padding: 10px 16px; border: 1px solid var(--border-color);
+    font-family: var(--font-sans); font-size: 13px; width: 280px; outline: none;
+}
+.bv-search-input:focus { border-color: #000; }
+.bv-search-btn {
+    padding: 10px 24px; background: #000; color: #fff; border: none;
+    font-family: var(--font-display); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+}
+.bv-search-btn:disabled { opacity: 0.4; }
+
+/* Result */
+.bv-result {
+    text-align: center; padding: 40px 32px;
+    border: 2px solid var(--border-color); margin-bottom: 32px;
+}
+.bv-result--valid { border-color: #4CAF50; }
+.bv-result--invalid { border-color: #F44336; }
+.bv-result__icon { font-size: 48px; margin-bottom: 12px; }
+.bv-result--invalid .bv-result__icon { color: #F44336; }
+.bv-result h2 { font-family: var(--font-display); font-size: 20px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+
+.bv-result__details { text-align: left; max-width: 360px; margin: 0 auto; }
+.bv-detail-row {
+    display: flex; justify-content: space-between; padding: 8px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.06); font-size: 13px;
+}
+.bv-detail-label { text-transform: uppercase; letter-spacing: 1px; font-size: 11px; color: #888; }
+.bv-detail-value { font-weight: 500; }
+
+.bv-footer { text-align: center; margin-top: 24px; }
+.bv-link { color: #000; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }

@@ -1,0 +1,56 @@
+/* ── CourseProgress.css ───────────────────────────────────── */
+.cp-page { padding: 0 32px 48px; max-width: 860px; }
+.cp-skeleton { padding: 32px; }
+.cp-error { padding: 48px; text-align: center; color: #c00; }
+
+.cp-header-stats { display: flex; gap: 20px; }
+.cp-stat { text-align: center; }
+.cp-stat__val { display: block; font-family: var(--font-display); font-size: 22px; }
+.cp-stat__label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+
+.cp-course-title { font-family: var(--font-serif); font-size: 22px; margin-bottom: 20px; }
+
+/* Overall progress */
+.cp-overall { margin-bottom: 36px; }
+.cp-overall__bar { height: 8px; background: rgba(0,0,0,0.08); margin-bottom: 8px; }
+.cp-overall__fill { height: 100%; background: #000; transition: width 0.4s; }
+.cp-overall__label { font-size: 12px; color: #666; }
+
+/* Modules */
+.cp-modules { margin-bottom: 32px; }
+.cp-module { border: 1px solid var(--border-color); margin-bottom: 16px; padding: 20px; }
+.cp-module__header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.cp-module__num { font-family: var(--font-display); font-size: 13px; color: #888; }
+.cp-module__title { flex: 1; font-family: var(--font-serif); font-size: 15px; }
+.cp-module__pct { font-family: var(--font-display); font-size: 14px; }
+.cp-module__bar { height: 3px; background: rgba(0,0,0,0.08); margin-bottom: 12px; }
+.cp-module__bar-fill { height: 100%; background: #000; transition: width 0.3s; }
+
+/* Lesson list */
+.cp-lesson-list { list-style: none; padding: 0; }
+.cp-lesson {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    font-size: 13px;
+}
+.cp-lesson.done { color: #4CAF50; }
+.cp-lesson__check { width: 20px; text-align: center; font-size: 14px; }
+.cp-lesson__link { color: inherit; text-decoration: none; flex: 1; }
+.cp-lesson__link:hover { text-decoration: underline; }
+.cp-lesson__partial { font-size: 10px; color: #FF9800; }
+
+/* Actions */
+.cp-actions { display: flex; gap: 12px; }
+.cp-back-btn, .cp-cert-btn {
+    padding: 10px 24px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+}
+.cp-cert-btn { background: #000; color: #fff; border-color: #000; }

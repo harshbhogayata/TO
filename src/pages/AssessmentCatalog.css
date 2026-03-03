@@ -1,0 +1,78 @@
+/* ── AssessmentCatalog.css ────────────────────────────────── */
+.ac-catalog-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    height: 100%;
+}
+
+.ac-header-stats { display: flex; gap: 24px; }
+.ac-stat-block h3 { font-family: var(--font-serif); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.ac-stat-block p { font-family: var(--font-display); font-size: 18px; }
+
+/* Filters */
+.ac-filters-panel { border-right: 1px solid var(--border-color); padding: 32px 20px; overflow-y: auto; }
+.ac-filter-group { margin-bottom: 24px; }
+.ac-filter-title {
+    font-family: var(--font-serif);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 6px;
+}
+.ac-filter-option {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 10px; font-size: 12px; text-transform: uppercase; cursor: pointer;
+}
+.ac-filter-option input { accent-color: #000; }
+
+/* Content */
+.ac-catalog-content { padding: 24px 32px; overflow-y: auto; }
+.ac-search-strip { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.ac-search-input {
+    flex: 1; padding: 10px 16px; border: 1px solid var(--border-color);
+    background: transparent; font-family: var(--font-sans); font-size: 13px; outline: none;
+}
+.ac-search-input:focus { border-color: #000; }
+.ac-results-count { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+
+/* Grid */
+.ac-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+
+/* Card */
+.ac-card {
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 12px;
+    transition: box-shadow 0.2s;
+}
+.ac-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+.ac-card__header { display: flex; justify-content: space-between; align-items: center; }
+.ac-card__difficulty {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: #fff; padding: 2px 8px;
+}
+.ac-card__type { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+.ac-card__title { font-family: var(--font-serif); font-size: 16px; line-height: 1.3; }
+.ac-card__desc { font-size: 12px; color: #666; line-height: 1.5; }
+.ac-card__meta { display: flex; gap: 16px; font-size: 11px; color: #555; }
+.ac-card__tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.ac-card__tag {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 1px;
+    border: 1px solid var(--border-color); padding: 2px 8px;
+}
+.ac-card__btn {
+    padding: 10px; background: #000; color: #fff; border: none;
+    font-family: var(--font-display); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+}
+.ac-card__btn:hover { opacity: 0.85; }
+
+.ac-error-banner { background: #fff0f0; border: 1px solid #f88; padding: 12px; margin-bottom: 20px; color: #c00; font-size: 13px; }
+.ac-empty { text-align: center; padding: 48px 0; font-size: 14px; color: #888; }
+
+@media (max-width: 900px) {
+    .ac-catalog-layout { grid-template-columns: 1fr; }
+    .ac-filters-panel { display: none; }
+}

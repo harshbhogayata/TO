@@ -1,0 +1,227 @@
+###############################################################################
+# TalentOrbit — Local Development Environment
+#
+# Provides a fully reproducible development stack:
+#   - PostgreSQL 16 (with full-text search extensions)
+#   - Redis 7 (cache + Celery broker + Channels layer)
+#   - MinIO (S3-compatible object storage, emulates Cloudflare R2)
+#   - Django API server (hot-reload)
+#   - Celery worker (hot-reload via watchfiles)
+#   - Celery Beat scheduler
+#
+# Usage:
+#   docker compose up -d                    # Start everything
+#   docker compose up api                   # Start only the API + deps
+#   docker compose logs -f api worker       # Follow API + worker logs
+#   docker compose exec api python manage.py createsuperuser
+#   docker compose down -v                  # Tear down + delete volumes
+#
+# The frontend runs separately via `npm run dev` (Vite dev server).
+###############################################################################
+
+name: talentorbit-dev
+
+x-backend-env: &backend-env
+  DEBUG: "True"
+  SECRET_KEY: "dev-insecure-key-do-not-use-in-production-must-be-50-chars-long"
+  ALLOWED_HOSTS: "localhost,127.0.0.1,0.0.0.0,api"
+  # ── Database ──────────────────────────────────────────────────────────
+  DATABASE_URL: "postgres://talentorbit:talentorbit@postgres:5432/talentorbit"
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  # ── Redis ─────────────────────────────────────────────────────────────
+  UPSTASH_REDIS_URL: "redis://redis:6379/0"
+  CHANNELS_REDIS_URL: "redis://redis:6379/1"
+  CELERY_BROKER_URL: "redis://redis:6379/2"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  # ── Object Storage (MinIO ≈ R2) ──────────────────────────────────────
+  R2_ACCESS_KEY_ID: "minioadmin"
+  R2_SECRET_ACCESS_KEY: "minioadmin"
+  R2_BUCKET_NAME: "talentorbit-media"
+  R2_ENDPOINT_URL: "http://minio:9000"
+  R2_CUSTOM_DOMAIN: ""
+  # ── Email (console backend in dev) ────────────────────────────────────
+  EMAIL_BACKEND: "django.core.mail.backends.console.EmailBackend"
+  DEFAULT_FROM_EMAIL: "dev@talentorbit.local"
+  # ── Frontend URL (Vite dev server on host) ────────────────────────────
+  FRONTEND_URL: "http://localhost:5173"
+  CORS_ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3000"
+  # ── Judge0 (sandboxed code execution) ────────────────────────────────
+  JUDGE0_API_URL: "http://judge0:2358"
+
+x-backend-base: &backend-base
+  build:
+    context: ./backend
+    dockerfile: Dockerfile.dev
+  volumes:
+    - ./backend:/app
+    - backend-pip-cache:/root/.cache/pip
+  environment:
+    <<: *backend-env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    minio-setup:
+      condition: service_completed_successfully
+
+services:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # INFRASTRUCTURE
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: talentorbit
+      POSTGRES_USER: talentorbit
+      POSTGRES_PASSWORD: talentorbit
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Enable PostgreSQL extensions on first boot
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U talentorbit -d talentorbit"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --save ""
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"     # S3 API
+      - "9001:9001"     # Web console
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Create the default bucket on first boot
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 minioadmin minioadmin;
+        mc mb local/talentorbit-media --ignore-existing;
+        mc anonymous set download local/talentorbit-media;
+        echo 'MinIO bucket created.';
+      "
+
+  judge0:
+    image: judge0/judge0:1.13.1
+    environment:
+      REDIS_URL: redis://redis:6379/3
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: judge0
+      POSTGRES_USER: talentorbit
+      POSTGRES_PASSWORD: talentorbit
+      RAILS_MAX_THREADS: 4
+      RAILS_SERVER_WORKERS: 2
+      ENABLE_BATCHED_SUBMISSIONS: "true"
+      ENABLE_WAIT_RESULT: "true"
+      ENABLE_ADDITIONAL_FILES: "false"
+      CPU_TIME_LIMIT: 30
+      CPU_EXTRA_TIME: 5
+      WALL_TIME_LIMIT: 60
+      MEMORY_LIMIT: 512000
+      MAX_PROCESSES_AND_OR_THREADS: 60
+      ENABLE_PER_PROCESS_AND_THREAD_TIME_LIMIT: "false"
+      ENABLE_PER_PROCESS_AND_THREAD_MEMORY_LIMIT: "false"
+    ports:
+      - "2358:2358"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    privileged: true    # Required for cgroups-based sandboxing
+
+  judge0-worker:
+    image: judge0/judge0:1.13.1
+    command: ["./scripts/workers"]
+    environment:
+      REDIS_URL: redis://redis:6379/3
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: judge0
+      POSTGRES_USER: talentorbit
+      POSTGRES_PASSWORD: talentorbit
+      RAILS_MAX_THREADS: 4
+    depends_on:
+      - judge0
+    privileged: true
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # APPLICATION
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  api:
+    <<: *backend-base
+    command: >
+      bash -c "
+        python manage.py migrate --noinput &&
+        python manage.py runserver 0.0.0.0:8000
+      "
+    ports:
+      - "8000:8000"
+      - "5678:5678"     # debugpy remote debugger
+
+  worker:
+    <<: *backend-base
+    command: >
+      watchfiles
+        --filter python
+        'celery -A talentorbit worker
+          --loglevel=info
+          --queues=default,emails,notifications,intelligence,analytics,compliance,assessments,dlq
+          --concurrency=2
+          --max-tasks-per-child=50
+          --without-heartbeat
+          --without-mingle
+          --without-gossip'
+    # No ports exposed — workers don't serve HTTP
+
+  beat:
+    <<: *backend-base
+    command: >
+      celery -A talentorbit beat
+        --loglevel=info
+        --scheduler django_celery_beat.schedulers:DatabaseScheduler
+        --pidfile=/tmp/celerybeat.pid
+    deploy:
+      replicas: 1       # CRITICAL: Only one Beat instance at a time
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  backend-pip-cache:

@@ -1,0 +1,177 @@
+/* ── CourseDetail.css ──────────────────────────────────────── */
+.cd-layout { padding: 0 32px 48px; max-width: 960px; }
+
+.cd-skeleton-wrap { padding: 32px; }
+
+.cd-error { padding: 48px; text-align: center; color: #c00; }
+
+.cd-header-actions { display: flex; gap: 12px; }
+.cd-enroll-btn, .cd-continue-btn {
+    padding: 10px 24px;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.cd-enroll-btn:hover, .cd-continue-btn:hover { opacity: 0.85; }
+.cd-enroll-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cd-drop-btn {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid #c00;
+    color: #c00;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+}
+.cd-enrolled-actions { display: flex; gap: 10px; }
+
+/* Hero */
+.cd-hero { position: relative; margin-bottom: 24px; }
+.cd-hero__img { width: 100%; max-height: 300px; object-fit: cover; display: block; }
+.cd-hero__overlay {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    display: flex;
+    gap: 8px;
+}
+.cd-hero__level, .cd-hero__access {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 4px 10px;
+}
+
+/* Info grid */
+.cd-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+.cd-info-block {
+    border: 1px solid var(--border-color);
+    padding: 16px;
+}
+.cd-info-block h4 {
+    font-family: var(--font-serif);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    color: #888;
+}
+.cd-info-block p { font-size: 14px; }
+
+.cd-star-row { display: inline-flex; gap: 2px; }
+
+/* Description */
+.cd-description { margin-bottom: 32px; }
+.cd-section-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+.cd-description p { font-size: 14px; line-height: 1.7; }
+.cd-outcomes h4, .cd-prereqs h4 {
+    font-family: var(--font-serif);
+    font-size: 13px;
+    margin: 16px 0 8px;
+    text-transform: uppercase;
+}
+.cd-outcomes ul { padding-left: 20px; font-size: 13px; line-height: 1.8; }
+
+/* Curriculum */
+.cd-curriculum { margin-bottom: 32px; }
+.cd-module { border: 1px solid var(--border-color); margin-bottom: 8px; }
+.cd-module__header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-family: var(--font-sans);
+}
+.cd-module__header:hover { background: rgba(0,0,0,0.02); }
+.cd-module__num {
+    font-family: var(--font-display);
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+.cd-module__title { flex: 1; font-size: 14px; font-weight: 500; }
+.cd-module__toggle { font-size: 18px; }
+.cd-lessons-list {
+    list-style: none;
+    padding: 0 20px 16px;
+}
+.cd-lesson-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    font-size: 13px;
+}
+.cd-lesson-item__num { font-family: var(--font-display); font-size: 11px; color: #888; }
+.cd-lesson-item__title { flex: 1; }
+.cd-lesson-item__type { font-size: 10px; text-transform: uppercase; color: #999; }
+.cd-lesson-item__play {
+    color: #000;
+    text-decoration: none;
+    font-size: 14px;
+}
+.cd-empty-modules { padding: 16px 0; font-size: 13px; color: #888; }
+
+/* Reviews */
+.cd-reviews { margin-bottom: 32px; }
+.cd-review-card {
+    border: 1px solid var(--border-color);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+}
+.cd-review-card__header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.cd-review-card p { font-size: 13px; line-height: 1.6; }
+.cd-empty-reviews { font-size: 13px; color: #888; }
+.cd-review-form { margin-top: 24px; }
+.cd-review-form h4 { font-family: var(--font-serif); font-size: 14px; margin-bottom: 12px; }
+.cd-review-form__rating { margin-bottom: 12px; }
+.cd-review-star { cursor: pointer; font-size: 22px; color: #555; margin-right: 4px; }
+.cd-review-star.active { color: #FFD700; }
+.cd-review-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    resize: vertical;
+    margin-bottom: 12px;
+}
+.cd-review-form button {
+    padding: 10px 24px;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-family: var(--font-display);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+}
+.cd-review-form button:disabled { opacity: 0.5; }

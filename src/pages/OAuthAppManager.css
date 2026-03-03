@@ -1,0 +1,414 @@
+/* ================================================================
+   OAuthAppManager  •  BEM prefix: oa-
+   ================================================================ */
+
+/* ── Layout ──────────────────────────────────────────────────── */
+.oa-layout {
+    padding: 24px 0;
+}
+
+/* ── App Cards Grid ──────────────────────────────────────────── */
+.oa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 20px;
+}
+
+/* ── Single App Card ─────────────────────────────────────────── */
+.oa-card {
+    background: rgba(255,255,255,0.015);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 24px;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+}
+.oa-card:hover {
+    border-color: rgba(255,255,255,0.12);
+    transform: translateY(-1px);
+}
+.oa-card--revoked {
+    opacity: 0.45;
+    pointer-events: auto;
+}
+
+/* ── Card Header (Logo Initials + Name + Status) ─────────────── */
+.oa-card__header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+}
+.oa-card__logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #cf8e6d 0%, #a96b4f 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 800;
+    color: #000;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+.oa-card__name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #e0e0e0;
+}
+.oa-card__client-id {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    margin-top: 2px;
+}
+
+/* ── Status Badge ────────────────────────────────────────────── */
+.oa-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.oa-status--active {
+    background: rgba(80,200,120,0.12);
+    color: #50c878;
+    border: 1px solid rgba(80,200,120,0.2);
+}
+.oa-status--pending {
+    background: rgba(255,193,7,0.12);
+    color: #ffc107;
+    border: 1px solid rgba(255,193,7,0.2);
+}
+.oa-status--suspended {
+    background: rgba(255,152,0,0.12);
+    color: #ff9800;
+    border: 1px solid rgba(255,152,0,0.2);
+}
+.oa-status--revoked {
+    background: rgba(255,107,107,0.08);
+    color: #ff6b6b;
+    border: 1px solid rgba(255,107,107,0.15);
+}
+
+/* ── Card Details ────────────────────────────────────────────── */
+.oa-card__details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.oa-detail {
+    font-size: 11px;
+}
+.oa-detail__label {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: rgba(255,255,255,0.3);
+    font-size: 9px;
+    margin-bottom: 4px;
+}
+.oa-detail__value {
+    color: rgba(255,255,255,0.7);
+    font-size: 12px;
+}
+.oa-detail__value--mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+}
+
+/* ── Scopes (inline tags) ────────────────────────────────────── */
+.oa-scopes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 16px;
+}
+.oa-scope-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    color: rgba(255,255,255,0.55);
+}
+
+/* ── Redirect URIs ───────────────────────────────────────────── */
+.oa-redirect-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px 0;
+}
+.oa-redirect-list li {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.oa-redirect-list li:last-child {
+    border-bottom: none;
+}
+
+/* ── Card Actions ────────────────────────────────────────────── */
+.oa-card__actions {
+    display: flex;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+.oa-revoke-btn {
+    padding: 6px 16px;
+    border: 1px solid rgba(255,107,107,0.25);
+    background: transparent;
+    color: #ff6b6b;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.oa-revoke-btn:hover {
+    background: rgba(255,107,107,0.12);
+}
+
+/* ── Create App Modal ────────────────────────────────────────── */
+.oa-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: oaFadeIn 0.15s ease;
+}
+@keyframes oaFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.oa-modal {
+    width: 560px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: #1e1e1e;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 32px;
+}
+.oa-modal h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+.oa-modal-field {
+    margin-bottom: 18px;
+}
+.oa-modal-field label {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 6px;
+}
+.oa-input {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 5px;
+    color: #e0e0e0;
+    font-size: 13px;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+}
+.oa-input:focus {
+    outline: none;
+    border-color: rgba(207,142,109,0.4);
+}
+.oa-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 5px;
+    color: #e0e0e0;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    resize: vertical;
+    min-height: 60px;
+    box-sizing: border-box;
+}
+.oa-textarea:focus {
+    outline: none;
+    border-color: rgba(207,142,109,0.4);
+}
+.oa-scope-checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+.oa-scope-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    cursor: pointer;
+}
+.oa-scope-checkbox-item input[type="checkbox"] {
+    accent-color: #cf8e6d;
+}
+.oa-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+}
+.oa-modal-cancel {
+    padding: 8px 20px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6);
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.oa-modal-submit {
+    padding: 8px 24px;
+    background: #cf8e6d;
+    border: none;
+    color: #000;
+    font-weight: 700;
+    border-radius: 5px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.oa-modal-submit:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ── Raw Secret Banner ───────────────────────────────────────── */
+.oa-secret-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(207,142,109,0.2);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    animation: oaFadeIn 0.2s ease;
+}
+.oa-secret-banner__text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #cf8e6d;
+    word-break: break-all;
+}
+.oa-secret-banner__copy {
+    padding: 6px 16px;
+    background: transparent;
+    border: 1px solid rgba(207,142,109,0.3);
+    color: #cf8e6d;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-left: 14px;
+    transition: background 0.15s;
+}
+.oa-secret-banner__copy:hover {
+    background: rgba(207,142,109,0.1);
+}
+
+/* ── Filter Tabs ─────────────────────────────────────────────── */
+.oa-filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+.oa-filter-btn {
+    padding: 6px 16px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.45);
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.oa-filter-btn:hover {
+    border-color: rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.7);
+}
+.oa-filter-btn--active {
+    background: rgba(207,142,109,0.1);
+    border-color: rgba(207,142,109,0.3);
+    color: #cf8e6d;
+}
+
+/* ── Header Actions ──────────────────────────────────────────── */
+.oa-header-actions {
+    display: flex;
+    gap: 10px;
+}
+.oa-create-btn {
+    padding: 8px 20px;
+    background: #cf8e6d;
+    border: none;
+    color: #000;
+    font-weight: 700;
+    font-size: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    letter-spacing: 0.3px;
+}
+.oa-create-btn:hover {
+    opacity: 0.85;
+}
+
+/* ── Empty / Error ───────────────────────────────────────────── */
+.oa-empty {
+    text-align: center;
+    padding: 60px 24px;
+    color: rgba(255,255,255,0.25);
+    font-size: 13px;
+}
+.oa-error-banner {
+    padding: 12px 18px;
+    background: rgba(255,107,107,0.08);
+    border: 1px solid rgba(255,107,107,0.2);
+    border-radius: 6px;
+    color: #ff6b6b;
+    font-size: 13px;
+    margin-bottom: 18px;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 800px) {
+    .oa-grid {
+        grid-template-columns: 1fr;
+    }
+    .oa-card__details {
+        grid-template-columns: 1fr;
+    }
+}

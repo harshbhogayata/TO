@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     'realtime',
     'search',
     'intelligence',
+    'compliance',
 ]
 
 MIDDLEWARE = [
@@ -85,6 +86,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'compliance.middleware.AuditContextMiddleware',
+    'compliance.middleware.ConsentEnforcementMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'intelligence.experiments.middleware.ExperimentMiddleware',
@@ -301,6 +304,17 @@ REST_FRAMEWORK = {
         'user': '2000/day',
         'auth': '20/hour',     # Strict — login, password-reset, verify-email
         'contact': '5/hour',   # Contact form submissions
+        # ── Compliance per-endpoint throttles ─────────────────────────────
+        'compliance_export': '5/day',
+        'compliance_export_download': '20/hour',
+        'compliance_deletion': '3/day',
+        'compliance_deletion_confirm': '10/hour',
+        'compliance_consent_write': '30/hour',
+        'compliance_team_invite': '20/hour',
+        'compliance_team_invite_action': '30/hour',
+        'compliance_audit': '60/hour',
+        'compliance_audit_integrity': '5/hour',
+        'compliance_policy_create': '10/hour',
     },
     'EXCEPTION_HANDLER': 'talentorbit.exceptions.custom_exception_handler',
 }
@@ -429,6 +443,11 @@ LOGGING = {
             'level': 'INFO',
             'propagate': False,
         },
+        'compliance': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
 }
 
@@ -485,6 +504,7 @@ CELERY_TASK_QUEUES = {
     'notifications': {},
     'intelligence': {},
     'analytics': {},
+    'compliance': {},                  # GDPR export/deletion, team invites
     'dlq': {},                       # Dead-letter queue for manual triage
 }
 CELERY_TASK_ROUTES = {
@@ -512,6 +532,16 @@ CELERY_TASK_ROUTES = {
     # Intelligence — cleanup
     'intelligence.cleanup_old_recommendation_logs': {'queue': 'default'},
     'intelligence.cleanup_old_interactions': {'queue': 'default'},
+    # Compliance — GDPR, teams
+    'compliance.tasks.process_data_export_task': {'queue': 'compliance'},
+    'compliance.tasks.process_data_deletion_task': {'queue': 'compliance'},
+    'compliance.tasks.send_team_invitation_email_task': {'queue': 'emails'},
+    'compliance.tasks.send_deletion_confirmation_email_task': {'queue': 'emails'},
+    'compliance.tasks.process_expired_deletions_task': {'queue': 'compliance'},
+    'compliance.tasks.cleanup_expired_exports_task': {'queue': 'compliance'},
+    'compliance.tasks.expire_team_invitations_task': {'queue': 'compliance'},
+    'compliance.tasks.audit_chain_integrity_check_task': {'queue': 'compliance'},
+    'compliance.tasks.ip_anomaly_detection_task': {'queue': 'compliance'},
 }
 
 # Celery Beat schedule — periodic housekeeping tasks
@@ -601,5 +631,32 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'intelligence.cleanup_old_interactions',
         'schedule': crontab(hour=4, minute=30, day_of_week=6),  # Saturday
         'options': {'queue': 'default'},
+    },
+
+    # ── Compliance — GDPR & Housekeeping ──────────────────────────────────
+    'process-expired-deletions': {
+        'task': 'compliance.tasks.process_expired_deletions_task',
+        'schedule': crontab(hour='*/4', minute=15),  # Every 4 hours
+        'options': {'queue': 'compliance'},
+    },
+    'cleanup-expired-exports': {
+        'task': 'compliance.tasks.cleanup_expired_exports_task',
+        'schedule': crontab(hour=5, minute=0),  # Daily at 05:00
+        'options': {'queue': 'compliance'},
+    },
+    'expire-team-invitations': {
+        'task': 'compliance.tasks.expire_team_invitations_task',
+        'schedule': crontab(hour=6, minute=0),  # Daily at 06:00
+        'options': {'queue': 'compliance'},
+    },
+    'audit-chain-integrity': {
+        'task': 'compliance.tasks.audit_chain_integrity_check_task',
+        'schedule': crontab(hour=3, minute=30),  # Daily at 03:30
+        'options': {'queue': 'compliance'},
+    },
+    'ip-anomaly-detection': {
+        'task': 'compliance.tasks.ip_anomaly_detection_task',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+        'options': {'queue': 'compliance'},
     },
 }

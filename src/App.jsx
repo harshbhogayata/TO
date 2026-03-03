@@ -65,6 +65,12 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Inbox = lazy(() => import('./pages/Inbox'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 
+// Protected — Compliance
+const PrivacyCenter = lazy(() => import('./pages/PrivacyCenter'));
+const TeamManagement = lazy(() => import('./pages/TeamManagement'));
+const AuditLog = lazy(() => import('./pages/AuditLog'));
+const TeamInvite = lazy(() => import('./pages/TeamInvite'));
+
 function AppRoutes() {
     const { addToast } = useToast();
 
@@ -179,6 +185,24 @@ function AppRoutes() {
                             <AdminAnalytics />
                         </ProtectedRoute>
                     } />
+
+                    {/* ── Compliance / Trust routes ──────────────────── */}
+                    <Route path="/privacy-center" element={
+                        <ProtectedRoute>
+                            <PrivacyCenter />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/company/team" element={
+                        <ProtectedRoute allowedRoles={['COMPANY']}>
+                            <TeamManagement />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/audit-log" element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <AuditLog />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/team/invite/:token" element={<TeamInvite />} />
 
                     {/* ── Shared authenticated routes ───────────────── */}
                     <Route path="/settings" element={

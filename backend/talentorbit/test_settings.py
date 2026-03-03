@@ -12,6 +12,9 @@ os.environ.setdefault('DEBUG', 'True')
 
 from talentorbit.settings import *  # noqa: F401, F403
 
+# Allow the default test client host
+ALLOWED_HOSTS = ['*']
+
 # Force SQLite for tests (fast, no external dependencies)
 DATABASES = {
     'default': {
@@ -25,13 +28,24 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
-# Disable throttling in tests — must patch inside REST_FRAMEWORK dict
+# Disable throttling in tests — set rates to None or keep compliance rates
 REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
     'anon': None,
     'user': None,
     'auth': None,
     'contact': None,
+    # Compliance-specific rates (views use per-view throttle_classes)
+    'compliance_export': '999/minute',
+    'compliance_export_download': '999/minute',
+    'compliance_deletion': '999/minute',
+    'compliance_deletion_confirm': '999/minute',
+    'compliance_consent_write': '999/minute',
+    'compliance_team_invite': '999/minute',
+    'compliance_team_invite_action': '999/minute',
+    'compliance_audit': '999/minute',
+    'compliance_audit_integrity': '999/minute',
+    'compliance_policy_create': '999/minute',
 }
 
 # In-memory cache
@@ -55,3 +69,16 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
+
+
+# Skip migrations entirely — create tables from models so SQLite works
+# (avoids pg_trgm CREATE EXTENSION in search.0002_gin_indexes).
+class _DisableMigrations:
+    def __contains__(self, item):
+        return True
+
+    def __getitem__(self, item):
+        return None
+
+
+MIGRATION_MODULES = _DisableMigrations()

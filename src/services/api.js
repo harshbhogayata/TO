@@ -306,3 +306,63 @@ export const intelligenceService = {
             event, properties, experiment_key: experimentKey, variant,
         }),
 };
+
+// ── Compliance & Trust ──────────────────────────────────────────────────────
+export const complianceService = {
+    // Audit Logs (admin)
+    getAuditLogs: (params) => api.get('/compliance/audit-logs/', { params }),
+    getAuditLog: (id) => api.get(`/compliance/audit-logs/${id}/`),
+    getAuditLogIntegrity: (limit) =>
+        api.get('/compliance/audit-logs/integrity/', { params: { limit } }),
+    getAuditLogStats: () => api.get('/compliance/audit-logs/stats/'),
+
+    // Policies
+    getPolicies: (type) =>
+        api.get('/compliance/policies/', { params: type ? { type } : {} }),
+    getPolicy: (id) => api.get(`/compliance/policies/${id}/`),
+    createPolicy: (data) => api.post('/compliance/policies/create/', data),
+
+    // Consent
+    getMyConsent: () => api.get('/compliance/consent/'),
+    grantConsent: (policyVersionIds) =>
+        api.post('/compliance/consent/grant/', { policy_version_ids: policyVersionIds }),
+    withdrawConsent: (policyVersionId, reason) =>
+        api.post('/compliance/consent/withdraw/', { policy_version_id: policyVersionId, reason }),
+    getConsentStatus: () => api.get('/compliance/consent/status/'),
+
+    // GDPR Data Export
+    requestExport: () => api.post('/compliance/gdpr/export/'),
+    getMyExports: () => api.get('/compliance/gdpr/export/list/'),
+    downloadExport: (token) =>
+        api.get(`/compliance/gdpr/export/${token}/download/`, { responseType: 'blob' }),
+
+    // GDPR Data Deletion
+    requestDeletion: (data) => api.post('/compliance/gdpr/deletion/', data),
+    getMyDeletions: () => api.get('/compliance/gdpr/deletion/list/'),
+    confirmDeletion: (token) =>
+        api.post('/compliance/gdpr/deletion/confirm/', { token }),
+    cancelDeletion: (token) =>
+        api.post('/compliance/gdpr/deletion/cancel/', { token }),
+
+    // Teams
+    getTeam: () => api.get('/compliance/team/'),
+    createTeam: (name) => api.post('/compliance/team/', { name }),
+    getTeamMembers: () => api.get('/compliance/team/members/'),
+    inviteMember: (data) => api.post('/compliance/team/invite/', data),
+    previewInvitation: (token) =>
+        api.get(`/compliance/team/invite/${token}/preview/`),
+    acceptInvitation: (token) =>
+        api.post(`/compliance/team/invite/${token}/accept/`),
+    declineInvitation: (token) =>
+        api.post(`/compliance/team/invite/${token}/decline/`),
+    revokeInvitation: (id) =>
+        api.delete(`/compliance/team/invite/${id}/`),
+    changeMemberRole: (id, role) =>
+        api.patch(`/compliance/team/members/${id}/role/`, { role }),
+    removeMember: (id) =>
+        api.delete(`/compliance/team/members/${id}/`),
+    getTeamInvitations: () => api.get('/compliance/team/invitations/'),
+
+    // Security
+    getSecurityInfo: () => api.get('/compliance/security/'),
+};

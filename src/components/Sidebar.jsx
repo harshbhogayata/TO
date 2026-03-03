@@ -18,7 +18,8 @@ const defaultTalentNav = [
         { num: '09', label: 'Skill Browser', path: '/skills/taxonomy' },
         { num: '10', label: 'Notifications', path: '/notifications' },
         { num: '11', label: 'Profile', path: '/profile' },
-        { num: '12', label: 'Settings', path: '/settings' }
+        { num: '12', label: 'Settings', path: '/settings' },
+        { num: '13', label: 'Privacy Center', path: '/privacy-center' }
     ]
 ];
 
@@ -32,9 +33,11 @@ const defaultCompanyNav = [
         { num: '06', label: 'Messages', path: '/inbox' }
     ],
     [
-        { num: '07', label: 'Skill Browser', path: '/skills/taxonomy' },
-        { num: '08', label: 'Notifications', path: '/notifications' },
-        { num: '09', label: 'Settings', path: '/settings' }
+        { num: '07', label: 'Team', path: '/company/team' },
+        { num: '08', label: 'Skill Browser', path: '/skills/taxonomy' },
+        { num: '09', label: 'Notifications', path: '/notifications' },
+        { num: '10', label: 'Settings', path: '/settings' },
+        { num: '11', label: 'Privacy Center', path: '/privacy-center' }
     ]
 ];
 
@@ -48,8 +51,10 @@ const defaultAdminNav = [
         { num: '06', label: 'About', path: '/about' }
     ],
     [
-        { num: '07', label: 'Skill Browser', path: '/skills/taxonomy' },
-        { num: '08', label: 'Settings', path: '/settings' }
+        { num: '07', label: 'Audit Log', path: '/admin/audit-log' },
+        { num: '08', label: 'Skill Browser', path: '/skills/taxonomy' },
+        { num: '09', label: 'Settings', path: '/settings' },
+        { num: '10', label: 'Privacy Center', path: '/privacy-center' }
     ]
 ];
 

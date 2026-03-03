@@ -51,6 +51,12 @@ urlpatterns = [
     path('api/v1/push/', include('realtime.urls')),
     path('api/v1/search/', include('search.urls')),
     path('api/v1/intelligence/', include('intelligence.urls')),
+    path('api/v1/compliance/', include('compliance.urls')),
+
+    # RFC 9116 security.txt
+    path('.well-known/security.txt', include(([
+        path('', __import__('compliance.views', fromlist=['security_txt']).security_txt, name='security-txt'),
+    ], 'well-known'))),
 ]
 
 # Serve uploaded media files in development

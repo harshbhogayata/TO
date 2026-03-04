@@ -5,9 +5,15 @@ Job board API views for TalentOrbit.
 from rest_framework import generics, permissions, status, filters
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from django.core.cache import cache
 from django.db.models import F, Exists, OuterRef, Subquery, Count
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+
+from compliance.constants import AuditAction, AuditCategory
+from compliance.decorators import audit_action
 
 from .models import JobPost, Application, SavedJob
 from .serializers import (
@@ -63,6 +69,10 @@ class JobPostListView(generics.ListAPIView):
     ordering_fields = ['created_at', 'salary_max']
     ordering = ['-created_at']
 
+    @method_decorator(cache_page(60 * 15))
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
     def get_queryset(self):
         qs = super().get_queryset()
         work_mode = self.request.query_params.get('work_mode')
@@ -95,6 +105,14 @@ class JobPostDetailView(generics.RetrieveAPIView):
         return Response(serializer.data)
 
 
+class JobCreateThrottle(ScopedRateThrottle):
+    scope = 'job_create'
+
+
+class JobApplyThrottle(ScopedRateThrottle):
+    scope = 'job_apply'
+
+
 class CompanyJobsView(generics.ListCreateAPIView):
     """
     GET  /api/jobs/mine/   — Company sees their own posts.
@@ -111,6 +129,18 @@ class CompanyJobsView(generics.ListCreateAPIView):
         qs = JobPost.objects.filter(company=self.request.user).select_related('company__company_profile')
         return _annotate_user_relations(qs, self.request.user)
 
+    def get_throttles(self):
+        if self.request.method == 'POST':
+            return [JobCreateThrottle()]
+        return super().get_throttles()
+
+    @audit_action(
+        action=AuditAction.CREATE,
+        category=AuditCategory.JOB,
+        description='Created job post',
+        resource_type='jobs.JobPost',
+        get_resource_id=lambda req, res: res.data.get('id', ''),
+    )
     def create(self, request, *args, **kwargs):
         allowed, message, current, limit = check_company_job_post_limit(request.user)
         if not allowed:
@@ -138,7 +168,15 @@ class ApplyView(generics.CreateAPIView):
     """POST /api/jobs/<id>/apply/ — Talent applies to a job."""
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated, IsTalentUser, IsEmailVerified]
+    throttle_classes = [JobApplyThrottle]
 
+    @audit_action(
+        action=AuditAction.APPLICATION_SUBMIT,
+        category=AuditCategory.APPLICATION,
+        description='Submitted job application',
+        resource_type='jobs.Application',
+        get_resource_id=lambda req, res: res.data.get('id', ''),
+    )
     def create(self, request, *args, **kwargs):
         allowed, message, current, limit = check_talent_application_limit(request.user)
         if not allowed:
@@ -188,6 +226,17 @@ class UpdateApplicationStatusView(generics.UpdateAPIView):
     def get_queryset(self):
         return Application.objects.filter(job__company=self.request.user)
 
+    @audit_action(
+        action=AuditAction.APPLICATION_STATUS_CHANGE,
+        category=AuditCategory.APPLICATION,
+        description='Updated application status',
+        resource_type='jobs.Application',
+        get_resource_id=lambda req, res: req.parser_context['kwargs'].get('pk', ''),
+        get_changes=lambda req, res: {'status': req.data.get('status', '')},
+    )
+    def update(self, request, *args, **kwargs):
+        return super().update(request, *args, **kwargs)
+
 
 class WithdrawApplicationView(generics.DestroyAPIView):
     """DELETE /api/applications/<id>/ — Talent withdraws their own application."""
@@ -196,6 +245,13 @@ class WithdrawApplicationView(generics.DestroyAPIView):
     def get_queryset(self):
         return Application.objects.filter(applicant=self.request.user)
 
+    @audit_action(
+        action=AuditAction.APPLICATION_WITHDRAW,
+        category=AuditCategory.APPLICATION,
+        description='Withdrew application',
+        resource_type='jobs.Application',
+        get_resource_id=lambda req, res: req.parser_context['kwargs'].get('pk', ''),
+    )
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         if instance.status in [Application.Status.REJECTED, Application.Status.OFFERED, Application.Status.WITHDRAWN]:

@@ -195,9 +195,10 @@ class Course(models.Model):
 
     # ── Identity ──────────────────────────────────────────────────────────
     title = models.CharField(max_length=255, db_index=True)
-    slug = models.SlugField(max_length=280, unique=True)
+    slug = models.SlugField(max_length=280, unique=True, default='')
     subtitle = models.CharField(max_length=500, blank=True)
     description = models.TextField(
+        default='',
         help_text='Full course description (Markdown supported).',
     )
     short_description = models.CharField(

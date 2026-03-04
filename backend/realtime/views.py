@@ -6,8 +6,9 @@ REST endpoints for push notification token management and user presence.
 import logging
 
 from rest_framework import permissions, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from .models import PushSubscription
 from .serializers import RegisterPushTokenSerializer
@@ -15,8 +16,13 @@ from .serializers import RegisterPushTokenSerializer
 logger = logging.getLogger(__name__)
 
 
+class PushSubscribeThrottle(ScopedRateThrottle):
+    scope = 'push_subscribe'
+
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
+@throttle_classes([PushSubscribeThrottle])
 def register_push_token(request):
     """
     POST /api/v1/push/subscribe/

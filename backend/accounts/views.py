@@ -15,7 +15,7 @@ except ImportError:
 
 from django.contrib.auth import update_session_auth_hash
 from django.core.cache import cache
-from rest_framework import status, generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
@@ -23,6 +23,9 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.exceptions import TokenError
+
+from compliance.constants import AuditAction, AuditCategory
+from compliance.decorators import audit_action
 
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -32,6 +35,9 @@ from django.conf import settings as django_settings
 from django.contrib.auth.password_validation import validate_password as _validate_pw
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+
+from compliance.constants import AuditAction, AuditCategory
+from compliance.decorators import audit_action, create_audit_log
 
 from .models import User, TalentProfile, CompanyProfile
 from .throttling import AuthEndpointThrottle, ContactEndpointThrottle
@@ -53,9 +59,69 @@ logger = logging.getLogger(__name__)
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    """Login endpoint — returns JWT pair with enriched payload."""
+    """
+    Login endpoint — returns JWT pair with enriched payload.
+
+    Enterprise security:
+        - Locks account after 5 failed login attempts for 15 minutes
+        - Tracks failed attempts per email via cache
+        - Resets counter on successful login
+        - Audit logs lockout events
+    """
     serializer_class = CustomTokenObtainPairSerializer
     throttle_classes = [AuthEndpointThrottle]
+
+    _MAX_ATTEMPTS = 5
+    _LOCKOUT_SECONDS = 900  # 15 minutes
+
+    @audit_action(
+        action=AuditAction.LOGIN,
+        category=AuditCategory.AUTH,
+        description='User logged in',
+        resource_type='accounts.User',
+        get_resource_id=lambda req, res: res.data.get('user', {}).get('id', '') if res.data else '',
+    )
+    def post(self, request, *args, **kwargs):
+        from django.core.cache import cache
+
+        email = (request.data.get('email') or '').lower().strip()
+        if not email:
+            return super().post(request, *args, **kwargs)
+
+        cache_key = f'login_lockout:{email}'
+        attempts = cache.get(cache_key, 0)
+
+        if attempts >= self._MAX_ATTEMPTS:
+            logger.warning('Account locked out: email=%s attempts=%d', email, attempts)
+            return Response(
+                {
+                    'error': 'Account temporarily locked due to too many failed login attempts. '
+                             'Please try again in 15 minutes or reset your password.',
+                    'locked_until_seconds': self._LOCKOUT_SECONDS,
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+                headers={'Retry-After': str(self._LOCKOUT_SECONDS)},
+            )
+
+        response = super().post(request, *args, **kwargs)
+
+        if response.status_code == 200:
+            # Successful login — reset counter
+            cache.delete(cache_key)
+        elif response.status_code == 401:
+            # Failed login — increment counter
+            new_count = attempts + 1
+            cache.set(cache_key, new_count, self._LOCKOUT_SECONDS)
+            remaining = self._MAX_ATTEMPTS - new_count
+            if remaining > 0:
+                response.data['attempts_remaining'] = remaining
+            else:
+                logger.warning(
+                    'Account lockout triggered: email=%s',
+                    email,
+                )
+
+        return response
 
 
 class RegisterTalentView(generics.CreateAPIView):
@@ -64,6 +130,13 @@ class RegisterTalentView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [AuthEndpointThrottle]
 
+    @audit_action(
+        action=AuditAction.CREATE,
+        category=AuditCategory.AUTH,
+        description='Talent account registered',
+        resource_type='accounts.User',
+        get_resource_id=lambda req, res: res.data.get('user', {}).get('id', ''),
+    )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -94,6 +167,13 @@ class RegisterCompanyView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [AuthEndpointThrottle]
 
+    @audit_action(
+        action=AuditAction.CREATE,
+        category=AuditCategory.AUTH,
+        description='Company account registered',
+        resource_type='accounts.User',
+        get_resource_id=lambda req, res: res.data.get('user', {}).get('id', ''),
+    )
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -199,6 +279,12 @@ class CompanyProfileView(generics.RetrieveUpdateAPIView):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 @throttle_classes([AuthEndpointThrottle])
+@audit_action(
+    action=AuditAction.PASSWORD_CHANGE,
+    category=AuditCategory.AUTH,
+    description='Password changed',
+    resource_type='accounts.User',
+)
 def change_password(request):
     """POST /api/auth/change-password"""
     serializer = ChangePasswordSerializer(data=request.data)
@@ -221,6 +307,12 @@ def change_password(request):
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 @throttle_classes([AuthEndpointThrottle])
+@audit_action(
+    action=AuditAction.PASSWORD_RESET_REQUEST,
+    category=AuditCategory.AUTH,
+    description='Password reset requested',
+    resource_type='accounts.User',
+)
 def password_reset_request(request):
     """
     POST /api/auth/password-reset/
@@ -247,6 +339,12 @@ def password_reset_request(request):
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 @throttle_classes([AuthEndpointThrottle])
+@audit_action(
+    action=AuditAction.PASSWORD_RESET_CONFIRM,
+    category=AuditCategory.AUTH,
+    description='Password reset confirmed',
+    resource_type='accounts.User',
+)
 def password_reset_confirm(request):
     """
     POST /api/auth/password-reset/confirm/
@@ -464,6 +562,12 @@ class TwoFactorDisableView(APIView):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 @throttle_classes([AuthEndpointThrottle])
+@audit_action(
+    action=AuditAction.ACCOUNT_DEACTIVATE,
+    category=AuditCategory.USER,
+    description='Account deactivated by user',
+    resource_type='accounts.User',
+)
 def deactivate_account(request):
     """POST /api/v1/auth/deactivate/ — Deactivate the current user's account.
     Requires current password for re-authentication."""

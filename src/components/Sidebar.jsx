@@ -28,6 +28,13 @@ const defaultTalentNav = [
         { num: '17', label: 'Settings', path: '/settings' },
         { num: '18', label: 'Privacy Center', path: '/privacy-center' },
         { num: '19', label: 'Company Reviews', path: '/reviews' }
+    ],
+    [
+        { num: '20', label: 'Billing', path: '/billing' },
+        { num: '21', label: 'Plans', path: '/plans' },
+        { num: '22', label: 'Referrals', path: '/referrals' },
+        { num: '23', label: 'Company Directory', path: '/companies' },
+        { num: '24', label: 'Compensation Data', path: '/compensation' }
     ]
 ];
 
@@ -54,6 +61,18 @@ const defaultCompanyNav = [
         { num: '17', label: 'Notifications', path: '/notifications' },
         { num: '18', label: 'Settings', path: '/settings' },
         { num: '19', label: 'Privacy Center', path: '/privacy-center' }
+    ],
+    [
+        { num: '20', label: 'Billing', path: '/billing' },
+        { num: '21', label: 'Plans', path: '/plans' },
+        { num: '22', label: 'Referrals', path: '/referrals' },
+        { num: '23', label: 'Sponsored Posts', path: '/company/sponsored' },
+        { num: '24', label: 'CRM Pipeline', path: '/company/crm' },
+        { num: '25', label: 'AI Job Writer', path: '/company/ai-job-writer' },
+        { num: '26', label: 'Interviews', path: '/company/interviews' },
+        { num: '27', label: 'Talent Search', path: '/talent-search' },
+        { num: '28', label: 'Compensation Data', path: '/compensation' },
+        { num: '29', label: 'Company Directory', path: '/companies' }
     ]
 ];
 
@@ -71,6 +90,14 @@ const defaultAdminNav = [
         { num: '08', label: 'Skill Browser', path: '/skills/taxonomy' },
         { num: '09', label: 'Settings', path: '/settings' },
         { num: '10', label: 'Privacy Center', path: '/privacy-center' }
+    ],
+    [
+        { num: '11', label: 'Revenue Dashboard', path: '/admin/revenue' },
+        { num: '12', label: 'Feature Flags', path: '/admin/feature-flags' },
+        { num: '13', label: 'Policy Manager', path: '/admin/policies' },
+        { num: '14', label: 'Talent Search', path: '/talent-search' },
+        { num: '15', label: 'Compensation Data', path: '/compensation' },
+        { num: '16', label: 'Company Directory', path: '/companies' }
     ]
 ];
 

@@ -59,6 +59,8 @@ INSTALLED_APPS = [
     'django_celery_results',
     'django_celery_beat',
     'channels',
+    'drf_spectacular',
+    'oauth2_provider',
 
     # PostgreSQL extensions
     'django.contrib.postgres',
@@ -83,6 +85,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'talentorbit.middleware.correlation.CorrelationIdMiddleware',  # Distributed tracing
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Efficient static file serving
     'corsheaders.middleware.CorsMiddleware',       # Must be before CommonMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -295,6 +298,7 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'developer.authentication.APIKeyAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -302,11 +306,12 @@ REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
     'DEFAULT_VERSION': 'v1',
     'ALLOWED_VERSIONS': ['v1'],
-    'DEFAULT_PAGINATION_CLASS': 'talentorbit.pagination.StandardPagination',
-    'PAGE_SIZE': 20,
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 50,
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
@@ -334,6 +339,30 @@ REST_FRAMEWORK = {
         'developer_webhook_test': '20/hour',
         'developer_oauth_create': '5/hour',
         'developer_oauth_revoke': '10/hour',
+        # ── Jobs per-endpoint throttles ──────────────────────────────────
+        'job_create': '20/hour',
+        'job_apply': '30/hour',
+        'job_search': '120/hour',
+        # ── Reviews per-endpoint throttles ───────────────────────────────
+        'review_create': '5/hour',
+        'review_helpful': '60/hour',
+        'review_respond': '10/hour',
+        # ── Messaging per-endpoint throttles ─────────────────────────────
+        'message_send': '120/hour',
+        'thread_create': '30/hour',
+        # ── Notifications per-endpoint throttles ─────────────────────────
+        'notification_read': '300/hour',
+        # ── Blog per-endpoint throttles ──────────────────────────────────
+        'blog_list': '120/hour',
+        # ── Payments per-endpoint throttles ──────────────────────────────
+        'payment_checkout': '10/hour',
+        'payment_portal': '10/hour',
+        # ── Admin per-endpoint throttles ─────────────────────────────────
+        'admin_action': '60/hour',
+        # ── Realtime per-endpoint throttles ──────────────────────────────
+        'push_subscribe': '30/hour',
+        # ── AI per-endpoint throttles ────────────────────────────────────
+        'ai_generate': '20/hour',
     },
     'EXCEPTION_HANDLER': 'talentorbit.exceptions.custom_exception_handler',
 }
@@ -354,6 +383,64 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
     'TOKEN_OBTAIN_SERIALIZER': 'accounts.serializers.CustomTokenObtainPairSerializer',
+}
+
+# ─── drf-spectacular (OpenAPI schema + docs) ──────────────────────────────────
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'TalentOrbit API',
+    'DESCRIPTION': 'Enterprise talent management platform — jobs, courses, assessments, messaging, compliance, intelligence.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'CONTACT': {'email': 'api@talentorbit.com'},
+    'LICENSE': {'name': 'Proprietary'},
+    'SCHEMA_PATH_PREFIX': r'/api/v[0-9]+/',
+    'COMPONENT_SPLIT_REQUEST': True,
+    'ENUM_NAME_OVERRIDES': {},
+    'POSTPROCESSING_HOOKS': [],
+    'TAGS': [
+        {'name': 'Auth', 'description': 'Authentication, registration, 2FA'},
+        {'name': 'Jobs', 'description': 'Job posts, applications, saved jobs'},
+        {'name': 'Messaging', 'description': 'Threads, messages, unread counts'},
+        {'name': 'Courses', 'description': 'Catalog, enrollment, progress, certificates'},
+        {'name': 'Assessments', 'description': 'Question banks, assessments, grading'},
+        {'name': 'Payments', 'description': 'Subscriptions, billing, invoices, referrals'},
+        {'name': 'Search', 'description': 'Unified search, autocomplete, trending'},
+        {'name': 'Intelligence', 'description': 'Recommendations, analytics, resume parsing'},
+        {'name': 'Compliance', 'description': 'Audit logs, GDPR, teams, policies'},
+        {'name': 'Reviews', 'description': 'Company reviews, ratings'},
+        {'name': 'Developer', 'description': 'API keys, webhooks, OAuth apps'},
+        {'name': 'Notifications', 'description': 'In-app notifications'},
+        {'name': 'Blog', 'description': 'Articles, categories'},
+        {'name': 'Admin', 'description': 'Platform administration'},
+        {'name': 'Realtime', 'description': 'Push tokens, presence'},
+    ],
+}
+
+# ─── OpenAI (AI features) ────────────────────────────────────────────────────
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
+
+# ─── OAuth2 Provider ──────────────────────────────────────────────────────────
+OAUTH2_PROVIDER = {
+    'SCOPES': {
+        'read': 'Read-only access',
+        'write': 'Read and write access',
+        'jobs:read': 'Read job posts',
+        'jobs:write': 'Create and manage job posts',
+        'applications:read': 'Read applications',
+        'applications:write': 'Manage applications',
+        'profile:read': 'Read user profile',
+        'profile:write': 'Update user profile',
+        'messaging:read': 'Read messages',
+        'messaging:write': 'Send messages',
+        'assessments:read': 'Read assessments',
+        'assessments:write': 'Manage assessments',
+    },
+    'DEFAULT_SCOPES': ['read'],
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,
+    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400 * 30,
+    'ROTATE_REFRESH_TOKEN': True,
+    'ALLOWED_REDIRECT_URI_SCHEMES': ['https'] if not DEBUG else ['http', 'https'],
 }
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
@@ -405,11 +492,14 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {message}',
             'style': '{',
         },
+        'json': {
+            '()': 'talentorbit.middleware.correlation.StructuredJsonFormatter',
+        },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+            'formatter': 'json' if not DEBUG else 'verbose',
         },
     },
     'root': {
@@ -569,6 +659,13 @@ CELERY_TASK_ROUTES = {
     'assessments.tasks.auto_submit_expired_attempts': {'queue': 'assessments'},
     'assessments.tasks.expire_invitations': {'queue': 'assessments'},
     'assessments.tasks.cleanup_abandoned_attempts': {'queue': 'default'},
+    # Payments — dunning, referrals, campaigns, revenue
+    'payments.tasks.handle_payment_failure': {'queue': 'default'},
+    'payments.tasks.process_expired_grace_periods': {'queue': 'default'},
+    'payments.tasks.check_referral_qualification': {'queue': 'default'},
+    'payments.tasks.expire_stale_referrals': {'queue': 'default'},
+    'payments.tasks.process_campaign_budgets': {'queue': 'default'},
+    'payments.tasks.compute_revenue_metrics': {'queue': 'analytics'},
 }
 
 # Celery Beat schedule — periodic housekeeping tasks
@@ -703,8 +800,42 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour=4, minute=45),  # Daily at 04:45
         'options': {'queue': 'default'},
     },
+
+    # ── Payments — Dunning, Referrals, Campaigns, Revenue ─────────────
+    'process-expired-grace-periods': {
+        'task': 'payments.tasks.process_expired_grace_periods',
+        'schedule': crontab(hour='*/4', minute=20),  # Every 4 hours
+        'options': {'queue': 'default'},
+    },
+    'check-referral-qualification': {
+        'task': 'payments.tasks.check_referral_qualification',
+        'schedule': crontab(hour='*/6', minute=30),  # Every 6 hours
+        'options': {'queue': 'default'},
+    },
+    'expire-stale-referrals': {
+        'task': 'payments.tasks.expire_stale_referrals',
+        'schedule': crontab(hour=5, minute=30),  # Daily at 05:30
+        'options': {'queue': 'default'},
+    },
+    'process-campaign-budgets': {
+        'task': 'payments.tasks.process_campaign_budgets',
+        'schedule': crontab(hour='*/2', minute=0),  # Every 2 hours
+        'options': {'queue': 'default'},
+    },
+    'compute-revenue-metrics': {
+        'task': 'payments.tasks.compute_revenue_metrics',
+        'schedule': crontab(minute=0, hour='*/1'),  # Every hour
+        'options': {'queue': 'analytics'},
+    },
 }
 
 # ─── Judge0 CE (sandboxed code execution) ─────────────────────────────────────
 JUDGE0_API_URL = os.environ.get('JUDGE0_API_URL', 'http://judge0:2358')
 JUDGE0_API_KEY = os.environ.get('JUDGE0_API_KEY', '')
+
+# ─── OpenAI API ───────────────────────────────────────────────────────────────
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
+# ─── Firebase Push Notifications ──────────────────────────────────────────────
+FIREBASE_CREDENTIALS_JSON = os.environ.get('FIREBASE_CREDENTIALS_JSON', '')
+FIREBASE_CREDENTIALS_PATH = os.environ.get('FIREBASE_CREDENTIALS_PATH', '')

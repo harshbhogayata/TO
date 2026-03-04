@@ -213,15 +213,81 @@ export const adminService = {
 };
 
 export const paymentsService = {
-    /**
-     * Creates a Stripe Checkout Session on the backend.
-     * @param {string} plan  e.g. 'Premium Pro'
-     * @returns {Promise<{url: string}>}  Stripe-hosted checkout URL
-     */
-    createCheckoutSession: (plan) =>
-        api.post('/payments/create-checkout-session/', { plan }),
+    // Plans & Billing
+    getPlans: (audience) =>
+        api.get('/payments/plans/', { params: audience ? { audience } : {} }),
+    getBillingOverview: () =>
+        api.get('/payments/billing/'),
+    createCheckoutSession: (plan, planId, couponCode) =>
+        api.post('/payments/create-checkout-session/', {
+            plan, plan_id: planId, coupon_code: couponCode,
+        }),
+    createPortalSession: () =>
+        api.post('/payments/customer-portal/'),
     downloadInvoice: (id) =>
         api.get(`/payments/invoice/${id}/`, { responseType: 'blob' }),
+
+    // Coupons
+    validateCoupon: (code) =>
+        api.post('/payments/coupons/validate/', { code }),
+
+    // Referrals
+    getReferralProgram: () =>
+        api.get('/payments/referrals/program/'),
+    getReferralStats: () =>
+        api.get('/payments/referrals/stats/'),
+    getMyReferrals: () =>
+        api.get('/payments/referrals/'),
+    createReferral: (data) =>
+        api.post('/payments/referrals/create/', data),
+    getMyReferralRewards: () =>
+        api.get('/payments/referrals/rewards/'),
+
+    // Sponsored Campaigns
+    getSponsoredCampaigns: () =>
+        api.get('/payments/sponsored/'),
+    createSponsoredCampaign: (data) =>
+        api.post('/payments/sponsored/', data),
+    getSponsoredCampaign: (id) =>
+        api.get(`/payments/sponsored/${id}/`),
+    updateSponsoredCampaign: (id, data) =>
+        api.patch(`/payments/sponsored/${id}/`, data),
+    toggleCampaignStatus: (id) =>
+        api.post(`/payments/sponsored/${id}/toggle/`),
+
+    // Talent Pool CRM
+    getPipelines: () =>
+        api.get('/payments/pipelines/'),
+    createPipeline: (data) =>
+        api.post('/payments/pipelines/', data),
+    getPipeline: (id) =>
+        api.get(`/payments/pipelines/${id}/`),
+    updatePipeline: (id, data) =>
+        api.patch(`/payments/pipelines/${id}/`, data),
+    deletePipeline: (id) =>
+        api.delete(`/payments/pipelines/${id}/`),
+    getCandidates: (pipelineId, stageId) =>
+        api.get(`/payments/pipelines/${pipelineId}/candidates/`, {
+            params: stageId ? { stage_id: stageId } : {},
+        }),
+    addCandidate: (pipelineId, data) =>
+        api.post(`/payments/pipelines/${pipelineId}/candidates/`, data),
+    getCandidate: (id) =>
+        api.get(`/payments/candidates/${id}/`),
+    updateCandidate: (id, data) =>
+        api.patch(`/payments/candidates/${id}/`, data),
+    deleteCandidate: (id) =>
+        api.delete(`/payments/candidates/${id}/`),
+    moveCandidate: (id, stageId) =>
+        api.post(`/payments/candidates/${id}/move/`, { stage_id: stageId }),
+    bulkMoveCandidates: (candidateIds, stageId) =>
+        api.post('/payments/candidates/bulk-move/', { candidate_ids: candidateIds, stage_id: stageId }),
+
+    // Revenue Dashboard (Admin)
+    getRevenueDashboard: () =>
+        api.get('/payments/revenue/dashboard/'),
+    getRevenueTrend: (months = 12) =>
+        api.get('/payments/revenue/trend/', { params: { months } }),
 };
 
 export const blogService = {
@@ -305,6 +371,28 @@ export const intelligenceService = {
         api.post('/intelligence/experiments/track/', {
             event, properties, experiment_key: experimentKey, variant,
         }),
+
+    // AI Features
+    generateJobDescription: (data) =>
+        api.post('/intelligence/ai/job-description/', data),
+    scheduleInterviews: (data) =>
+        api.post('/intelligence/ai/schedule-interviews/', data),
+
+    // AI Chatbot
+    chatWithAI: (message, context) =>
+        api.post('/intelligence/ai/chat/', { message, context }),
+
+    // Compensation Benchmark
+    getCompensationBenchmark: (role, location) =>
+        api.get('/intelligence/ai/compensation/', { params: { role, location } }),
+
+    // Feature Flag Management (Admin)
+    createFeatureFlag: (data) =>
+        api.post('/intelligence/experiments/flags/', data),
+    updateFeatureFlag: (id, data) =>
+        api.patch(`/intelligence/experiments/flags/${id}/`, data),
+    deleteFeatureFlag: (id) =>
+        api.delete(`/intelligence/experiments/flags/${id}/`),
 };
 
 // ── Compliance & Trust ──────────────────────────────────────────────────────
@@ -365,4 +453,12 @@ export const complianceService = {
 
     // Security
     getSecurityInfo: () => api.get('/compliance/security/'),
+};
+
+// ── Search / Discovery ──────────────────────────────────────────────────────
+export const searchService = {
+    search: (params) => api.get('/search/', { params }),
+    getCompanyDirectory: (params) => api.get('/search/companies/', { params }),
+    getFeaturedEmployers: () => api.get('/search/companies/featured/'),
+    getTalentProfiles: (params) => api.get('/search/talent/', { params }),
 };

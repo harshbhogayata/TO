@@ -1,8 +1,41 @@
 """
 accounts/permissions.py
-Shared permission classes for email verification enforcement.
+Shared permission classes for role enforcement and email verification.
 """
 from rest_framework import permissions
+
+
+class IsCompanyUser(permissions.BasePermission):
+    """Only allow users with COMPANY role."""
+    message = 'Access restricted to verified company accounts.'
+
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated and
+            request.user.role == 'COMPANY'
+        )
+
+
+class IsTalentUser(permissions.BasePermission):
+    """Only allow users with TALENT role."""
+    message = 'Access restricted to talent accounts.'
+
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated and
+            request.user.role == 'TALENT'
+        )
+
+
+class IsAdminUser(permissions.BasePermission):
+    """Only allow users with ADMIN role."""
+    message = 'Access restricted to admin accounts.'
+
+    def has_permission(self, request, view):
+        return (
+            request.user.is_authenticated and
+            request.user.role == 'ADMIN'
+        )
 
 
 class IsEmailVerified(permissions.BasePermission):

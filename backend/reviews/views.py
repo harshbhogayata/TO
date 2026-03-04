@@ -6,10 +6,13 @@ import math
 
 from django.db.models import Avg, Count, Q
 from rest_framework import generics, permissions, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from accounts.permissions import IsEmailVerified
+from compliance.constants import AuditAction, AuditCategory
+from compliance.decorators import audit_action
 
 from .models import CompanyReview, CompanyReviewResponse, ReviewHelpful
 from .serializers import (
@@ -18,6 +21,18 @@ from .serializers import (
     CompanyReviewResponseCreateSerializer,
     CompanyReviewStatsSerializer,
 )
+
+
+class ReviewCreateThrottle(ScopedRateThrottle):
+    scope = 'review_create'
+
+
+class ReviewHelpfulThrottle(ScopedRateThrottle):
+    scope = 'review_helpful'
+
+
+class ReviewRespondThrottle(ScopedRateThrottle):
+    scope = 'review_respond'
 
 
 class CompanyReviewListView(generics.ListAPIView):
@@ -72,6 +87,17 @@ class CompanyReviewCreateView(generics.CreateAPIView):
     """
     serializer_class = CompanyReviewCreateSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
+    throttle_classes = [ReviewCreateThrottle]
+
+    @audit_action(
+        action=AuditAction.CREATE,
+        category=AuditCategory.USER,
+        description='Submitted company review',
+        resource_type='reviews.CompanyReview',
+        get_resource_id=lambda req, res: res.data.get('id', ''),
+    )
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
 
 class CompanyReviewStatsView(generics.GenericAPIView):
@@ -164,6 +190,7 @@ class CompanyReviewStatsView(generics.GenericAPIView):
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
+@throttle_classes([ReviewHelpfulThrottle])
 def toggle_helpful(request, review_id):
     """
     POST /api/v1/reviews/<review_id>/helpful/
@@ -199,6 +226,7 @@ def toggle_helpful(request, review_id):
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
+@throttle_classes([ReviewRespondThrottle])
 def respond_to_review(request, review_id):
     """
     POST /api/v1/reviews/<review_id>/respond/

@@ -28,6 +28,8 @@ from django.db import models as db_models
 from django.db.models import Avg, Count, Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
@@ -119,6 +121,10 @@ class CourseCategoryListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
     throttle_classes = [UserRateThrottle]
     pagination_class = None  # Categories are few; return all
+
+    @method_decorator(cache_page(60 * 15))
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
     def get_queryset(self):
         return (
@@ -239,6 +245,10 @@ class CourseListView(generics.ListAPIView, CourseQueryMixin):
     serializer_class = CourseListSerializer
     permission_classes = [permissions.AllowAny]
     throttle_classes = [UserRateThrottle]
+
+    @method_decorator(cache_page(60 * 15))
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 
     def get_queryset(self):
         qs = self.get_published_courses()

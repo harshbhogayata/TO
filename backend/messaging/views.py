@@ -7,14 +7,25 @@ from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from accounts.models import User
 from accounts.permissions import IsEmailVerified
+from compliance.constants import AuditAction, AuditCategory
+from compliance.decorators import audit_action
 from .models import Thread, Message
 from .serializers import (
     ThreadSerializer, MessageSerializer,
     SendMessageSerializer, CreateThreadSerializer
 )
+
+
+class MessageSendThrottle(ScopedRateThrottle):
+    scope = 'message_send'
+
+
+class ThreadCreateThrottle(ScopedRateThrottle):
+    scope = 'thread_create'
 
 
 class MyThreadsView(generics.ListAPIView):
@@ -136,6 +147,7 @@ class SendMessageView(generics.CreateAPIView):
     """POST /api/messages/send/ — Send a message in an existing thread."""
     serializer_class = SendMessageSerializer
     permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
+    throttle_classes = [MessageSendThrottle]
 
     def perform_create(self, serializer):
         thread = serializer.validated_data['thread']

@@ -1,13 +1,20 @@
 from rest_framework import generics, views, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from .models import Notification
 from .serializers import NotificationSerializer
+
+
+class NotificationReadThrottle(ScopedRateThrottle):
+    scope = 'notification_read'
+
 
 class NotificationListView(generics.ListAPIView):
     """GET /api/v1/notifications/ — List user notifications"""
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [NotificationReadThrottle]
     def get_queryset(self):
         return self.request.user.notifications.all()
 

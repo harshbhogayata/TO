@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import { useAuthStore } from './store/authStore';
 
 // ── Lightweight global loading fallback ──────────────────────────────────────
 const PageLoader = () => (
@@ -100,6 +102,30 @@ const PrivacyCenter = lazy(() => import('./pages/PrivacyCenter'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const TeamInvite = lazy(() => import('./pages/TeamInvite'));
+
+// Protected — Revenue & Growth (WS4)
+const BillingCenter = lazy(() => import(/* webpackChunkName: "billing" */ './pages/BillingCenter'));
+const SubscriptionPlans = lazy(() => import(/* webpackChunkName: "plans" */ './pages/SubscriptionPlans'));
+const ReferralProgram = lazy(() => import(/* webpackChunkName: "referrals" */ './pages/ReferralProgram'));
+const SponsoredPosts = lazy(() => import(/* webpackChunkName: "sponsored" */ './pages/SponsoredPosts'));
+const CRMPipeline = lazy(() => import(/* webpackChunkName: "crm" */ './pages/CRMPipeline'));
+const RevenueDashboard = lazy(() => import(/* webpackChunkName: "revenue" */ './pages/RevenueDashboard'));
+
+// Protected — AI/ML Platform (WS5)
+const AIJobWriter = lazy(() => import(/* webpackChunkName: "ai-writer" */ './pages/AIJobWriter'));
+const InterviewScheduler = lazy(() => import(/* webpackChunkName: "interviews" */ './pages/InterviewScheduler'));
+const CompensationBenchmark = lazy(() => import(/* webpackChunkName: "compensation" */ './pages/CompensationBenchmark'));
+
+// Protected — Utility / Discovery
+const TalentSearch = lazy(() => import(/* webpackChunkName: "talent-search" */ './pages/TalentSearch'));
+const CompanyDirectory = lazy(() => import(/* webpackChunkName: "company-dir" */ './pages/CompanyDirectory'));
+
+// Protected — Admin Operations
+const FeatureFlagAdmin = lazy(() => import(/* webpackChunkName: "flags" */ './pages/FeatureFlagAdmin'));
+const PolicyManager = lazy(() => import(/* webpackChunkName: "policies" */ './pages/PolicyManager'));
+
+// Global overlay — AI Chatbot (not a route)
+const AIChatbot = lazy(() => import(/* webpackChunkName: "chatbot" */ './pages/AIChatbot'));
 
 function AppRoutes() {
     const { addToast } = useToast();
@@ -368,8 +394,90 @@ function AppRoutes() {
                         </ProtectedRoute>
                     } />
 
+                    {/* ── Revenue & Growth (WS4) ──────────────────── */}
+                    <Route path="/billing" element={
+                        <ProtectedRoute allowedRoles={['TALENT', 'COMPANY']}>
+                            <ErrorBoundary><BillingCenter /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/plans" element={
+                        <ProtectedRoute>
+                            <ErrorBoundary><SubscriptionPlans /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/referrals" element={
+                        <ProtectedRoute>
+                            <ErrorBoundary><ReferralProgram /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/company/sponsored" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <ErrorBoundary><SponsoredPosts /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/company/crm" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <ErrorBoundary><CRMPipeline /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/revenue" element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <ErrorBoundary><RevenueDashboard /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ── AI/ML Platform (WS5) ────────────────────── */}
+                    <Route path="/company/ai-job-writer" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <ErrorBoundary><AIJobWriter /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/company/interviews" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <ErrorBoundary><InterviewScheduler /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/compensation" element={
+                        <ProtectedRoute allowedRoles={['TALENT', 'COMPANY', 'ADMIN']}>
+                            <ErrorBoundary><CompensationBenchmark /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ── Utility / Discovery ──────────────────────── */}
+                    <Route path="/talent-search" element={
+                        <ProtectedRoute allowedRoles={['COMPANY', 'ADMIN']}>
+                            <ErrorBoundary><TalentSearch /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/companies" element={
+                        <ProtectedRoute>
+                            <ErrorBoundary><CompanyDirectory /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ── Admin Operations ─────────────────────────── */}
+                    <Route path="/admin/feature-flags" element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <ErrorBoundary><FeatureFlagAdmin /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/policies" element={
+                        <ProtectedRoute allowedRoles={['ADMIN']}>
+                            <ErrorBoundary><PolicyManager /></ErrorBoundary>
+                        </ProtectedRoute>
+                    } />
+
                     <Route path="*" element={<NotFound />} />
             </Routes>
+
+            {/* ── AI Chatbot Overlay (global, non-critical) ───── */}
+            {useAuthStore.getState().isAuthenticated && (
+                <ErrorBoundary fallback={null}>
+                    <Suspense fallback={null}>
+                        <AIChatbot />
+                    </Suspense>
+                </ErrorBoundary>
+            )}
         </Suspense>
     );
 }

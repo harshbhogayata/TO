@@ -15,14 +15,17 @@
     "@sentry/react": "^10.40.0",
     "@stripe/stripe-js": "^8.8.0",
     "axios": "^1.13.5",
+    "dompurify": "^3.3.1",
     "lucide-react": "^0.344.0",
     "posthog-js": "^1.356.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.3",
+    "zod": "^4.3.6",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@axe-core/react": "^4.11.1",
     "@testing-library/react": "^14.2.0",
     "@vitejs/plugin-react-swc": "^3.5.0",
     "eslint": "^8.56.0",

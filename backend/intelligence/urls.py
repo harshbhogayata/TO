@@ -36,6 +36,13 @@ from .views import (
     ExperimentTrackView,
 )
 
+from .ai_views import (
+    ai_generate_job_description,
+    ai_schedule_interviews,
+    ai_chat,
+    ai_compensation_benchmark,
+)
+
 app_name = 'intelligence'
 
 urlpatterns = [
@@ -73,4 +80,10 @@ urlpatterns = [
     # ── Experiments / A/B Testing ─────────────────────────────────────────────
     path('experiments/flags/', FeatureFlagsView.as_view(), name='experiment_flags'),
     path('experiments/track/', ExperimentTrackView.as_view(), name='experiment_track'),
+
+    # ── AI Features ───────────────────────────────────────────────────────────
+    path('ai/job-description/', ai_generate_job_description, name='ai_job_description'),
+    path('ai/schedule-interviews/', ai_schedule_interviews, name='ai_schedule_interviews'),
+    path('ai/chat/', ai_chat, name='ai_chat'),
+    path('ai/compensation/', ai_compensation_benchmark, name='ai_compensation_benchmark'),
 ]

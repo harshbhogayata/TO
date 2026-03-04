@@ -9,6 +9,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.db import connection
 from django.http import JsonResponse
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 
 
 # ─── Health check (for uptime monitors / load balancers) ──────────────────────
@@ -55,6 +60,14 @@ urlpatterns = [
     path('api/v1/assessments/', include('assessments.urls')),
     path('api/v1/reviews/', include('reviews.urls')),
     path('api/v1/developer/', include('developer.urls')),
+
+    # ── OpenAPI schema & documentation ────────────────────────────────────
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+    # ── OAuth2 Provider ───────────────────────────────────────────────────
+    path('api/v1/oauth/', include('oauth2_provider.urls', namespace='oauth2_provider')),
 
     # RFC 9116 security.txt
     path('.well-known/security.txt', include(([

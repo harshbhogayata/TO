@@ -24,8 +24,9 @@ _firebase_initialized = False
 
 def _get_firebase_app():
     """
-    Initialize Firebase Admin SDK once using the service account key
-    specified in settings.FIREBASE_CREDENTIALS_PATH.
+    Initialize Firebase Admin SDK using the credentials specified in settings.
+    Prioritizes FIREBASE_CREDENTIALS_JSON (for Render production) over
+    FIREBASE_CREDENTIALS_PATH (for local development).
 
     Returns None if Firebase is not configured (development mode).
     """
@@ -36,16 +37,26 @@ def _get_firebase_app():
 
     _firebase_initialized = True
 
+    cred_json = getattr(settings, 'FIREBASE_CREDENTIALS_JSON', '')
     cred_path = getattr(settings, 'FIREBASE_CREDENTIALS_PATH', '')
-    if not cred_path:
-        logger.info('Firebase not configured (FIREBASE_CREDENTIALS_PATH not set). Push notifications disabled.')
+    
+    if not cred_json and not cred_path:
+        logger.info('Firebase not configured (Credentials not set). Push notifications disabled.')
         return None
 
     try:
         import firebase_admin
         from firebase_admin import credentials
+        import json
 
-        cred = credentials.Certificate(cred_path)
+        if cred_json:
+            # Load directly from string (e.g., Render Environment Variables)
+            cred_dict = json.loads(cred_json)
+            cred = credentials.Certificate(cred_dict)
+        else:
+            # Load from local file path
+            cred = credentials.Certificate(cred_path)
+            
         _firebase_app = firebase_admin.initialize_app(cred)
         logger.info('Firebase Admin SDK initialized successfully.')
         return _firebase_app

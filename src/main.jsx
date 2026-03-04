@@ -27,6 +27,17 @@ if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.PROD) {
     })
 }
 
+// ─── axe-core (accessibility auditing in development) ────────────────────────
+if (import.meta.env.DEV) {
+    import('react').then((React) =>
+        import('react-dom').then((ReactDOM) =>
+            import('@axe-core/react').then(({ default: axe }) => {
+                axe(React.default || React, ReactDOM.default || ReactDOM, 1000);
+            })
+        )
+    );
+}
+
 // ─── Restore session (access token is memory-only) ───────────────────────
 restoreSession().finally(() => {
     ReactDOM.createRoot(document.getElementById('root')).render(

@@ -5,13 +5,20 @@ Admin-only API views for platform oversight.
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from django.db.models import Count, Sum
 from django.contrib.auth import get_user_model
 from jobs.models import JobPost, Application
 from jobs.serializers import JobPostSerializer, ApplicationSerializer
 from accounts.serializers import UserMeSerializer
+from compliance.constants import AuditAction, AuditCategory
+from compliance.decorators import audit_action
 
 User = get_user_model()
+
+
+class AdminActionThrottle(ScopedRateThrottle):
+    scope = 'admin_action'
 
 
 class IsAdminUser(permissions.BasePermission):
@@ -73,6 +80,13 @@ class AdminUserListView(generics.ListAPIView):
 
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
+@audit_action(
+    action=AuditAction.ADMIN_VERIFY_USER,
+    category=AuditCategory.ADMIN,
+    description='Admin verified user',
+    resource_type='accounts.User',
+    get_resource_id=lambda req, res: req.parser_context['kwargs'].get('pk', ''),
+)
 def verify_user(request, pk):
     """PATCH /api/admin/users/<pk>/verify/ — Mark user as verified."""
     try:
@@ -86,6 +100,13 @@ def verify_user(request, pk):
 
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
+@audit_action(
+    action=AuditAction.ADMIN_DEACTIVATE_USER,
+    category=AuditCategory.ADMIN,
+    description='Admin deactivated user',
+    resource_type='accounts.User',
+    get_resource_id=lambda req, res: req.parser_context['kwargs'].get('pk', ''),
+)
 def deactivate_user(request, pk):
     """DELETE /api/admin/users/<pk>/ — Deactivate a user account."""
     if str(pk) == str(request.user.pk):
@@ -110,6 +131,13 @@ class AdminJobListView(generics.ListAPIView):
 
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
+@audit_action(
+    action=AuditAction.ADMIN_TOGGLE_JOB,
+    category=AuditCategory.ADMIN,
+    description='Admin toggled job status',
+    resource_type='jobs.JobPost',
+    get_resource_id=lambda req, res: req.parser_context['kwargs'].get('pk', ''),
+)
 def toggle_job_status(request, pk):
     """PATCH /api/admin/jobs/<pk>/toggle/ — Open or close a job listing."""
     try:

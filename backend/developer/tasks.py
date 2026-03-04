@@ -55,6 +55,25 @@ def deliver_webhook(self, endpoint_id: str, event_type: str, payload: dict):
         logger.warning('deliver_webhook: endpoint %s not found or inactive, skipping.', endpoint_id)
         return
 
+    # ── SSRF Prevention: validate URL against denylist ──
+    from developer.validators import validate_webhook_url, WebhookURLValidationError
+    try:
+        validate_webhook_url(endpoint.url)
+    except WebhookURLValidationError as e:
+        logger.error(
+            'deliver_webhook: SSRF blocked for endpoint %s url=%s: %s',
+            endpoint_id, endpoint.url, e,
+        )
+        WebhookDelivery.objects.create(
+            endpoint=endpoint,
+            event_type=event_type,
+            payload=payload,
+            attempt_number=attempt_number,
+            error_message=f'URL validation failed (SSRF prevention): {e}',
+            is_success=False,
+        )
+        return  # Do not retry SSRF-blocked URLs
+
     # Compute HMAC-SHA256 signature
     raw_secret = endpoint.get_signing_secret()
     payload_bytes = json.dumps(payload, separators=(',', ':'), sort_keys=True).encode('utf-8')

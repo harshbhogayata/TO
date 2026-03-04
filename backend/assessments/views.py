@@ -42,6 +42,9 @@ from rest_framework.views import APIView
 
 from accounts.permissions import IsEmailVerified
 
+from compliance.constants import AuditAction, AuditCategory
+from compliance.decorators import audit_action
+
 from .models import (
     Assessment,
     AssessmentAttempt,
@@ -698,6 +701,13 @@ class FinalSubmitView(APIView):
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'assessment_answer'
 
+    @audit_action(
+        action=AuditAction.CREATE,
+        category='ASSESSMENT',
+        description='Assessment submitted for grading',
+        resource_type='assessments.AssessmentAttempt',
+        get_resource_id=lambda req, res: req.parser_context['kwargs'].get('attempt_id', ''),
+    )
     def post(self, request, attempt_id):
         attempt = get_object_or_404(
             AssessmentAttempt.objects.select_related('assessment'),

@@ -1,4 +1,4 @@
-"""
+﻿"""
 developer/views.py
 REST API views for the Developer Platform.
 
@@ -11,39 +11,39 @@ Enterprise patterns applied:
     - Proper error propagation and structured responses
 
 Endpoints:
-    ── Portal Overview ──────────────────────────────────────────────
-    GET  /portal/stats/            — Aggregated developer stats
+    â”€â”€ Portal Overview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    GET  /portal/stats/            â€” Aggregated developer stats
 
-    ── API Keys ─────────────────────────────────────────────────────
-    GET  /api-keys/                — List company API keys
-    POST /api-keys/                — Create a new API key (returns raw key once)
-    GET  /api-keys/<id>/           — Detail view
-    DEL  /api-keys/<id>/           — Revoke (soft-deactivate) a key
-    POST /api-keys/<id>/rotate/    — Rotate: revoke old, create new with same config
+    â”€â”€ API Keys â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    GET  /api-keys/                â€” List company API keys
+    POST /api-keys/                â€” Create a new API key (returns raw key once)
+    GET  /api-keys/<id>/           â€” Detail view
+    DEL  /api-keys/<id>/           â€” Revoke (soft-deactivate) a key
+    POST /api-keys/<id>/rotate/    â€” Rotate: revoke old, create new with same config
 
-    ── Webhooks ─────────────────────────────────────────────────────
-    GET  /webhooks/                — List company webhook endpoints
-    POST /webhooks/                — Create a new webhook endpoint
-    GET  /webhooks/<id>/           — Detail view
-    DEL  /webhooks/<id>/           — Deactivate a webhook
-    PATCH /webhooks/<id>/          — Update events / URL
-    GET  /webhooks/<id>/deliveries/ — Delivery log for a webhook
-    POST /webhooks/<id>/test/      — Send a test ping (HMAC-signed)
+    â”€â”€ Webhooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    GET  /webhooks/                â€” List company webhook endpoints
+    POST /webhooks/                â€” Create a new webhook endpoint
+    GET  /webhooks/<id>/           â€” Detail view
+    DEL  /webhooks/<id>/           â€” Deactivate a webhook
+    PATCH /webhooks/<id>/          â€” Update events / URL
+    GET  /webhooks/<id>/deliveries/ â€” Delivery log for a webhook
+    POST /webhooks/<id>/test/      â€” Send a test ping (HMAC-signed)
 
-    ── OAuth Apps ───────────────────────────────────────────────────
-    GET  /oauth-apps/              — List company OAuth applications
-    POST /oauth-apps/              — Register new app (returns secret once)
-    GET  /oauth-apps/<id>/         — Detail view
-    POST /oauth-apps/<id>/revoke/  — Revoke application
+    â”€â”€ OAuth Apps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    GET  /oauth-apps/              â€” List company OAuth applications
+    POST /oauth-apps/              â€” Register new app (returns secret once)
+    GET  /oauth-apps/<id>/         â€” Detail view
+    POST /oauth-apps/<id>/revoke/  â€” Revoke application
 
-    ── Changelog ────────────────────────────────────────────────────
-    GET  /changelog/               — Public changelog entries
+    â”€â”€ Changelog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    GET  /changelog/               â€” Public changelog entries
 
-    ── Reference Data ───────────────────────────────────────────────
-    GET  /available-events/        — Webhook event type catalogue (cached)
-    GET  /available-scopes/        — API key + OAuth scope catalogue (cached)
-    GET  /rate-limits/             — Rate limit tiers (cached)
-    GET  /endpoints/               — Swagger-lite endpoint list (cached)
+    â”€â”€ Reference Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    GET  /available-events/        â€” Webhook event type catalogue (cached)
+    GET  /available-scopes/        â€” API key + OAuth scope catalogue (cached)
+    GET  /rate-limits/             â€” Rate limit tiers (cached)
+    GET  /endpoints/               â€” Swagger-lite endpoint list (cached)
 """
 import json
 import logging
@@ -68,6 +68,7 @@ from .models import (
     WebhookEndpoint,
 )
 from .serializers import (
+
     APIChangelogSerializer,
     APIKeyCreatedSerializer,
     APIKeyCreateSerializer,
@@ -80,7 +81,9 @@ from .serializers import (
     WebhookEndpointCreatedSerializer,
     WebhookEndpointCreateSerializer,
     WebhookEndpointListSerializer,
+    WebhookEndpointUpdateSerializer,
 )
+from .validators import WebhookURLValidationError, validate_webhook_url
 from .throttling import (
     APIKeyCreateThrottle,
     APIKeyRotateThrottle,
@@ -104,9 +107,9 @@ def _get_company(request):
     return request.user.company_profile
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # PORTAL OVERVIEW
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated, IsCompanyUser])
@@ -155,14 +158,14 @@ def portal_stats(request):
     return Response(serializer.data)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # API KEYS
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class APIKeyListCreateView(generics.ListCreateAPIView):
     """
-    GET  — List all API keys for the company.
-    POST — Create a new API key (throttled, audited).
+    GET  â€” List all API keys for the company.
+    POST â€” Create a new API key (throttled, audited).
     """
     permission_classes = [permissions.IsAuthenticated, IsCompanyUser, IsEmailVerified]
 
@@ -225,8 +228,8 @@ class APIKeyListCreateView(generics.ListCreateAPIView):
 
 class APIKeyDetailView(generics.RetrieveDestroyAPIView):
     """
-    GET    — API key detail.
-    DELETE — Revoke (soft-deactivate) a key (audited).
+    GET    â€” API key detail.
+    DELETE â€” Revoke (soft-deactivate) a key (audited).
     """
     permission_classes = [permissions.IsAuthenticated, IsCompanyUser]
     serializer_class = APIKeyListSerializer
@@ -304,14 +307,14 @@ def rotate_api_key(request, id):
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # WEBHOOKS
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class WebhookListCreateView(generics.ListCreateAPIView):
     """
-    GET  — List webhook endpoints for the company.
-    POST — Register a new webhook endpoint (throttled, audited).
+    GET  â€” List webhook endpoints for the company.
+    POST â€” Register a new webhook endpoint (throttled, audited).
     """
     permission_classes = [permissions.IsAuthenticated, IsCompanyUser, IsEmailVerified]
 
@@ -373,9 +376,9 @@ class WebhookListCreateView(generics.ListCreateAPIView):
 
 class WebhookDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    GET    — Webhook detail.
-    PATCH  — Update events/url/description (audited).
-    DELETE — Deactivate webhook (audited).
+    GET    â€” Webhook detail.
+    PATCH  â€” Update events/url/description (audited).
+    DELETE â€” Deactivate webhook (audited).
     """
     permission_classes = [permissions.IsAuthenticated, IsCompanyUser]
     serializer_class = WebhookEndpointListSerializer
@@ -397,14 +400,28 @@ class WebhookDetailView(generics.RetrieveUpdateDestroyAPIView):
     )
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        # Only allow updating specific fields
-        allowed = {'events', 'url', 'description', 'is_active'}
-        data = {k: v for k, v in request.data.items() if k in allowed}
-        for key, value in data.items():
+        serializer = WebhookEndpointUpdateSerializer(
+            instance=instance,
+            data=request.data,
+            partial=True,
+            context={
+                'company': _get_company(request),
+                'request': request,
+                'instance': instance,
+            },
+        )
+        serializer.is_valid(raise_exception=True)
+
+        for key, value in serializer.validated_data.items():
             setattr(instance, key, value)
-        instance.save(update_fields=list(data.keys()))
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+        instance.save(update_fields=list(serializer.validated_data.keys()))
+
+        company = _get_company(request)
+        if company:
+            cache.delete(f'developer:portal_stats:{company.pk}')
+
+        response_serializer = self.get_serializer(instance)
+        return Response(response_serializer.data)
 
     @audit_action(
         action=AuditAction.WEBHOOK_DELETE,
@@ -424,7 +441,7 @@ class WebhookDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class WebhookDeliveryListView(generics.ListAPIView):
-    """GET — Delivery log for a specific webhook endpoint."""
+    """GET â€” Delivery log for a specific webhook endpoint."""
     permission_classes = [permissions.IsAuthenticated, IsCompanyUser]
     serializer_class = WebhookDeliverySerializer
 
@@ -462,6 +479,23 @@ def webhook_test_ping(request, id):
         endpoint = WebhookEndpoint.objects.get(id=id, company=company, is_active=True)
     except WebhookEndpoint.DoesNotExist:
         return Response({'detail': 'Webhook not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        validate_webhook_url(endpoint.url)
+    except WebhookURLValidationError as exc:
+        delivery = WebhookDelivery.objects.create(
+            endpoint=endpoint,
+            event_type='ping',
+            payload={'event': 'ping'},
+            error_message=f'URL validation failed (SSRF prevention): {exc}',
+            is_success=False,
+        )
+        endpoint.failure_count += 1
+        endpoint.save(update_fields=['failure_count'])
+        return Response(
+            WebhookDeliverySerializer(delivery).data,
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     payload = {
         'event': 'ping',
@@ -530,14 +564,14 @@ def webhook_test_ping(request, id):
         )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # OAUTH APPLICATIONS
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class OAuthAppListCreateView(generics.ListCreateAPIView):
     """
-    GET  — List company OAuth applications.
-    POST — Register a new OAuth application (throttled, audited).
+    GET  â€” List company OAuth applications.
+    POST â€” Register a new OAuth application (throttled, audited).
     """
     permission_classes = [permissions.IsAuthenticated, IsCompanyUser, IsEmailVerified]
 
@@ -605,7 +639,7 @@ class OAuthAppListCreateView(generics.ListCreateAPIView):
 
 
 class OAuthAppDetailView(generics.RetrieveAPIView):
-    """GET — OAuth application detail."""
+    """GET â€” OAuth application detail."""
     permission_classes = [permissions.IsAuthenticated, IsCompanyUser]
     serializer_class = OAuthApplicationListSerializer
     lookup_field = 'id'
@@ -647,23 +681,23 @@ def revoke_oauth_app(request, id):
     return Response(OAuthApplicationListSerializer(app).data)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # CHANGELOG
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class ChangelogListView(generics.ListAPIView):
     """
-    GET — Public changelog entries for the developer portal.
-    No authentication required — displayed in the public dev portal.
+    GET â€” Public changelog entries for the developer portal.
+    No authentication required â€” displayed in the public dev portal.
     """
     permission_classes = [permissions.AllowAny]
     serializer_class = APIChangelogSerializer
     queryset = APIChangelog.objects.filter(is_published=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # REFERENCE DATA (public, cached)
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
@@ -708,7 +742,7 @@ def rate_limits(request):
             {'tier': 'Free', 'limit': '1,000', 'window': 'Per Hour', 'burst': '50/min'},
             {'tier': 'Starter', 'limit': '10,000', 'window': 'Per Hour', 'burst': '200/min'},
             {'tier': 'Professional', 'limit': '50,000', 'window': 'Per Hour', 'burst': '1,000/min'},
-            {'tier': 'Enterprise', 'limit': 'Unlimited', 'window': '—', 'burst': 'Custom'},
+            {'tier': 'Enterprise', 'limit': 'Unlimited', 'window': 'â€”', 'burst': 'Custom'},
         ]
         cache.set(cache_key, data, _CACHE_REFERENCE_TTL)
     return Response(data)
@@ -739,3 +773,8 @@ def endpoint_catalogue(request):
         ]
         cache.set(cache_key, data, _CACHE_REFERENCE_TTL)
     return Response(data)
+
+
+
+
+

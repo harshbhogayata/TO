@@ -153,6 +153,11 @@ function AppRoutes() {
                     <Route path="/blog" element={<Blog />} />
                     <Route path="/terms" element={<Terms />} />
                     <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/jobs" element={
+                        <ProtectedRoute allowedRoles={['TALENT', 'COMPANY', 'ADMIN']}>
+                            <JobBoard />
+                        </ProtectedRoute>
+                    } />
                     <Route path="/jobs/:id" element={<JobDetail />} />
                     <Route path="/search" element={<SearchPage />} />
                     <Route path="/payment/success" element={<PaymentSuccess />} />
@@ -163,11 +168,6 @@ function AppRoutes() {
                     <Route path="/user" element={
                         <ProtectedRoute allowedRoles={['TALENT']}>
                             <UserDashboard />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/jobs" element={
-                        <ProtectedRoute allowedRoles={['TALENT', 'COMPANY', 'ADMIN']}>
-                            <JobBoard />
                         </ProtectedRoute>
                     } />
                     <Route path="/skills" element={

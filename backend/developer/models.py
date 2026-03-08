@@ -1,15 +1,15 @@
-"""
+﻿"""
 developer/models.py
 Developer Platform data models for TalentOrbit.
 
 Contains:
-    1. APIKey             — Company API keys with hashed secrets, scoped access,
+    1. APIKey             â€” Company API keys with hashed secrets, scoped access,
                             IP allowlists, per-key usage sparkline data
-    2. WebhookEndpoint    — Registered webhook URLs with event subscriptions
-    3. WebhookDelivery    — Immutable delivery log per webhook attempt
-    4. OAuthApplication   — Registered OAuth 2.0 apps with client credentials,
+    2. WebhookEndpoint    â€” Registered webhook URLs with event subscriptions
+    3. WebhookDelivery    â€” Immutable delivery log per webhook attempt
+    4. OAuthApplication   â€” Registered OAuth 2.0 apps with client credentials,
                             redirect URIs, scope checklist, and revocation flow
-    5. APIChangelog       — Versioned changelog entries for developer portal
+    5. APIChangelog       â€” Versioned changelog entries for developer portal
 
 Design:
     - API keys are stored as SHA-256 hashes; only the prefix is kept in plaintext.
@@ -56,9 +56,9 @@ def _hash_secret(value):
     return hashlib.sha256(value.encode('utf-8')).hexdigest()
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # 1. API KEY
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class APIKey(models.Model):
     """
@@ -94,13 +94,13 @@ class APIKey(models.Model):
         help_text='First 12 chars of the key (for UI identification).',
     )
 
-    # Scopes — list of strings e.g. ["read:jobs", "write:jobs", "read:assessments"]
+    # Scopes â€” list of strings e.g. ["read:jobs", "write:jobs", "read:assessments"]
     scopes = models.JSONField(
         default=list,
         help_text='List of permission scope strings.',
     )
 
-    # IP Allowlist — empty list means no restriction
+    # IP Allowlist â€” empty list means no restriction
     ip_allowlist = models.JSONField(
         default=list,
         help_text='List of allowed IPv4/IPv6 CIDRs. Empty = unrestricted.',
@@ -111,7 +111,7 @@ class APIKey(models.Model):
     last_used_ip = models.GenericIPAddressField(null=True, blank=True)
     usage_count = models.PositiveIntegerField(default=0)
 
-    # Rolling 7-day hourly usage for sparkline — list of 7 integers
+    # Rolling 7-day hourly usage for sparkline â€” list of 7 integers
     daily_usage = models.JSONField(
         default=list,
         help_text='Rolling 7-day usage counts for sparkline rendering.',
@@ -131,7 +131,7 @@ class APIKey(models.Model):
     )
 
     def __str__(self):
-        return f'{self.name} ({self.prefix}…)'
+        return f'{self.name} ({self.prefix}â€¦)'
 
     @property
     def is_expired(self):
@@ -185,9 +185,9 @@ class APIKey(models.Model):
         self.save(update_fields=['usage_count', 'last_used_at', 'last_used_ip', 'daily_usage'])
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # 2. WEBHOOK ENDPOINT
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class WebhookEndpoint(models.Model):
     """
@@ -237,7 +237,7 @@ class WebhookEndpoint(models.Model):
         help_text='List of event type strings this endpoint listens to.',
     )
 
-    # Signing secret — signed at rest
+    # Signing secret â€” signed at rest
     signing_secret_signed = models.CharField(
         max_length=256, editable=False,
         help_text='Signer-protected webhook signing secret.',
@@ -265,7 +265,7 @@ class WebhookEndpoint(models.Model):
     )
 
     def __str__(self):
-        return f'Webhook → {self.url[:60]}…'
+        return f'Webhook â†’ {self.url[:60]}â€¦'
 
     @classmethod
     def create_endpoint(cls, company, url, events, description='', created_by=None):
@@ -273,6 +273,9 @@ class WebhookEndpoint(models.Model):
         Factory: generates signing secret, signs it, and creates the endpoint.
         Returns (instance, raw_secret).
         """
+        from .validators import validate_webhook_url
+
+        url = validate_webhook_url(url)
         raw_secret = _generate_webhook_secret()
         instance = cls(
             company=company,
@@ -303,9 +306,9 @@ class WebhookEndpoint(models.Model):
         return 'active'
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # 3. WEBHOOK DELIVERY LOG
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class WebhookDelivery(models.Model):
     """
@@ -363,12 +366,12 @@ class WebhookDelivery(models.Model):
     delivered_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f'{self.event_type} → {self.endpoint.url[:40]} [{self.status_code}]'
+        return f'{self.event_type} â†’ {self.endpoint.url[:40]} [{self.status_code}]'
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # 4. OAUTH APPLICATION
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class OAuthApplication(models.Model):
     """
@@ -489,9 +492,9 @@ class OAuthApplication(models.Model):
         self.save(update_fields=['status', 'revoked_at', 'revoked_by'])
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # 5. API CHANGELOG
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class APIChangelog(models.Model):
     """
@@ -530,4 +533,6 @@ class APIChangelog(models.Model):
     )
 
     def __str__(self):
-        return f'{self.version} — {self.title}'
+        return f'{self.version} â€” {self.title}'
+
+

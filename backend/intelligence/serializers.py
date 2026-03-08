@@ -149,6 +149,9 @@ class ParsedResumeSerializer(serializers.ModelSerializer):
     Note: the model uses a single ``parsed_at`` (auto_now) timestamp.
     There is no separate ``created_at``/``updated_at``.
     """
+    ai_enhanced = serializers.SerializerMethodField()
+    feature_flag_used = serializers.SerializerMethodField()
+    cached = serializers.BooleanField(default=False, read_only=True)
 
     class Meta:
         model = ParsedResume
@@ -156,9 +159,71 @@ class ParsedResumeSerializer(serializers.ModelSerializer):
             'id', 'parsed_skills', 'parsed_experience', 'parsed_education',
             'total_experience_years', 'generated_bio', 'contact_info',
             'confidence_score', 'parser_version', 'source_file_hash',
-            'parsed_at',
+            'raw_text', 'parsed_at', 'ai_enhanced', 'feature_flag_used', 'cached',
         )
         read_only_fields = fields
+
+    def get_ai_enhanced(self, obj):
+        return str(getattr(obj, 'parser_version', '')).startswith('ai_enhanced')
+
+    def get_feature_flag_used(self, obj):
+        if self.get_ai_enhanced(obj):
+            return 'USE_AI_ENHANCED_RESUME_PARSING'
+        return None
+
+
+class ResumeParseResponseSerializer(serializers.Serializer):
+    """Stable resume parsing response used by all parse endpoints."""
+    parsed_skills = serializers.ListField(child=serializers.JSONField(), default=list)
+    parsed_experience = serializers.ListField(child=serializers.JSONField(), default=list)
+    parsed_education = serializers.ListField(child=serializers.JSONField(), default=list)
+    total_experience_years = serializers.FloatField(allow_null=True, required=False)
+    generated_bio = serializers.CharField(allow_blank=True, default='')
+    contact_info = serializers.DictField(default=dict)
+    confidence_score = serializers.FloatField(default=0.0)
+    parser_version = serializers.CharField(default='spacy_v1')
+    source_file_hash = serializers.CharField(required=False, allow_blank=True, default='')
+    raw_text = serializers.CharField(required=False, allow_blank=True, default='')
+    parsed_at = serializers.DateTimeField(required=False, allow_null=True)
+    ai_enhanced = serializers.BooleanField(default=False)
+    feature_flag_used = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    cached = serializers.BooleanField(default=False)
+
+
+def normalise_resume_payload(source, *, cached=None, feature_flag_used=None):
+    """Map parser/model output into the canonical resume response contract."""
+    if isinstance(source, ParsedResume):
+        payload = dict(ParsedResumeSerializer(source).data)
+    else:
+        payload = {
+            'parsed_skills': source.get('parsed_skills', source.get('skills', [])),
+            'parsed_experience': source.get('parsed_experience', source.get('experience', [])),
+            'parsed_education': source.get('parsed_education', source.get('education', [])),
+            'total_experience_years': source.get('total_experience_years'),
+            'generated_bio': source.get('generated_bio', source.get('bio', '')),
+            'contact_info': source.get('contact_info', source.get('contact', {})),
+            'confidence_score': source.get('confidence_score', 0.0),
+            'parser_version': source.get('parser_version', 'spacy_v1'),
+            'source_file_hash': source.get('source_file_hash', ''),
+            'raw_text': source.get('raw_text', ''),
+            'parsed_at': source.get('parsed_at'),
+            'ai_enhanced': bool(
+                source.get('ai_enhanced')
+                or str(source.get('parser_version', '')).startswith('ai_enhanced')
+            ),
+            'feature_flag_used': source.get('feature_flag_used'),
+            'cached': source.get('cached', False),
+        }
+
+    if cached is not None:
+        payload['cached'] = cached
+
+    if feature_flag_used is not None:
+        payload['feature_flag_used'] = feature_flag_used
+    elif payload.get('ai_enhanced') and not payload.get('feature_flag_used'):
+        payload['feature_flag_used'] = 'USE_AI_ENHANCED_RESUME_PARSING'
+
+    return ResumeParseResponseSerializer(payload).data
 
 
 class ResumeUploadSerializer(serializers.Serializer):
@@ -418,3 +483,4 @@ class ExperimentTrackSerializer(serializers.Serializer):
     properties = serializers.DictField(required=False, default=dict)
     experiment_key = serializers.CharField(max_length=200, required=False)
     variant = serializers.CharField(max_length=100, required=False)
+

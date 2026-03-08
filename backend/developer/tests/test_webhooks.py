@@ -1,4 +1,4 @@
-"""
+﻿"""
 developer/tests/test_webhooks.py
 Comprehensive tests for Webhook management endpoints.
 
@@ -57,7 +57,7 @@ class WebhookListCreateTests(TestCase):
         self.client.force_authenticate(user=self.user)
         self.url = reverse('developer:webhook-list-create')
 
-    # ── List ──────────────────────────────────────────────────────
+    # â”€â”€ List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def test_list_empty(self):
         resp = self.client.get(self.url)
@@ -82,7 +82,7 @@ class WebhookListCreateTests(TestCase):
         self.assertEqual(len(resp.data), 1)
         self.assertEqual(resp.data[0]['url'], 'https://a.io/hook')
 
-    # ── Create ────────────────────────────────────────────────────
+    # â”€â”€ Create â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def test_create_success(self):
         resp = self.client.post(self.url, {
@@ -97,6 +97,13 @@ class WebhookListCreateTests(TestCase):
     def test_create_rejects_http_url(self):
         resp = self.client.post(self.url, {
             'url': 'http://insecure.com/hook',
+            'events': ['job.created'],
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_rejects_private_metadata_url(self):
+        resp = self.client.post(self.url, {
+            'url': 'https://169.254.169.254/latest/meta-data',
             'events': ['job.created'],
         }, format='json')
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
@@ -134,7 +141,7 @@ class WebhookListCreateTests(TestCase):
         }, format='json')
         self.assertIsNone(cache.get(f'developer:portal_stats:{self.company.pk}'))
 
-    # ── Tier limits ───────────────────────────────────────────────
+    # â”€â”€ Tier limits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def test_tier_limit_enforced(self):
         self.company.subscription_tier = 'free'
@@ -196,6 +203,13 @@ class WebhookDetailTests(TestCase):
         initial = AuditLog.objects.count()
         self.client.patch(url, {'description': 'Updated desc'}, format='json')
         self.assertGreater(AuditLog.objects.count(), initial)
+
+    def test_update_rejects_private_url(self):
+        url = reverse('developer:webhook-detail', kwargs={'id': self.endpoint.id})
+        resp = self.client.patch(url, {
+            'url': 'https://127.0.0.1/internal',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_deactivate_webhook(self):
         url = reverse('developer:webhook-detail', kwargs={'id': self.endpoint.id})
@@ -370,3 +384,19 @@ class WebhookTestPingTests(TestCase):
 
         self.endpoint.refresh_from_db()
         self.assertEqual(self.endpoint.failure_count, 1)
+
+    @patch('requests.post')
+    def test_test_ping_blocks_private_url_without_outbound_call(self, mock_post):
+        WebhookEndpoint.objects.filter(pk=self.endpoint.pk).update(
+            url='https://169.254.169.254/latest/meta-data'
+        )
+        response = self.client.post(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        mock_post.assert_not_called()
+        self.endpoint.refresh_from_db()
+        self.assertEqual(self.endpoint.failure_count, 1)
+        delivery = WebhookDelivery.objects.get(endpoint=self.endpoint)
+        self.assertFalse(delivery.is_success)
+        self.assertIn('SSRF prevention', delivery.error_message)
+

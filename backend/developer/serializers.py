@@ -1,4 +1,4 @@
-"""
+﻿"""
 developer/serializers.py
 DRF serializers for the Developer Platform.
 
@@ -11,6 +11,7 @@ Covers:
 from rest_framework import serializers
 
 from .models import (
+
     APIKey,
     WebhookEndpoint,
     WebhookDelivery,
@@ -18,10 +19,12 @@ from .models import (
     APIChangelog,
 )
 
+from .validators import WebhookURLValidationError, validate_webhook_url
 
-# ═══════════════════════════════════════════════════════════════════════════════
+
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # API KEYS
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class APIKeyListSerializer(serializers.ModelSerializer):
     """Read-only list representation of an API key."""
@@ -54,7 +57,7 @@ class APIKeyCreateSerializer(serializers.Serializer):
     )
     expires_at = serializers.DateTimeField(required=False, allow_null=True, default=None)
 
-    # ── Available scopes whitelist ───────────────────────────────────────
+    # â”€â”€ Available scopes whitelist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     VALID_SCOPES = {
         'read:jobs', 'write:jobs',
         'read:assessments', 'write:assessments',
@@ -96,7 +99,7 @@ class APIKeyCreateSerializer(serializers.Serializer):
 
 
 class APIKeyCreatedSerializer(serializers.ModelSerializer):
-    """Response after creating a key — includes the raw key (shown once)."""
+    """Response after creating a key â€” includes the raw key (shown once)."""
     raw_key = serializers.SerializerMethodField()
 
     class Meta:
@@ -111,9 +114,10 @@ class APIKeyCreatedSerializer(serializers.ModelSerializer):
         return getattr(obj, '_raw_key', None)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # WEBHOOKS
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class WebhookEndpointListSerializer(serializers.ModelSerializer):
     """Read-only webhook endpoint listing."""
@@ -146,6 +150,10 @@ class WebhookEndpointCreateSerializer(serializers.Serializer):
     VALID_EVENTS = {e[0] for e in WebhookEndpoint.AVAILABLE_EVENTS}
 
     def validate_url(self, value):
+        try:
+            value = validate_webhook_url(value)
+        except WebhookURLValidationError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
         if not value.startswith('https://'):
             raise serializers.ValidationError('Webhook URLs must use HTTPS.')
         company = self.context['company']
@@ -177,8 +185,54 @@ class WebhookEndpointCreateSerializer(serializers.Serializer):
         return instance
 
 
+
+class WebhookEndpointUpdateSerializer(serializers.Serializer):
+    """Write serializer for partial webhook endpoint updates."""
+    url = serializers.URLField(max_length=500, required=False)
+    events = serializers.ListField(
+        child=serializers.CharField(max_length=60),
+        allow_empty=False,
+        required=False,
+    )
+    description = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    is_active = serializers.BooleanField(required=False)
+
+    VALID_EVENTS = WebhookEndpointCreateSerializer.VALID_EVENTS
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError('At least one field must be updated.')
+        return attrs
+
+    def validate_url(self, value):
+        try:
+            value = validate_webhook_url(value)
+        except WebhookURLValidationError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+
+        if not value.startswith('https://'):
+            raise serializers.ValidationError('Webhook URLs must use HTTPS.')
+
+        company = self.context['company']
+        instance = self.context.get('instance')
+        queryset = WebhookEndpoint.objects.filter(company=company, url=value, is_active=True)
+        if instance is not None:
+            queryset = queryset.exclude(pk=instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError('An active webhook for this URL already exists.')
+        return value
+
+    def validate_events(self, value):
+        invalid = set(value) - self.VALID_EVENTS
+        if invalid:
+            raise serializers.ValidationError(
+                f'Invalid events: {", ".join(sorted(invalid))}. '
+                f'Valid events: {", ".join(sorted(self.VALID_EVENTS))}'
+            )
+        return value
+
 class WebhookEndpointCreatedSerializer(serializers.ModelSerializer):
-    """Response after creating a webhook — includes signing secret (shown once)."""
+    """Response after creating a webhook â€” includes signing secret (shown once)."""
     signing_secret = serializers.SerializerMethodField()
     status = serializers.CharField(source='status_label', read_only=True)
 
@@ -206,9 +260,9 @@ class WebhookDeliverySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # OAUTH APPLICATIONS
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class OAuthApplicationListSerializer(serializers.ModelSerializer):
     """Read-only list of registered OAuth applications."""
@@ -279,7 +333,7 @@ class OAuthApplicationCreateSerializer(serializers.Serializer):
 
 
 class OAuthApplicationCreatedSerializer(serializers.ModelSerializer):
-    """Response after registering — includes raw client_secret (shown once)."""
+    """Response after registering â€” includes raw client_secret (shown once)."""
     client_secret = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
 
@@ -296,9 +350,10 @@ class OAuthApplicationCreatedSerializer(serializers.ModelSerializer):
         return getattr(obj, '_raw_secret', None)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # CHANGELOG
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class APIChangelogSerializer(serializers.ModelSerializer):
     """Read-only changelog entries for the developer portal."""
@@ -314,9 +369,9 @@ class APIChangelogSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# PORTAL OVERVIEW — Aggregated stats (no model, computed)
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# PORTAL OVERVIEW â€” Aggregated stats (no model, computed)
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class DeveloperPortalStatsSerializer(serializers.Serializer):
     """Aggregated developer portal statistics for a company."""
@@ -328,3 +383,6 @@ class DeveloperPortalStatsSerializer(serializers.Serializer):
     active_oauth_apps = serializers.IntegerField()
     total_api_calls_24h = serializers.IntegerField()
     webhook_delivery_rate = serializers.FloatField()
+
+
+

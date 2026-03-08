@@ -361,6 +361,10 @@ REST_FRAMEWORK = {
         'admin_action': '60/hour',
         # ── Realtime per-endpoint throttles ──────────────────────────────
         'push_subscribe': '30/hour',
+        'resume_authenticated': '30/hour',
+        'resume_public': '10/hour',
+        'ai_resume_authenticated': '12/hour',
+        'ai_resume_public': '5/hour',
         # ── AI per-endpoint throttles ────────────────────────────────────
         'ai_generate': '20/hour',
     },
@@ -416,9 +420,12 @@ SPECTACULAR_SETTINGS = {
     ],
 }
 
-# ─── OpenAI (AI features) ────────────────────────────────────────────────────
+# ─── OpenAI (AI features) ────────────────────────────────────────────
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 OPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o-mini')
+
+# ─── AI-Enhanced Resume Parsing ─────────────────────────────────────
+USE_AI_ENHANCED_RESUME_PARSING = os.environ.get('USE_AI_ENHANCED_RESUME_PARSING', 'False').lower() == 'true'
 
 # ─── OAuth2 Provider ──────────────────────────────────────────────────────────
 OAUTH2_PROVIDER = {
@@ -839,3 +846,4 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
 # ─── Firebase Push Notifications ──────────────────────────────────────────────
 FIREBASE_CREDENTIALS_JSON = os.environ.get('FIREBASE_CREDENTIALS_JSON', '')
 FIREBASE_CREDENTIALS_PATH = os.environ.get('FIREBASE_CREDENTIALS_PATH', '')
+

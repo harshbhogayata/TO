@@ -15,7 +15,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         return <Navigate to="/auth" state={{ from: location }} replace />;
     }
 
-    if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    if (allowedRoles && (!user?.role || !allowedRoles.includes(user.role))) {
         // Authenticated but wrong role — redirect to their correct dashboard
         const dashboardMap = {
             TALENT: '/user',

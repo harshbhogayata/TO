@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Skeleton from '../components/Skeleton';
 import { intelligenceService, getApiErrorMessage } from '../services/api';
@@ -27,11 +27,11 @@ const ResumeParser = () => {
                 const { data } = await intelligenceService.getParsedResume();
                 if (data && (data.parsed_skills?.length || data.parsed_experience?.length)) {
                     setParsed(data);
-                    setRawText(data.generated_bio || `[Resume parsed on ${data.parsed_at || 'unknown date'}]`);
+                    setRawText(data.raw_text || data.generated_bio || `[Resume parsed on ${data.parsed_at || 'unknown date'}]`);
                     setProgress(100);
                 }
             } catch {
-                // No existing parsed resume — that's fine
+                // No existing parsed resume â€” that's fine
             }
         };
         loadExisting();
@@ -46,12 +46,12 @@ const ResumeParser = () => {
         return () => clearInterval(interval);
     }, [parsing]);
 
-    const handleFileDrop = useCallback((e) => {
+    const handleFileDrop = (e) => {
         e.preventDefault();
         setDragOver(false);
         const dropped = e.dataTransfer?.files?.[0];
         if (dropped) handleFileSelect(dropped);
-    }, []);
+    };
 
     const handleFileSelect = async (selectedFile) => {
         if (!selectedFile) return;
@@ -77,9 +77,9 @@ const ResumeParser = () => {
             const formData = new FormData();
             formData.append('resume', selectedFile);
 
-            const { data } = await intelligenceService.parseResume(formData);
+            const { data } = await intelligenceService.parseResumeAI(formData);
             setParsed(data);
-            setRawText(data.generated_bio || data.raw_text || `[Parsed from ${selectedFile.name}]`);
+            setRawText(data.raw_text || data.generated_bio || `[Parsed from ${selectedFile.name}]`);
             setProgress(100);
         } catch (err) {
             addToast(getApiErrorMessage(err, 'Resume parsing failed.'), 'error');
@@ -109,7 +109,7 @@ const ResumeParser = () => {
         }
     };
 
-    // Backend stores confidence_score as FloatField 0.0–1.0
+    // Backend stores confidence_score as FloatField 0.0â€“1.0
     const confidence = parsed?.confidence_score != null
         ? Math.min(Math.round(parsed.confidence_score * 100), 100)
         : null;
@@ -133,7 +133,7 @@ const ResumeParser = () => {
             }
         >
             <div className="rp-grid">
-                {/* ── Left: Upload Zone ── */}
+                {/* â”€â”€ Left: Upload Zone â”€â”€ */}
                 <div className="rp-upload-zone">
                     <span className="rp-section-label">Resume Source Ingestion</span>
 
@@ -178,7 +178,7 @@ const ResumeParser = () => {
                         <div className="rp-raw-header">
                             <span className="rp-section-label" style={{ marginBottom: 0, border: 'none' }}>Raw CV Data Stream</span>
                             <span className="rp-status-badge">
-                                {parsing ? '● Capturing' : rawText ? '● Complete' : '● Idle'}
+                                {parsing ? 'â— Capturing' : rawText ? 'â— Complete' : 'â— Idle'}
                             </span>
                         </div>
                         <div className="rp-raw-data">
@@ -189,7 +189,7 @@ const ResumeParser = () => {
                     </div>
                 </div>
 
-                {/* ── Right: Structured View ── */}
+                {/* â”€â”€ Right: Structured View â”€â”€ */}
                 <div className="rp-structured">
                     {!parsed && !parsing ? (
                         <div className="rp-empty-structured">
@@ -252,7 +252,7 @@ const ResumeParser = () => {
                                                     {exp.company || 'Company'}
                                                 </h4>
                                                 <p className="rp-timeline-role">
-                                                    {[exp.title, exp.start_date && exp.end_date ? `${exp.start_date} – ${exp.end_date}` : null, exp.duration_months ? `${exp.duration_months}mo` : null].filter(Boolean).join(' • ')}
+                                                    {[exp.title, exp.start_date && exp.end_date ? `${exp.start_date} â€“ ${exp.end_date}` : null, exp.duration_months ? `${exp.duration_months}mo` : null].filter(Boolean).join(' â€¢ ')}
                                                 </p>
                                                 {exp.description && (
                                                     <p className="rp-timeline-highlight">
@@ -272,7 +272,7 @@ const ResumeParser = () => {
                                     {parsed.parsed_education.map((edu, i) => (
                                         <p key={i} style={{ fontSize: '13px', marginBottom: '4px' }}>
                                             <strong>{edu.institution || 'Institution'}</strong>
-                                            {edu.degree && ` — ${edu.degree}`}
+                                            {edu.degree && ` â€” ${edu.degree}`}
                                             {edu.field && ` in ${edu.field}`}
                                             {edu.graduation_year && ` (${edu.graduation_year})`}
                                         </p>
@@ -287,7 +287,7 @@ const ResumeParser = () => {
                                     onClick={handleConfirm}
                                     disabled={confirming || confirmed}
                                 >
-                                    {confirmed ? '✓ Mapped to Database' : confirming ? 'Processing...' : 'Confirm & Map to Database'}
+                                    {confirmed ? 'âœ“ Mapped to Database' : confirming ? 'Processing...' : 'Confirm & Map to Database'}
                                 </button>
                             </div>
                         </>
@@ -299,3 +299,7 @@ const ResumeParser = () => {
 };
 
 export default ResumeParser;
+
+
+
+

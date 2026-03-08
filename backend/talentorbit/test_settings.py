@@ -1,5 +1,5 @@
-"""
-Test settings — forces SQLite + disables Sentry for fast local test runs.
+﻿"""
+Test settings â€” forces SQLite + disables Sentry for fast local test runs.
 Usage: python manage.py test --settings=talentorbit.test_settings
 """
 import os
@@ -28,7 +28,7 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
-# Disable throttling in tests — set rates to None or keep compliance rates
+# Disable throttling in tests â€” set rates to None or keep compliance rates
 REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
     'anon': None,
@@ -46,6 +46,16 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
     'compliance_audit': '999/minute',
     'compliance_audit_integrity': '999/minute',
     'compliance_policy_create': '999/minute',
+    'resume_authenticated': '999/minute',
+    'resume_public': '999/minute',
+    'ai_resume_authenticated': '999/minute',
+    'ai_resume_public': '999/minute',
+    'developer_key_create': '999/minute',
+    'developer_key_rotate': '999/minute',
+    'developer_webhook_create': '999/minute',
+    'developer_webhook_test': '999/minute',
+    'developer_oauth_create': '999/minute',
+    'developer_oauth_revoke': '999/minute',
 }
 
 # In-memory cache
@@ -58,12 +68,12 @@ CACHES = {
 # In-memory email
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
-# Celery — run tasks synchronously in tests (no broker needed)
+# Celery â€” run tasks synchronously in tests (no broker needed)
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_RESULT_BACKEND = 'django-db'
 
-# Channel layer — in-memory for tests
+# Channel layer â€” in-memory for tests
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
@@ -71,7 +81,7 @@ CHANNEL_LAYERS = {
 }
 
 
-# Skip migrations entirely — create tables from models so SQLite works
+# Skip migrations entirely â€” create tables from models so SQLite works
 # (avoids pg_trgm CREATE EXTENSION in search.0002_gin_indexes).
 class _DisableMigrations:
     def __contains__(self, item):
@@ -82,3 +92,4 @@ class _DisableMigrations:
 
 
 MIGRATION_MODULES = _DisableMigrations()
+

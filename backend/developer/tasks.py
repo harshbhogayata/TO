@@ -1,4 +1,4 @@
-"""
+﻿"""
 developer/tasks.py
 Celery tasks for the Developer Platform.
 
@@ -6,8 +6,8 @@ All tasks use BaseTaskWithDLQ so permanently-failed tasks are routed
 to the dead-letter queue instead of being silently dropped.
 
 Tasks:
-    1. deliver_webhook       — Async outbound HTTP POST with retry + HMAC signing
-    2. prune_delivery_logs   — Periodic cleanup of old WebhookDelivery rows
+    1. deliver_webhook       â€” Async outbound HTTP POST with retry + HMAC signing
+    2. prune_delivery_logs   â€” Periodic cleanup of old WebhookDelivery rows
 """
 import hashlib
 import hmac
@@ -20,9 +20,9 @@ from talentorbit.task_base import BaseTaskWithDLQ
 logger = logging.getLogger(__name__)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # 1. Async Webhook Delivery with HMAC Signature
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @shared_task(
     base=BaseTaskWithDLQ,
@@ -55,7 +55,8 @@ def deliver_webhook(self, endpoint_id: str, event_type: str, payload: dict):
         logger.warning('deliver_webhook: endpoint %s not found or inactive, skipping.', endpoint_id)
         return
 
-    # ── SSRF Prevention: validate URL against denylist ──
+    attempt_number = self.request.retries + 1
+    # â”€â”€ SSRF Prevention: validate URL against denylist â”€â”€
     from developer.validators import validate_webhook_url, WebhookURLValidationError
     try:
         validate_webhook_url(endpoint.url)
@@ -93,7 +94,6 @@ def deliver_webhook(self, endpoint_id: str, event_type: str, payload: dict):
         'User-Agent': 'TalentOrbit-Webhook/1.0',
     }
 
-    attempt_number = self.request.retries + 1
     start = time.monotonic()
     try:
         resp = http_requests.post(
@@ -182,9 +182,9 @@ def compute_webhook_signature(secret: str, timestamp: str, payload_bytes: bytes)
     return f'v1={sig}'
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 2. Periodic Cleanup — Prune Old Delivery Logs
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# 2. Periodic Cleanup â€” Prune Old Delivery Logs
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 @shared_task(
     base=BaseTaskWithDLQ,
@@ -208,3 +208,6 @@ def prune_delivery_logs(self, retention_days: int = 30):
         delivered_at__lt=cutoff,
     ).delete()
     logger.info('prune_delivery_logs: deleted %d delivery records older than %d days.', deleted_count, retention_days)
+
+
+

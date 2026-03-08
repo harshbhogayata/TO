@@ -1,0 +1,7 @@
+backend/venv/
+venv/
+node_modules/
+dist/
+backend/staticfiles/
+backend/media/
+backend/**/migrations/

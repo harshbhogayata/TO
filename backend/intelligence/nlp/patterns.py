@@ -46,7 +46,7 @@ DEGREE_PATTERNS = re.compile(
 # ─── Job Title Patterns ──────────────────────────────────────────────────────
 
 JOB_TITLE_KEYWORDS = re.compile(
-    r'\b('
+    r'\b(?:'
     r'(?:Senior|Junior|Lead|Principal|Staff|Chief|Head\s+of|Director\s+of|VP\s+of|'
     r'Associate|Assistant|Manager|Coordinator|Specialist|Analyst|Consultant|'
     r'Intern|Trainee|Fellow)\s+)?'
@@ -58,7 +58,7 @@ JOB_TITLE_KEYWORDS = re.compile(
     r'(?:Engineer|Developer|Architect|Designer|Scientist|Analyst|Manager|'
     r'Administrator|Specialist|Consultant|Lead|Director|Officer|Coordinator|'
     r'Tester|Researcher|Strategist|Executive)?'
-    r')\b',
+    r'\b',
     re.IGNORECASE,
 )
 

@@ -1,16 +1,16 @@
-"""
+﻿"""
 intelligence/views.py
 API views for the Intelligence layer.
 
 Endpoints
-─────────
-  Recommendations  — personalised job/talent recommendations
-  Interactions     — record user-job interactions
-  Resume Parser    — NLP resume parsing + apply
-  Skill Taxonomy   — browse / search / suggest skills
-  Company Analytics — hiring funnel, time-to-hire, sources, talent pool
-  Platform Analytics — admin-only platform-wide metrics
-  Experiments      — feature flags + event tracking
+â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  Recommendations  â€” personalised job/talent recommendations
+  Interactions     â€” record user-job interactions
+  Resume Parser    â€” NLP resume parsing + apply
+  Skill Taxonomy   â€” browse / search / suggest skills
+  Company Analytics â€” hiring funnel, time-to-hire, sources, talent pool
+  Platform Analytics â€” admin-only platform-wide metrics
+  Experiments      â€” feature flags + event tracking
 
 Enterprise quality patterns applied:
   - Throttle classes on every endpoint (matching accounts/views.py)
@@ -31,7 +31,7 @@ from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
-from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
+from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
 from accounts.models import TalentProfile
@@ -49,6 +49,7 @@ from .models import (
 )
 from .permissions import IsAdminUser, IsCompany, IsCompanyOrAdmin, IsTalent
 from .serializers import (
+
     CompanyAnalyticsExportSerializer,
     DailyPlatformMetricsSerializer,
     ExperimentTrackSerializer,
@@ -58,6 +59,7 @@ from .serializers import (
     MatchScoreResponseSerializer,
     OverviewMetricsSerializer,
     ParsedResumeSerializer,
+    normalise_resume_payload,
     PlatformBenchmarkSerializer,
     PlatformEngagementSerializer,
     PlatformGrowthSerializer,
@@ -70,6 +72,13 @@ from .serializers import (
     TalentPoolSerializer,
     TimeToHireSerializer,
     UserInteractionSerializer,
+)
+
+from .throttling import (
+    AuthenticatedAIResumeParseThrottle,
+    AuthenticatedResumeParseThrottle,
+    PublicAIResumeParseThrottle,
+    PublicResumeParseThrottle,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,9 +100,9 @@ def _parse_int_param(request, name: str, default: int, max_val: int | None = Non
     return max(1, value)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Recommendations
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class RecommendedJobsView(APIView):
     """
@@ -119,7 +128,7 @@ class RecommendedJobsView(APIView):
             )
         user = request.user
 
-        # ── Check cache ──────────────────────────────────────────────
+        # â”€â”€ Check cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         cached = get_cached_recommendations(user.id)
         if cached is not None:
             results = cached[:limit]
@@ -154,7 +163,7 @@ class RecommendedJobsView(APIView):
             }, context={'request': request})
             return Response(serializer.data)
 
-        # ── Compute fresh recommendations ────────────────────────────
+        # â”€â”€ Compute fresh recommendations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         try:
             results, latency_ms = compute_recommendations(user, limit=limit)
         except Exception:
@@ -264,9 +273,9 @@ class MatchScoreView(APIView):
         return Response(serializer.data)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Interactions
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class RecordInteractionView(generics.CreateAPIView):
     """
@@ -280,21 +289,21 @@ class RecordInteractionView(generics.CreateAPIView):
     throttle_classes = [UserRateThrottle]
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Resume Parser
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class ParseResumeView(APIView):
     """
     POST /api/v1/intelligence/parse-resume/
     GET  /api/v1/intelligence/parse-resume/
 
-    POST — Upload and parse a resume file.  Returns extracted data.
-    GET  — Return most recent parsed resume for the current user.
+    POST - Upload and parse a resume file. Returns extracted data.
+    GET  - Return most recent parsed resume for the current user.
     """
     permission_classes = [permissions.IsAuthenticated, IsTalent, IsEmailVerified]
     parser_classes = [MultiPartParser, FormParser]
-    throttle_classes = [UserRateThrottle]
+    throttle_classes = [AuthenticatedResumeParseThrottle]
 
     def get(self, request):
         try:
@@ -304,8 +313,7 @@ class ParseResumeView(APIView):
                 {'detail': 'No parsed resume found. Upload one first.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        serializer = ParsedResumeSerializer(parsed)
-        return Response(serializer.data)
+        return Response(normalise_resume_payload(parsed))
 
     def post(self, request):
         upload_serializer = ResumeUploadSerializer(data=request.data)
@@ -316,7 +324,6 @@ class ParseResumeView(APIView):
         from .nlp.parser import parse_resume
 
         try:
-            # parse_resume(file_obj, user=None) — file first, user second
             parsed = parse_resume(resume_file, user=request.user)
         except Exception:
             logger.exception('Resume parsing failed for user %s', request.user.id)
@@ -325,17 +332,46 @@ class ParseResumeView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        # Return the persisted model instance for consistent serialisation
-        try:
-            instance = ParsedResume.objects.get(user=request.user)
-            serializer = ParsedResumeSerializer(instance)
-        except ParsedResume.DoesNotExist:
-            # Fallback: return the raw dict from parse_resume
-            serializer = ParsedResumeSerializer(data=parsed)
-            serializer.is_valid()
-            return Response(parsed, status=status.HTTP_201_CREATED)
+        instance = ParsedResume.objects.filter(user=request.user).first()
+        if instance:
+            payload = normalise_resume_payload(
+                instance,
+                cached=parsed.get('cached', False),
+            )
+        else:
+            payload = normalise_resume_payload(parsed)
 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+
+class ParseResumeUnauthenticatedView(APIView):
+    """
+    POST /api/v1/intelligence/parse-resume-public/
+
+    Unauthenticated resume parsing for user registration.
+    Returns extracted data without saving to database.
+    """
+    permission_classes = [permissions.AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
+    throttle_classes = [PublicResumeParseThrottle]
+
+    def post(self, request):
+        upload_serializer = ResumeUploadSerializer(data=request.data)
+        upload_serializer.is_valid(raise_exception=True)
+
+        resume_file = upload_serializer.validated_data['resume']
+
+        from .nlp.parser import parse_resume
+
+        try:
+            parsed = parse_resume(resume_file, user=None)
+            return Response(normalise_resume_payload(parsed), status=status.HTTP_200_OK)
+        except Exception:
+            logger.exception('Resume parsing failed for unauthenticated user')
+            return Response(
+                {'detail': 'Resume parsing failed. Please try a different file.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class ApplyParsedResumeView(APIView):
@@ -373,7 +409,7 @@ class ApplyParsedResumeView(APIView):
         if updated_fields:
             profile.save(update_fields=updated_fields)
 
-        # Track the event — track_resume_apply(user_id, fields_applied)
+        # Track the event â€” track_resume_apply(user_id, fields_applied)
         try:
             from .experiments.tracking import track_resume_apply
             track_resume_apply(request.user.id, fields_applied=updated_fields)
@@ -383,9 +419,9 @@ class ApplyParsedResumeView(APIView):
         return Response({'detail': 'Profile updated successfully.'})
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Skill Taxonomy
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class SkillTaxonomyListView(generics.ListAPIView):
     """
@@ -447,9 +483,9 @@ class SkillSuggestionView(APIView):
         return Response(data)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Company Analytics
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class CompanyOverviewView(APIView):
     """GET /api/v1/intelligence/analytics/overview/"""
@@ -667,9 +703,9 @@ class CompanyAnalyticsExportView(APIView):
         return response
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # Platform Analytics (Admin only)
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class PlatformMetricsView(APIView):
     """GET /api/v1/intelligence/analytics/platform/"""
@@ -746,9 +782,9 @@ class PlatformBenchmarksView(APIView):
         return Response(serializer.data)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # A/B Testing / Experiments
-# ══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class FeatureFlagsView(APIView):
     """
@@ -794,3 +830,4 @@ class ExperimentTrackView(APIView):
             properties,
         )
         return Response({'detail': 'Event tracked.'}, status=status.HTTP_202_ACCEPTED)
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * src/services/api.js
  * Central Axios instance for the TalentOrbit API.
  *
@@ -19,19 +19,23 @@ const api = axios.create({
     timeout: 15000,
 });
 
-// ─── Request Interceptor ────────────────────────────────────────────────────
+// â”€â”€â”€ Request Interceptor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 api.interceptors.request.use(
     (config) => {
         const token = useAuthStore.getState().accessToken;
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+        // Don't set Content-Type for FormData - let browser set it automatically
+        if (config.data instanceof FormData) {
+            delete config.headers['Content-Type'];
+        }
         return config;
     },
     (error) => Promise.reject(error)
 );
 
-// ─── Response Interceptor — silent token refresh ────────────────────────────
+// â”€â”€â”€ Response Interceptor â€” silent token refresh â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -101,7 +105,7 @@ api.interceptors.response.use(
 export default api;
 
 /**
- * Restore session on app boot — access token is memory-only,
+ * Restore session on app boot â€” access token is memory-only,
  * so we need to refresh it from the persisted refresh token.
  * Returns true if session was restored, false otherwise.
  */
@@ -139,14 +143,42 @@ export function getApiErrorMessage(err, fallback = 'Something went wrong. Please
     return fallback;
 }
 
-// ─── Named service functions ────────────────────────────────────────────────
+const withTransformedData = (requestPromise, transform) =>
+    requestPromise.then((response) => ({
+        ...response,
+        data: transform(response.data),
+    }));
+
+export function normaliseParsedResume(data = {}) {
+    const parserVersion = data.parser_version || 'spacy_v1';
+    const aiEnhanced = Boolean(
+        data.ai_enhanced || String(parserVersion).startsWith('ai_enhanced')
+    );
+
+    return {
+        ...data,
+        parsed_skills: data.parsed_skills || data.skills || [],
+        parsed_experience: data.parsed_experience || data.experience || [],
+        parsed_education: data.parsed_education || data.education || [],
+        generated_bio: data.generated_bio || data.bio || '',
+        contact_info: data.contact_info || data.contact || {},
+        total_experience_years: data.total_experience_years ?? null,
+        confidence_score: data.confidence_score ?? 0,
+        parser_version: parserVersion,
+        ai_enhanced: aiEnhanced,
+        feature_flag_used: data.feature_flag_used ?? (aiEnhanced ? 'USE_AI_ENHANCED_RESUME_PARSING' : null),
+        cached: Boolean(data.cached),
+        raw_text: data.raw_text || '',
+        source_file_hash: data.source_file_hash || '',
+        parsed_at: data.parsed_at || null,
+    };
+}
+// â”€â”€â”€ Named service functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const authService = {
     loginUser: (email, password) =>
         api.post('/auth/login/', { email, password }),
     registerTalent: (data) =>
         api.post('/auth/register/talent/', data),
-    extractResume: (formData) =>
-        api.post('/intelligence/parse-resume/', formData),
     registerCompany: (data) =>
         api.post('/auth/register/company/', data),
     logout: (refresh) =>
@@ -321,9 +353,30 @@ export const intelligenceService = {
 
     // Resume parser
     parseResume: (formData) =>
-        api.post('/intelligence/parse-resume/', formData),
+        withTransformedData(
+            api.post('/intelligence/parse-resume/', formData),
+            normaliseParsedResume,
+        ),
+    parseResumePublic: (formData) =>
+        withTransformedData(
+            api.post('/intelligence/parse-resume-public/', formData),
+            normaliseParsedResume,
+        ),
+    parseResumeAI: (formData) =>
+        withTransformedData(
+            api.post('/intelligence/parse-resume-ai/', formData),
+            normaliseParsedResume,
+        ),
+    parseResumeAIPublic: (formData) =>
+        withTransformedData(
+            api.post('/intelligence/parse-resume-ai-public/', formData),
+            normaliseParsedResume,
+        ),
     getParsedResume: () =>
-        api.get('/intelligence/parse-resume/'),
+        withTransformedData(
+            api.get('/intelligence/parse-resume/'),
+            normaliseParsedResume,
+        ),
     applyParsedResume: (data) =>
         api.post('/intelligence/parse-resume/apply/', data),
 
@@ -395,7 +448,7 @@ export const intelligenceService = {
         api.delete(`/intelligence/experiments/flags/${id}/`),
 };
 
-// ── Compliance & Trust ──────────────────────────────────────────────────────
+// â”€â”€ Compliance & Trust â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const complianceService = {
     // Audit Logs (admin)
     getAuditLogs: (params) => api.get('/compliance/audit-logs/', { params }),
@@ -455,10 +508,12 @@ export const complianceService = {
     getSecurityInfo: () => api.get('/compliance/security/'),
 };
 
-// ── Search / Discovery ──────────────────────────────────────────────────────
+// â”€â”€ Search / Discovery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const searchService = {
     search: (params) => api.get('/search/', { params }),
     getCompanyDirectory: (params) => api.get('/search/companies/', { params }),
     getFeaturedEmployers: () => api.get('/search/companies/featured/'),
     getTalentProfiles: (params) => api.get('/search/talent/', { params }),
 };
+
+

@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useToast } from '../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { authService, intelligenceService, getApiErrorMessage } from '../services/api';
@@ -171,7 +171,7 @@ const UserRegistration = () => {
                                     </div>
                                     <div className="wizard-field-group">
                                         <label className="wizard-label">Password</label>
-                                        <input type="password" className="wizard-input-text" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" name="password" value={form.password} onChange={handleInput} />
+                                        <input type="password" className="wizard-input-text" placeholder="********" name="password" value={form.password} onChange={handleInput} />
                                     </div>
                                     <div className="wizard-field-group">
                                         <label className="wizard-label">Select Protocol Role</label>
@@ -189,7 +189,7 @@ const UserRegistration = () => {
                                     {step1Error && <span style={{ color: 'red', fontSize: '12px' }}>{step1Error}</span>}
                                     <div className="wizard-cta-container">
                                         <span className="wizard-login-link" onClick={() => navigate('/auth')}>Already Registered?</span>
-                                        <button type="submit" className="wizard-btn-next">Next Step â†’</button>
+                                        <button type="submit" className="wizard-btn-next">Next Step -&gt;</button>
                                     </div>
                                 </form>
                             </div>
@@ -231,7 +231,7 @@ const UserRegistration = () => {
                                     <h3>Drag & Drop Resume</h3>
                                     <p>Our AI will automatically parse your experience and skills.</p>
                                     <div className="btn-black" style={{ background: 'transparent', border: '1px solid black', color: 'black', marginBottom: '24px', display: 'inline-block' }}>Browse Files</div>
-                                    <div className="file-hints">Supported: PDF, DOCX, TXT â€¢ Max 5MB</div>
+                                    <div className="file-hints">Supported: PDF, DOCX, TXT | Max 5MB</div>
                                     <input type="file" id="resume-upload" style={{ display: 'none' }} accept=".pdf,.docx,.txt" onChange={handleFileUpload} />
                                 </label>
                                 {(isParsing || resumeFile) && (
@@ -248,7 +248,7 @@ const UserRegistration = () => {
                                 <div className="action-footer">
                                     <button className="btn-black" style={{ background: 'transparent', color: 'black', border: '1px solid black' }} onClick={() => setStep(1)}>Back</button>
                                     <button className="btn-black" disabled={isParsing} onClick={() => setStep(3)}>
-                                        {resumeFile ? 'Continue to Preview' : 'Skip â€” Continue Without Resume'}
+                                        {resumeFile ? 'Continue to Preview' : 'Skip - Continue Without Resume'}
                                     </button>
                                 </div>
                             </section>
@@ -320,7 +320,7 @@ const UserRegistration = () => {
                                     <div className="skill-container">
                                         {skills.map(s => (
                                             <div className="skill-chip" key={s}>
-                                                {s} <span className="skill-remove" onClick={() => removeSkill(s)}>Ã—</span>
+                                                {s} <span className="skill-remove" onClick={() => removeSkill(s)}>x</span>
                                             </div>
                                         ))}
                                         <input

@@ -20,11 +20,13 @@ export const useAuthStore = create(
                 accessToken,
                 refreshToken,
                 isAuthenticated: true,
+                isLoading: false,
             }),
 
             setTokens: (accessToken, refreshToken) => set({
                 accessToken,
                 refreshToken,
+                isAuthenticated: true,
             }),
 
             setUser: (user) => set({ user }),
@@ -34,6 +36,7 @@ export const useAuthStore = create(
                 accessToken: null,
                 refreshToken: null,
                 isAuthenticated: false,
+                isLoading: false,
             }),
 
             setLoading: (isLoading) => set({ isLoading }),
@@ -45,7 +48,7 @@ export const useAuthStore = create(
         }),
         {
             name: 'talentorbit-auth',
-            // accessToken intentionally excluded — memory-only (XSS protection)
+            // accessToken intentionally excluded; memory-only for XSS protection
             partialize: (state) => ({
                 user: state.user,
                 refreshToken: state.refreshToken,

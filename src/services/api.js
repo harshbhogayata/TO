@@ -1,4 +1,4 @@
-﻿/**
+/**
  * src/services/api.js
  * Central Axios instance for the TalentOrbit API.
  *
@@ -110,12 +110,14 @@ export default api;
  * Returns true if session was restored, false otherwise.
  */
 export async function restoreSession() {
-    const { refreshToken, isAuthenticated } = useAuthStore.getState();
-    if (!isAuthenticated || !refreshToken) return false;
+    const { refreshToken } = useAuthStore.getState();
+    if (!refreshToken) return false;
 
     try {
         const { data } = await axios.post(`${BASE_URL}/auth/refresh/`, {
             refresh: refreshToken,
+        }, {
+            timeout: api.defaults.timeout,
         });
         useAuthStore.getState().setTokens(data.access, data.refresh || refreshToken);
         return true;

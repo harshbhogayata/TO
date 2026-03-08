@@ -5,9 +5,10 @@ import posthog from 'posthog-js'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { restoreSession } from './services/api.js'
+import { useAuthStore } from './store/authStore.js'
 import './index.css'
 
-// ─── Sentry (frontend error tracking) ────────────────────────────────────────
+// Sentry (frontend error tracking)
 if (import.meta.env.VITE_SENTRY_DSN) {
     Sentry.init({
         dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -17,7 +18,7 @@ if (import.meta.env.VITE_SENTRY_DSN) {
     })
 }
 
-// ─── PostHog (product analytics) ─────────────────────────────────────────────
+// PostHog (product analytics)
 if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.PROD) {
     posthog.init(import.meta.env.VITE_POSTHOG_KEY, {
         api_host: import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com',
@@ -27,7 +28,7 @@ if (import.meta.env.VITE_POSTHOG_KEY && import.meta.env.PROD) {
     })
 }
 
-// ─── axe-core (accessibility auditing in development) ────────────────────────
+// axe-core (accessibility auditing in development)
 if (import.meta.env.DEV) {
     import('react').then((React) =>
         import('react-dom').then((ReactDOM) =>
@@ -38,22 +39,32 @@ if (import.meta.env.DEV) {
     );
 }
 
-// ─── Restore session (access token is memory-only) ───────────────────────
-restoreSession().finally(() => {
-    ReactDOM.createRoot(document.getElementById('root')).render(
-        <StrictMode>
-            <ErrorBoundary>
-                <App />
-            </ErrorBoundary>
-        </StrictMode>,
-    )
-})
+const { refreshToken, setLoading } = useAuthStore.getState()
+const shouldRestoreSession = Boolean(refreshToken)
 
-// ─── Service Worker (PWA offline support) ────────────────────────────────────
+if (shouldRestoreSession) {
+    setLoading(true)
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+    <StrictMode>
+        <ErrorBoundary>
+            <App />
+        </ErrorBoundary>
+    </StrictMode>,
+)
+
+if (shouldRestoreSession) {
+    restoreSession().finally(() => {
+        useAuthStore.getState().setLoading(false)
+    })
+}
+
+// Service Worker (PWA offline support)
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').catch(() => {
-            // SW registration failed — non-critical, app works without it
+            // SW registration failed; app still works without it.
         });
     });
 }

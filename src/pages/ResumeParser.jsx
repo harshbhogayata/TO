@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Skeleton from '../components/Skeleton';
 import { intelligenceService, getApiErrorMessage } from '../services/api';
@@ -31,7 +31,7 @@ const ResumeParser = () => {
                     setProgress(100);
                 }
             } catch {
-                // No existing parsed resume â€” that's fine
+                // No existing parsed resume; that's fine.
             }
         };
         loadExisting();
@@ -109,7 +109,7 @@ const ResumeParser = () => {
         }
     };
 
-    // Backend stores confidence_score as FloatField 0.0â€“1.0
+    // Backend stores confidence_score as FloatField 0.0-1.0.
     const confidence = parsed?.confidence_score != null
         ? Math.min(Math.round(parsed.confidence_score * 100), 100)
         : null;
@@ -133,7 +133,7 @@ const ResumeParser = () => {
             }
         >
             <div className="rp-grid">
-                {/* â”€â”€ Left: Upload Zone â”€â”€ */}
+                {/* Left: Upload Zone */}
                 <div className="rp-upload-zone">
                     <span className="rp-section-label">Resume Source Ingestion</span>
 
@@ -178,7 +178,7 @@ const ResumeParser = () => {
                         <div className="rp-raw-header">
                             <span className="rp-section-label" style={{ marginBottom: 0, border: 'none' }}>Raw CV Data Stream</span>
                             <span className="rp-status-badge">
-                                {parsing ? 'â— Capturing' : rawText ? 'â— Complete' : 'â— Idle'}
+                                {parsing ? 'Capturing' : rawText ? 'Complete' : 'Idle'}
                             </span>
                         </div>
                         <div className="rp-raw-data">
@@ -189,7 +189,7 @@ const ResumeParser = () => {
                     </div>
                 </div>
 
-                {/* â”€â”€ Right: Structured View â”€â”€ */}
+                {/* Right: Structured View */}
                 <div className="rp-structured">
                     {!parsed && !parsing ? (
                         <div className="rp-empty-structured">
@@ -252,7 +252,7 @@ const ResumeParser = () => {
                                                     {exp.company || 'Company'}
                                                 </h4>
                                                 <p className="rp-timeline-role">
-                                                    {[exp.title, exp.start_date && exp.end_date ? `${exp.start_date} â€“ ${exp.end_date}` : null, exp.duration_months ? `${exp.duration_months}mo` : null].filter(Boolean).join(' â€¢ ')}
+                                                    {[exp.title, exp.start_date && exp.end_date ? `${exp.start_date} - ${exp.end_date}` : null, exp.duration_months ? `${exp.duration_months}mo` : null].filter(Boolean).join(' | ')}
                                                 </p>
                                                 {exp.description && (
                                                     <p className="rp-timeline-highlight">
@@ -272,7 +272,7 @@ const ResumeParser = () => {
                                     {parsed.parsed_education.map((edu, i) => (
                                         <p key={i} style={{ fontSize: '13px', marginBottom: '4px' }}>
                                             <strong>{edu.institution || 'Institution'}</strong>
-                                            {edu.degree && ` â€” ${edu.degree}`}
+                                            {edu.degree && ` - ${edu.degree}`}
                                             {edu.field && ` in ${edu.field}`}
                                             {edu.graduation_year && ` (${edu.graduation_year})`}
                                         </p>
@@ -287,7 +287,7 @@ const ResumeParser = () => {
                                     onClick={handleConfirm}
                                     disabled={confirming || confirmed}
                                 >
-                                    {confirmed ? 'âœ“ Mapped to Database' : confirming ? 'Processing...' : 'Confirm & Map to Database'}
+                                    {confirmed ? 'Mapped to Database' : confirming ? 'Processing...' : 'Confirm & Map to Database'}
                                 </button>
                             </div>
                         </>

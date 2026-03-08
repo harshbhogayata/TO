@@ -6,6 +6,7 @@ import { useCourseStore } from '../store/courseStore';
 import { getApiErrorMessage } from '../services/api';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
+import { sanitizeHTML } from '../utils/sanitize';
 import './LessonPlayer.css';
 
 const LessonPlayer = () => {
@@ -20,7 +21,7 @@ const LessonPlayer = () => {
     const [completed, setCompleted] = useState(false);
     const videoRef = useRef(null);
 
-    usePageTitle('Lesson Player', 'Watch and learn — track your progress as you go.');
+    usePageTitle('Lesson Player', 'Watch and learn - track your progress as you go.');
 
     // Fetch course if not loaded yet
     const ensureCourse = useCallback(async () => {
@@ -88,6 +89,7 @@ const LessonPlayer = () => {
     const goToLesson = (lid) => navigate(`/courses/${courseId}/lessons/${lid}`);
 
     const lesson = activeLesson;
+    const lessonHtml = sanitizeHTML(lesson?.text_content || '');
 
     if (loading) {
         return (
@@ -112,7 +114,7 @@ const LessonPlayer = () => {
         <DashboardLayout
             tapeBarProps={{
                 title: 'Lesson Player',
-                status: completed ? 'Completed ✓' : `${progressPct}% watched`,
+                status: completed ? 'Completed' : `${progressPct}% watched`,
                 info: `Course #${courseId}`,
             }}
             pageTitleLine1="Lesson"
@@ -153,7 +155,7 @@ const LessonPlayer = () => {
                             />
                         ) : (
                             <div className="lp-content-block">
-                                <div dangerouslySetInnerHTML={{ __html: lesson?.content || '<p>No content available.</p>' }} />
+                                <div dangerouslySetInnerHTML={{ __html: lessonHtml || '<p>No content available.</p>' }} />
                             </div>
                         )}
                     </div>
@@ -176,18 +178,18 @@ const LessonPlayer = () => {
                     <div className="lp-actions">
                         {prevLesson && (
                             <button className="lp-nav-btn" onClick={() => goToLesson(prevLesson.id)}>
-                                ← Previous
+                                Previous
                             </button>
                         )}
                         {!completed && (
                             <button className="lp-complete-btn" onClick={handleMarkComplete} disabled={saving}>
-                                {saving ? 'Saving…' : 'Mark Complete'}
+                                {saving ? 'Saving...' : 'Mark Complete'}
                             </button>
                         )}
-                        {completed && <span className="lp-completed-badge">✓ Completed</span>}
+                        {completed && <span className="lp-completed-badge">Completed</span>}
                         {nextLesson && (
                             <button className="lp-nav-btn" onClick={() => goToLesson(nextLesson.id)}>
-                                Next →
+                                Next
                             </button>
                         )}
                     </div>

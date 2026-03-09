@@ -682,6 +682,17 @@ class TrendingSearchesAPITests(TestCase):
         self.assertIn('react developer', queries)
         self.assertIn('python engineer', queries)
 
+    def test_cached_empty_result_is_invalidated_by_new_analytics(self):
+        self.client.get('/api/v1/search/trending/')
+
+        SearchAnalytics.objects.create(
+            query='fresh query', entity_type='jobs', results_count=4,
+        )
+
+        response = self.client.get('/api/v1/search/trending/')
+        queries = [t['query'] for t in response.json()['trending']]
+        self.assertIn('fresh query', queries)
+
     def test_trending_ordered_by_count(self):
         for _ in range(10):
             SearchAnalytics.objects.create(query='top query', entity_type='jobs', results_count=5)

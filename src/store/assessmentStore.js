@@ -1,11 +1,17 @@
-/**
+﻿/**
  * src/store/assessmentStore.js
  * Zustand store for assessments / quiz engine state.
  */
 import { create } from 'zustand';
 
-export const useAssessmentStore = create((set, get) => ({
-    // ── Catalog ──────────────────────────────────────────────────────────────
+const nextAttemptState = (attempt = null) => ({
+    attempt,
+    answers: attempt?.answers ?? {},
+    flagged: Object.fromEntries((attempt?.flagged ?? []).map((questionId) => [String(questionId), true])),
+    timeRemaining: attempt?.timeRemaining ?? 0,
+});
+
+export const useAssessmentStore = create((set) => ({
     assessments: [],
     assessmentsLoading: false,
     assessmentsError: null,
@@ -14,6 +20,7 @@ export const useAssessmentStore = create((set, get) => ({
         type: '',
         difficulty: '',
         skill: '',
+        sort: 'newest',
     },
 
     setAssessments: (assessments) => set({ assessments }),
@@ -23,34 +30,62 @@ export const useAssessmentStore = create((set, get) => ({
         set((state) => ({ filters: { ...state.filters, [key]: value } })),
     resetFilters: () =>
         set({
-            filters: { search: '', type: '', difficulty: '', skill: '' },
+            filters: { search: '', type: '', difficulty: '', skill: '', sort: 'newest' },
         }),
 
-    // ── Active assessment detail ─────────────────────────────────────────────
     activeAssessment: null,
     setActiveAssessment: (assessment) => set({ activeAssessment: assessment }),
 
-    // ── Live attempt (player) ────────────────────────────────────────────────
     attempt: null,
     currentQuestionIndex: 0,
-    answers: {},      // { questionId: { selectedOption, code, ... } }
-    flagged: {},      // { questionId: true }
+    answers: {},
+    flagged: {},
     timeRemaining: 0,
 
-    setAttempt: (attempt) => set({ attempt }),
+    setAttempt: (attempt) => set(() => nextAttemptState(attempt)),
     setCurrentQuestionIndex: (index) => set({ currentQuestionIndex: index }),
     setAnswer: (questionId, answer) =>
-        set((state) => ({
-            answers: { ...state.answers, [questionId]: answer },
-        })),
+        set((state) => {
+            const nextAnswers = {
+                ...(state.attempt?.answers ?? state.answers),
+                [String(questionId)]: answer,
+            };
+
+            return {
+                answers: nextAnswers,
+                attempt: state.attempt ? { ...state.attempt, answers: nextAnswers } : state.attempt,
+            };
+        }),
     toggleFlag: (questionId) =>
-        set((state) => ({
-            flagged: {
-                ...state.flagged,
-                [questionId]: !state.flagged[questionId],
-            },
-        })),
-    setTimeRemaining: (seconds) => set({ timeRemaining: seconds }),
+        set((state) => {
+            const key = String(questionId);
+            const currentFlags = {
+                ...(state.attempt?.flagged
+                    ? Object.fromEntries(state.attempt.flagged.map((id) => [String(id), true]))
+                    : state.flagged),
+            };
+            currentFlags[key] = !currentFlags[key];
+            const flaggedIds = Object.entries(currentFlags)
+                .filter(([, isFlagged]) => Boolean(isFlagged))
+                .map(([id]) => id);
+
+            return {
+                flagged: currentFlags,
+                attempt: state.attempt ? { ...state.attempt, flagged: flaggedIds } : state.attempt,
+            };
+        }),
+    setTimeRemaining: (valueOrUpdater) =>
+        set((state) => {
+            const previous = state.attempt?.timeRemaining ?? state.timeRemaining ?? 0;
+            const next = typeof valueOrUpdater === 'function'
+                ? valueOrUpdater(previous)
+                : valueOrUpdater;
+
+            return {
+                timeRemaining: next,
+                attempt: state.attempt ? { ...state.attempt, timeRemaining: next } : state.attempt,
+            };
+        }),
     resetAttempt: () =>
         set({
             attempt: null,
@@ -60,27 +95,22 @@ export const useAssessmentStore = create((set, get) => ({
             timeRemaining: 0,
         }),
 
-    // ── Results ──────────────────────────────────────────────────────────────
     activeResult: null,
     myResults: [],
     setActiveResult: (result) => set({ activeResult: result }),
     setMyResults: (results) => set({ myResults: results }),
 
-    // ── Skill Badges ─────────────────────────────────────────────────────────
     badges: [],
     setBadges: (badges) => set({ badges }),
 
-    // ── Invitations ──────────────────────────────────────────────────────────
     invitations: [],
     setInvitations: (invitations) => set({ invitations }),
 
-    // ── Company dashboard ────────────────────────────────────────────────────
     companyAssessments: [],
     companyResults: [],
     setCompanyAssessments: (data) => set({ companyAssessments: data }),
     setCompanyResults: (data) => set({ companyResults: data }),
 
-    // ── Question Banks ───────────────────────────────────────────────────────
     questionBanks: [],
     questionBanksLoading: false,
     questionBanksError: null,

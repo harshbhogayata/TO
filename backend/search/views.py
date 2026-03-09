@@ -11,6 +11,7 @@ Endpoints:
   GET /api/v1/search/trending/       → Trending search terms (public)
   POST /api/v1/search/click/         → Record a result click (analytics)
 """
+import html
 import logging
 import time
 
@@ -62,6 +63,22 @@ def _extract_filters(request):
         k: v for k, v in request.query_params.items()
         if k not in exclude_keys and v
     }
+
+
+def _safe_meta_value(value):
+    """Escape reflected text so raw HTML payloads are not echoed into responses."""
+    if isinstance(value, str):
+        return html.escape(value, quote=True)
+    if isinstance(value, dict):
+        return {k: _safe_meta_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_safe_meta_value(v) for v in value]
+    return value
+
+
+def _build_search_meta(**kwargs):
+    """Normalize response metadata for safe JSON reflection."""
+    return {key: _safe_meta_value(value) for key, value in kwargs.items()}
 
 
 def _log_search(query, entity_type, user, results_count, response_time_ms, filters):
@@ -127,12 +144,12 @@ class JobSearchView(generics.ListAPIView):
 
         # Inject search metadata
         if isinstance(response_data, dict):
-            response_data['search_meta'] = {
-                'query': query,
-                'filters': filters,
-                'sort': sort,
-                'response_time_ms': round(elapsed * 1000, 1),
-            }
+            response_data['search_meta'] = _build_search_meta(
+                query=query,
+                filters=filters,
+                sort=sort,
+                response_time_ms=round(elapsed * 1000, 1),
+            )
 
         # Cache the response
         set_cached_results(cache_key, 'jobs', response_data)
@@ -191,11 +208,11 @@ class TalentSearchView(generics.ListAPIView):
             response_data = serializer.data
 
         if isinstance(response_data, dict):
-            response_data['search_meta'] = {
-                'query': query,
-                'filters': filters,
-                'response_time_ms': round(elapsed * 1000, 1),
-            }
+            response_data['search_meta'] = _build_search_meta(
+                query=query,
+                filters=filters,
+                response_time_ms=round(elapsed * 1000, 1),
+            )
 
         set_cached_results(cache_key, 'talent', response_data)
         total = response_data.get('count', len(serializer.data)) if isinstance(response_data, dict) else len(serializer.data)
@@ -243,11 +260,11 @@ class CompanySearchView(generics.ListAPIView):
             response_data = serializer.data
 
         if isinstance(response_data, dict):
-            response_data['search_meta'] = {
-                'query': query,
-                'filters': filters,
-                'response_time_ms': round(elapsed * 1000, 1),
-            }
+            response_data['search_meta'] = _build_search_meta(
+                query=query,
+                filters=filters,
+                response_time_ms=round(elapsed * 1000, 1),
+            )
 
         set_cached_results(cache_key, 'companies', response_data)
         total = response_data.get('count', len(serializer.data)) if isinstance(response_data, dict) else len(serializer.data)
@@ -276,7 +293,7 @@ class UnifiedSearchView(APIView):
         if not query:
             return Response({
                 'results': [],
-                'search_meta': {'query': '', 'response_time_ms': 0},
+                'search_meta': _build_search_meta(query='', response_time_ms=0),
             })
 
         start = time.monotonic()
@@ -374,12 +391,12 @@ class UnifiedSearchView(APIView):
 
         return Response({
             'results': results[:limit],
-            'search_meta': {
-                'query': query,
-                'entity_type': entity_type,
-                'total': len(results),
-                'response_time_ms': round(elapsed * 1000, 1),
-            },
+            'search_meta': _build_search_meta(
+                query=query,
+                entity_type=entity_type,
+                total=len(results),
+                response_time_ms=round(elapsed * 1000, 1),
+            ),
         })
 
 
@@ -493,10 +510,6 @@ class TrendingSearchesView(APIView):
     def get(self, request):
         entity_type = request.query_params.get('entity_type', 'all')
 
-        cached = get_cached_trending(entity_type)
-        if cached is not None:
-            return Response({'trending': cached})
-
         cutoff = timezone.now() - timezone.timedelta(days=7)
         qs = SearchAnalytics.objects.filter(
             created_at__gte=cutoff,
@@ -504,6 +517,16 @@ class TrendingSearchesView(APIView):
         )
         if entity_type != 'all':
             qs = qs.filter(entity_type=entity_type)
+
+        # Test database resets and manual data cleanup do not trigger cache invalidation.
+        # Treat an empty qualifying queryset as the source of truth before trusting cache.
+        if not qs.exists():
+            set_cached_trending(entity_type, [])
+            return Response({'trending': []})
+
+        cached = get_cached_trending(entity_type)
+        if cached is not None:
+            return Response({'trending': cached})
 
         trending = (
             qs

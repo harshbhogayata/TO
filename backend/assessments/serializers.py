@@ -521,26 +521,27 @@ class AssessmentAttemptDetailSerializer(serializers.ModelSerializer):
     assessment_title = serializers.CharField(source='assessment.title', read_only=True)
     duration_seconds = serializers.IntegerField(read_only=True)
     proctor_summary = serializers.SerializerMethodField()
+    total_time_minutes = serializers.IntegerField(source='assessment.total_time_minutes', read_only=True)
+    questions = serializers.SerializerMethodField()
+    answers = serializers.SerializerMethodField()
+    flagged_question_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = AssessmentAttempt
         fields = [
             'id', 'assessment', 'assessment_title', 'attempt_number', 'status',
             'started_at', 'submitted_at', 'duration_seconds',
-            'time_remaining_seconds', 'current_section_index',
+            'time_remaining_seconds', 'total_time_minutes', 'current_section_index',
             'section_timestamps', 'question_order',
             'tab_switch_count', 'copy_paste_count', 'fullscreen_exit_count',
             'suspicious_activity_score', 'is_flagged', 'flag_reason',
-            'proctor_summary',
+            'proctor_summary', 'questions', 'answers', 'flagged_question_ids',
         ]
         read_only_fields = ['id']
 
     def get_proctor_summary(self, obj):
-        events = obj.proctor_events.values('event_type').annotate(
-            count=serializers.IntegerField()
-        )
-        # Fallback to manual aggregation since annotate returns model fields
         from django.db.models import Count
+
         events = (
             obj.proctor_events
             .values('event_type')
@@ -548,6 +549,66 @@ class AssessmentAttemptDetailSerializer(serializers.ModelSerializer):
             .order_by('-count')
         )
         return list(events)
+
+    def get_questions(self, obj):
+        question_order = obj.question_order or {}
+        ordered_pairs = []
+
+        for section_key in sorted(question_order.keys(), key=lambda value: int(value)):
+            for question_id in question_order.get(section_key) or []:
+                ordered_pairs.append((question_id, int(section_key)))
+
+        if not ordered_pairs:
+            return []
+
+        question_ids = [question_id for question_id, _ in ordered_pairs]
+        questions = (
+            Question.objects
+            .filter(pk__in=question_ids, is_active=True)
+            .prefetch_related('options')
+        )
+        question_map = {question.id: question for question in questions}
+
+        serialised_questions = []
+        for question_id, section_index in ordered_pairs:
+            question = question_map.get(question_id)
+            if question is None:
+                continue
+
+            question_data = QuestionCandidateSerializer(question).data
+            question_data['section_index'] = section_index
+            serialised_questions.append(question_data)
+
+        return serialised_questions
+
+    def get_answers(self, obj):
+        answers = (
+            AttemptAnswer.objects
+            .filter(attempt=obj)
+            .select_related('question')
+        )
+        answer_map = {}
+
+        for answer in answers:
+            answer_map[str(answer.question_id)] = {
+                'selected_option_ids': answer.selected_option_ids,
+                'text_answer': answer.text_answer,
+                'boolean_answer': answer.boolean_answer,
+                'code_answer': answer.code_answer,
+                'ordering_answer': answer.ordering_answer,
+                'is_bookmarked': answer.is_bookmarked,
+                'section_index': answer.section_index,
+                'time_spent_seconds': answer.time_spent_seconds,
+            }
+
+        return answer_map
+
+    def get_flagged_question_ids(self, obj):
+        return list(
+            AttemptAnswer.objects
+            .filter(attempt=obj, is_bookmarked=True)
+            .values_list('question_id', flat=True)
+        )
 
 
 class StartAttemptSerializer(serializers.Serializer):
@@ -667,10 +728,18 @@ class AttemptAnswerSerializer(serializers.ModelSerializer):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class AssessmentResultSerializer(serializers.ModelSerializer):
-    """Full result serializer with breakdowns."""
+    """Full result serializer with review-ready data."""
     assessment_title = serializers.CharField(source='assessment.title', read_only=True)
     attempt_id = serializers.UUIDField(source='attempt.id', read_only=True)
+    passing_score = serializers.FloatField(source='assessment.passing_score_percent', read_only=True)
+    correct_count = serializers.IntegerField(source='questions_correct', read_only=True)
+    total_questions = serializers.SerializerMethodField()
+    time_taken_seconds = serializers.IntegerField(source='total_time_seconds', read_only=True)
+    percentile = serializers.FloatField(source='percentile_rank', read_only=True)
+    skill_breakdown = serializers.SerializerMethodField()
+    show_answers = serializers.SerializerMethodField()
     answers = serializers.SerializerMethodField()
+    badge = serializers.SerializerMethodField()
 
     class Meta:
         model = AssessmentResult
@@ -678,48 +747,180 @@ class AssessmentResultSerializer(serializers.ModelSerializer):
             'id', 'attempt_id', 'assessment', 'assessment_title', 'user',
             'total_points_earned', 'total_points_possible',
             'percentage_score', 'passed',
-            'section_scores', 'skill_scores', 'difficulty_breakdown',
+            'section_scores', 'skill_scores', 'skill_breakdown', 'difficulty_breakdown',
             'questions_answered', 'questions_correct',
             'questions_incorrect', 'questions_partial', 'questions_skipped',
-            'total_time_seconds', 'avg_time_per_question_seconds',
-            'percentile_rank',
-            'answers',
+            'correct_count', 'total_questions',
+            'total_time_seconds', 'time_taken_seconds', 'avg_time_per_question_seconds',
+            'percentile_rank', 'percentile', 'passing_score',
+            'show_answers', 'answers', 'badge',
             'graded_at', 'updated_at',
         ]
         read_only_fields = ['id']
 
-    def get_answers(self, obj):
-        """Only include answers if the assessment allows review."""
-        assessment = obj.assessment
-        if not assessment.show_results_immediately:
+    def get_total_questions(self, obj):
+        return (
+            obj.questions_correct
+            + obj.questions_incorrect
+            + obj.questions_partial
+            + obj.questions_skipped
+        )
+
+    def get_skill_breakdown(self, obj):
+        if not obj.skill_scores:
             return []
+
+        if isinstance(obj.skill_scores, dict):
+            return [
+                {
+                    'name': skill,
+                    'score': score,
+                }
+                for skill, score in obj.skill_scores.items()
+            ]
+
+        if isinstance(obj.skill_scores, list):
+            breakdown = []
+            for entry in obj.skill_scores:
+                if not isinstance(entry, dict):
+                    continue
+
+                name = (
+                    entry.get('name')
+                    or entry.get('skill_name')
+                    or entry.get('skill')
+                    or entry.get('tag_name')
+                )
+                if not name:
+                    continue
+
+                score = entry.get('score')
+                if score is None:
+                    score = entry.get('percentage')
+                if score is None:
+                    earned = entry.get('earned')
+                    possible = entry.get('possible')
+                    if possible:
+                        score = round((float(earned or 0) / float(possible)) * 100, 2)
+
+                item = {'name': name}
+                if score is not None:
+                    item['score'] = score
+                if entry.get('percentage') is not None:
+                    item['percentage'] = entry['percentage']
+                breakdown.append(item)
+
+            return breakdown
+
+        return []
+
+    def get_show_answers(self, obj):
+        return bool(obj.assessment.show_results_immediately and obj.assessment.allow_review)
+
+    def get_badge(self, obj):
+        try:
+            badge = obj.badge
+        except SkillBadge.DoesNotExist:
+            return None
+
+        return {
+            'id': str(badge.id),
+            'title': badge.assessment_title,
+            'name': badge.skill_name,
+            'level': badge.level,
+            'skill': badge.skill_name,
+            'issued_at': badge.issued_at,
+        }
+
+    def _format_user_answer(self, answer):
+        question = answer.question
+
+        if question.question_type in (Question.QuestionType.MCQ, Question.QuestionType.MULTI_SELECT):
+            option_text = {
+                option.id: option.text
+                for option in question.options.all()
+            }
+            labels = [
+                option_text.get(option_id, str(option_id))
+                for option_id in (answer.selected_option_ids or [])
+            ]
+            return ', '.join(labels)
+
+        if question.question_type == Question.QuestionType.TRUE_FALSE:
+            if answer.boolean_answer is None:
+                return ''
+            return 'True' if answer.boolean_answer else 'False'
+
+        if question.question_type == Question.QuestionType.ORDERING:
+            return ' -> '.join(answer.ordering_answer or [])
+
+        if question.question_type == Question.QuestionType.CODE:
+            return answer.code_answer or ''
+
+        return answer.text_answer or ''
+
+    def _format_correct_answer(self, answer):
+        question = answer.question
+
+        if question.question_type in (Question.QuestionType.MCQ, Question.QuestionType.MULTI_SELECT):
+            correct_options = question.options.filter(is_correct=True).values_list('text', flat=True)
+            return ', '.join(correct_options)
+
+        if question.question_type == Question.QuestionType.TRUE_FALSE:
+            if question.correct_boolean is None:
+                return None
+            return 'True' if question.correct_boolean else 'False'
+
+        if question.question_type == Question.QuestionType.SHORT_ANSWER:
+            return ', '.join(question.accepted_answers or [])
+
+        if question.question_type == Question.QuestionType.ORDERING:
+            return ' -> '.join(question.correct_order or [])
+
+        return None
+
+    def get_answers(self, obj):
+        if not self.get_show_answers(obj):
+            return []
+
         answers = (
             AttemptAnswer.objects
             .filter(attempt=obj.attempt)
             .select_related('question')
+            .prefetch_related('question__options')
             .order_by('section_index', 'question__id')
         )
-        return AttemptAnswerSerializer(answers, many=True).data
+
+        answer_list = []
+        for answer in answers:
+            answer_list.append({
+                'question_id': answer.question_id,
+                'question_text': answer.question.title,
+                'question_type': answer.question.question_type,
+                'is_correct': answer.is_correct,
+                'user_answer': self._format_user_answer(answer),
+                'correct_answer': self._format_correct_answer(answer) if obj.assessment.show_correct_answers else None,
+                'explanation': answer.grader_notes or answer.question.explanation or None,
+            })
+
+        return answer_list
 
 
 class AssessmentResultCompactSerializer(serializers.ModelSerializer):
     """Compact result for lists / company dashboards."""
     assessment_title = serializers.CharField(source='assessment.title', read_only=True)
+    attempt_id = serializers.UUIDField(source='attempt.id', read_only=True)
 
     class Meta:
         model = AssessmentResult
         fields = [
-            'id', 'assessment', 'assessment_title',
+            'id', 'attempt_id', 'assessment', 'assessment_title',
             'percentage_score', 'passed',
             'questions_answered', 'questions_correct',
             'total_time_seconds', 'percentile_rank',
             'graded_at',
         ]
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# INVITATION
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class AssessmentInvitationSerializer(serializers.ModelSerializer):
     assessment_title = serializers.CharField(source='assessment.title', read_only=True)
@@ -844,3 +1045,6 @@ class QuestionReportCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = QuestionReport
         fields = ['question', 'attempt', 'report_type', 'description']
+
+
+

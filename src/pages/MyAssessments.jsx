@@ -6,41 +6,61 @@ import { useAssessmentStore } from '../store/assessmentStore';
 import { getApiErrorMessage } from '../services/api';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
+import { normaliseAssessmentResultListItem } from '../utils/learningContracts';
 import './MyAssessments.css';
+
+const asCollection = (payload) => payload?.results || payload || [];
+
+const normaliseInvitation = (invitation = {}) => ({
+    ...invitation,
+    status: String(invitation.status ?? '').toLowerCase(),
+    assessment_id: invitation.assessment_id ?? invitation.assessment?.id ?? invitation.assessment ?? null,
+});
+
+const normaliseBadge = (badge = {}) => ({
+    ...badge,
+    title: badge.title ?? badge.name ?? 'Badge',
+    skill: badge.skill ?? badge.skill_name ?? badge.assessment_title ?? '-',
+    earned_at: badge.earned_at ?? badge.issued_at ?? badge.created_at ?? null,
+});
 
 const MyAssessments = () => {
     const navigate = useNavigate();
     const { myResults, setMyResults, invitations, setInvitations, badges, setBadges } = useAssessmentStore();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [tab, setTab] = useState('results'); // results | invitations | badges
+    const [tab, setTab] = useState('results');
 
     usePageTitle('My Assessments', 'Track your assessment history, invitations, and earned badges.');
 
     const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
+
         try {
-            const [resultsRes, invitesRes, badgesRes] = await Promise.all([
+            const [resultsResponse, invitationsResponse, badgesResponse] = await Promise.all([
                 assessmentService.myResults(),
                 assessmentService.myInvitations(),
                 assessmentService.myBadges(),
             ]);
-            setMyResults(resultsRes.data.results || resultsRes.data);
-            setInvitations(invitesRes.data.results || invitesRes.data);
-            setBadges(badgesRes.data.results || badgesRes.data);
+
+            setMyResults(asCollection(resultsResponse.data).map(normaliseAssessmentResultListItem));
+            setInvitations(asCollection(invitationsResponse.data).map(normaliseInvitation));
+            setBadges(asCollection(badgesResponse.data).map(normaliseBadge));
         } catch (err) {
             setError(getApiErrorMessage(err, 'Failed to load assessment data.'));
         } finally {
             setLoading(false);
         }
-    }, [setMyResults, setInvitations, setBadges]);
+    }, [setBadges, setInvitations, setMyResults]);
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
-    const passedResults = myResults.filter((r) => r.passed);
-    const failedResults = myResults.filter((r) => !r.passed);
-    const pendingInvites = invitations.filter((inv) => inv.status === 'pending');
+    const passedResults = myResults.filter((result) => result.passed);
+    const failedResults = myResults.filter((result) => !result.passed);
+    const pendingInvites = invitations.filter((invitation) => invitation.status === 'pending');
 
     const tabs = [
         { key: 'results', label: 'Results', count: myResults.length },
@@ -67,13 +87,13 @@ const MyAssessments = () => {
         >
             <div className="ma-page">
                 <div className="ma-tabs">
-                    {tabs.map((t) => (
+                    {tabs.map((item) => (
                         <button
-                            key={t.key}
-                            className={`ma-tab ${tab === t.key ? 'active' : ''}`}
-                            onClick={() => setTab(t.key)}
+                            key={item.key}
+                            className={`ma-tab ${tab === item.key ? 'active' : ''}`}
+                            onClick={() => setTab(item.key)}
                         >
-                            {t.label} <span className="ma-tab__count">({t.count})</span>
+                            {item.label} <span className="ma-tab__count">({item.count})</span>
                         </button>
                     ))}
                 </div>
@@ -82,53 +102,60 @@ const MyAssessments = () => {
 
                 {loading ? (
                     <div className="ma-grid">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                            <Skeleton key={i} style={{ width: '100%', height: '120px', borderRadius: '8px' }} />
+                        {Array.from({ length: 4 }).map((_, index) => (
+                            <Skeleton key={index} style={{ width: '100%', height: '120px', borderRadius: '8px' }} />
                         ))}
                     </div>
                 ) : tab === 'results' ? (
                     <div className="ma-grid">
-                        {myResults.length > 0 ? myResults.map((res) => (
-                            <div key={res.id} className={`ma-result-card ${res.passed ? 'passed' : 'failed'}`}>
-                                <div className="ma-result-card__header">
-                                    <h4>{res.assessment_title || res.assessment?.title || 'Assessment'}</h4>
-                                    <span className={`ma-result-badge ${res.passed ? 'pass' : 'fail'}`}>
-                                        {res.passed ? '✓ Passed' : '✗ Failed'}
-                                    </span>
+                        {myResults.length > 0 ? myResults.map((result) => {
+                            const assessmentId = result.assessment_id ?? result.assessment?.id ?? result.assessment ?? null;
+                            const attemptId = result.attempt_id ?? result.attempt?.id ?? null;
+                            const detailHref = assessmentId && attemptId
+                                ? `/assessments/${assessmentId}/results/${attemptId}`
+                                : assessmentId
+                                    ? `/assessments/${assessmentId}`
+                                    : '/my-assessments';
+
+                            return (
+                                <div key={result.id} className={`ma-result-card ${result.passed ? 'passed' : 'failed'}`}>
+                                    <div className="ma-result-card__header">
+                                        <h4>{result.assessment_title || result.assessment?.title || 'Assessment'}</h4>
+                                        <span className={`ma-result-badge ${result.passed ? 'pass' : 'fail'}`}>
+                                            {result.passed ? 'Passed' : 'Failed'}
+                                        </span>
+                                    </div>
+                                    <div className="ma-result-card__meta">
+                                        <span>Score: {result.score ?? result.percentage ?? 0}%</span>
+                                        <span>{new Date(result.completed_at || result.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                    <Link to={detailHref} className="ma-result-card__link">
+                                        View Details
+                                    </Link>
                                 </div>
-                                <div className="ma-result-card__meta">
-                                    <span>Score: {res.score ?? res.percentage ?? 0}%</span>
-                                    <span>{new Date(res.completed_at || res.created_at).toLocaleDateString()}</span>
-                                </div>
-                                <Link
-                                    to={`/assessments/${res.assessment_id || res.assessment?.id || res.assessment}/results/${res.id}`}
-                                    className="ma-result-card__link"
-                                >
-                                    View Details →
-                                </Link>
-                            </div>
-                        )) : (
+                            );
+                        }) : (
                             <p className="ma-empty">No assessment results yet. <Link to="/assessments">Browse assessments</Link></p>
                         )}
                     </div>
                 ) : tab === 'invitations' ? (
                     <div className="ma-grid">
-                        {invitations.length > 0 ? invitations.map((inv) => (
-                            <div key={inv.id} className="ma-invite-card">
+                        {invitations.length > 0 ? invitations.map((invitation) => (
+                            <div key={invitation.id} className="ma-invite-card">
                                 <div className="ma-invite-card__header">
-                                    <h4>{inv.assessment_title || inv.assessment?.title || 'Assessment'}</h4>
-                                    <span className={`ma-invite-status ${inv.status}`}>{inv.status}</span>
+                                    <h4>{invitation.assessment_title || invitation.assessment?.title || 'Assessment'}</h4>
+                                    <span className={`ma-invite-status ${invitation.status}`}>{invitation.status || 'unknown'}</span>
                                 </div>
-                                <p className="ma-invite-card__from">From: {inv.company_name || inv.sender?.name || '—'}</p>
+                                <p className="ma-invite-card__from">From: {invitation.company_name || invitation.invited_by_name || 'Unknown company'}</p>
                                 <p className="ma-invite-card__deadline">
-                                    Deadline: {inv.deadline ? new Date(inv.deadline).toLocaleDateString() : 'None'}
+                                    Deadline: {invitation.expires_at ? new Date(invitation.expires_at).toLocaleDateString() : 'None'}
                                 </p>
-                                {inv.status === 'pending' && (
+                                {invitation.status === 'pending' && invitation.assessment_id && (
                                     <button
                                         className="ma-invite-card__btn"
-                                        onClick={() => navigate(`/assessments/${inv.assessment_id || inv.assessment?.id || inv.assessment}`)}
+                                        onClick={() => navigate(`/assessments/${invitation.assessment_id}`)}
                                     >
-                                        Take Assessment →
+                                        Take Assessment
                                     </button>
                                 )}
                             </div>
@@ -140,18 +167,18 @@ const MyAssessments = () => {
                     <div className="ma-grid">
                         {badges.length > 0 ? badges.map((badge) => (
                             <div key={badge.id} className="ma-badge-card">
-                                <div className="ma-badge-card__icon">🏅</div>
-                                <h4 className="ma-badge-card__title">{badge.name || badge.title}</h4>
-                                <p className="ma-badge-card__skill">{badge.skill || badge.assessment_title || '—'}</p>
+                                <div className="ma-badge-card__icon">Badge</div>
+                                <h4 className="ma-badge-card__title">{badge.title}</h4>
+                                <p className="ma-badge-card__skill">{badge.skill}</p>
                                 <p className="ma-badge-card__date">
-                                    Earned: {new Date(badge.earned_at || badge.created_at).toLocaleDateString()}
+                                    Earned: {badge.earned_at ? new Date(badge.earned_at).toLocaleDateString() : 'Unknown'}
                                 </p>
                                 <Link to={`/badges/${badge.id}`} className="ma-badge-card__link">
-                                    View Badge →
+                                    View Badge
                                 </Link>
                             </div>
                         )) : (
-                            <p className="ma-empty">No badges earned yet. Pass assessments to earn skill badges!</p>
+                            <p className="ma-empty">No badges earned yet. Pass assessments to earn skill badges.</p>
                         )}
                     </div>
                 )}
@@ -161,3 +188,4 @@ const MyAssessments = () => {
 };
 
 export default MyAssessments;
+

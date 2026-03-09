@@ -1,13 +1,13 @@
 """
 intelligence/ai_views.py
-AI-powered features — job description generator, interview scheduler,
+AI-powered features â€” job description generator, interview scheduler,
 chatbot assistant, and compensation benchmarking.
 
 Uses OpenAI's chat completion API for:
     - Job description generation from minimal inputs
     - Interview scheduling suggestions
     - Context-aware chatbot for job search assistance
-    - Compensation benchmarking (role/location → salary ranges)
+    - Compensation benchmarking (role/location â†’ salary ranges)
 
 Enterprise patterns:
     - ScopedRateThrottle (ai_generate scope)
@@ -30,6 +30,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
 from accounts.permissions import IsEmailVerified
+from intelligence.permissions import IsCompany
 from compliance.constants import AuditAction, AuditCategory
 from compliance.decorators import audit_action
 from intelligence.pii_detector import validate_ai_input, moderate_ai_response, strip_pii
@@ -49,7 +50,7 @@ def _get_openai_client():
         breaker = get_breaker('llm')
         breaker.check()
     except Exception:
-        pass  # Circuit breaker not configured — proceed without it
+        pass  # Circuit breaker not configured â€” proceed without it
     return openai.OpenAI(api_key=settings.OPENAI_API_KEY)
 
 
@@ -71,9 +72,9 @@ def _record_circuit_breaker_failure():
         pass
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # AI JOB DESCRIPTION WRITER
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 JOB_DESCRIPTION_SYSTEM_PROMPT = """You are TalentOrbit's AI writing assistant. Generate professional, engaging job descriptions.
 
@@ -93,7 +94,7 @@ Rules:
 
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated, IsEmailVerified])
+@permission_classes([permissions.IsAuthenticated, IsCompany, IsEmailVerified])
 @throttle_classes([AIGenerateThrottle])
 @audit_action(
     action=AuditAction.CREATE,
@@ -154,7 +155,7 @@ def ai_generate_job_description(request):
 
     user_prompt = '\n'.join(user_prompt_parts)
 
-    # ── PII stripping + prompt injection prevention ──
+    # â”€â”€ PII stripping + prompt injection prevention â”€â”€
     try:
         user_prompt, detected_pii = validate_ai_input(user_prompt)
     except ValueError as e:
@@ -182,7 +183,7 @@ def ai_generate_job_description(request):
         content = response.choices[0].message.content
         _record_circuit_breaker_success()
 
-        # ── Content moderation on response ──
+        # â”€â”€ Content moderation on response â”€â”€
         content, is_safe = moderate_ai_response(content)
         if not is_safe:
             return Response(
@@ -215,9 +216,9 @@ def ai_generate_job_description(request):
         )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # AI INTERVIEW SCHEDULER
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 INTERVIEW_SCHEDULER_PROMPT = """You are TalentOrbit's AI interview scheduling assistant.
 
@@ -236,7 +237,7 @@ Rules:
 
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated, IsEmailVerified])
+@permission_classes([permissions.IsAuthenticated, IsCompany, IsEmailVerified])
 @throttle_classes([AIGenerateThrottle])
 @audit_action(
     action=AuditAction.CREATE,
@@ -297,7 +298,7 @@ def ai_schedule_interviews(request):
 
     user_prompt = '\n'.join(user_prompt_parts)
 
-    # ── PII stripping + prompt injection prevention ──
+    # â”€â”€ PII stripping + prompt injection prevention â”€â”€
     try:
         user_prompt, detected_pii = validate_ai_input(user_prompt)
     except ValueError as e:
@@ -319,7 +320,7 @@ def ai_schedule_interviews(request):
         content = response.choices[0].message.content
         _record_circuit_breaker_success()
 
-        # ── Content moderation ──
+        # â”€â”€ Content moderation â”€â”€
         content, is_safe = moderate_ai_response(content)
         if not is_safe:
             return Response(
@@ -349,9 +350,9 @@ def ai_schedule_interviews(request):
         )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # AI CHATBOT
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 CHATBOT_SYSTEM_PROMPT = """You are TalentOrbit's AI assistant. Help users with job searching, applications, hiring processes, and platform features.
 
@@ -391,7 +392,7 @@ def ai_chat(request):
     }
     Returns: AI-generated response with follow-up suggestions.
 
-    Privacy: No server-side chat persistence — session-scoped only.
+    Privacy: No server-side chat persistence â€” session-scoped only.
     """
     if not settings.OPENAI_API_KEY:
         return Response(
@@ -406,7 +407,7 @@ def ai_chat(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # ── PII stripping + prompt injection prevention ──
+    # â”€â”€ PII stripping + prompt injection prevention â”€â”€
     try:
         message, detected_pii = validate_ai_input(message, max_length=2000)
     except ValueError as e:
@@ -445,7 +446,7 @@ def ai_chat(request):
         content = response.choices[0].message.content
         _record_circuit_breaker_success()
 
-        # ── Content moderation ──
+        # â”€â”€ Content moderation â”€â”€
         content, is_safe = moderate_ai_response(content)
         if not is_safe:
             return Response({
@@ -484,9 +485,9 @@ def ai_chat(request):
         )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # COMPENSATION BENCHMARKING
-# ═══════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 COMPENSATION_SYSTEM_PROMPT = """You are a compensation data analyst. Provide salary benchmark data based on role, location, and experience level.
 
@@ -531,13 +532,13 @@ def ai_compensation_benchmark(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    # ── Cache lookup (6h TTL) ──
+    # â”€â”€ Cache lookup (6h TTL) â”€â”€
     cache_key = f'compensation:{role.lower()}:{location.lower()}:{level.lower()}'
     cached = cache.get(cache_key)
     if cached:
         return Response({'benchmark': cached, 'cached': True})
 
-    # ── PII check on inputs ──
+    # â”€â”€ PII check on inputs â”€â”€
     combined_input = f'{role} {location} {level}'
     try:
         combined_input, _ = validate_ai_input(combined_input, max_length=500)

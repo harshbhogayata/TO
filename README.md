@@ -1,12 +1,12 @@
-# TalentOrbit — Full Platform Overview
+# TalentOrbit â€” Full Platform Overview
 
-Welcome to TalentOrbit! This is a comprehensive, top-level README for a modern, enterprise-grade HR-tech SaaS platform. TalentOrbit is designed for scale, reliability, and rapid innovation—making it suitable for startups and large organizations alike. This document explains everything: architecture, services, technologies, deployment, and how the platform works end-to-end.
+Welcome to TalentOrbit! This is a comprehensive, top-level README for a modern, enterprise-grade HR-tech SaaS platform. TalentOrbit is designed for scale, reliability, and rapid innovationâ€”making it suitable for startups and large organizations alike. This document explains everything: architecture, services, technologies, deployment, and how the platform works end-to-end.
 
 ---
 
 ## Table of Contents
 1. [Project Vision](#project-vision)
-## TalentOrbit — Consolidated Platform README
+## TalentOrbit â€” Consolidated Platform README
 
 This single README consolidates the Frontend, Backend, and Infra operational guides into one central document. It is intended to be the primary entry point for developers, DevOps, product, and new contributors.
 
@@ -162,14 +162,19 @@ Emergency rollback checklist:
 ---
 
 ### Docs & additional resources
-- `docs/DEPLOYMENT.md` — detailed deployment runbook and smoke tests
-- `infra/helm/talentorbit/` — Helm templates and production values
-- `backend/README.md`, `src/README.md`, `infra/helm/talentorbit/README.md` — legacy component READMEs have been consolidated into this file. Use this README as the single source of truth.
+- `docs/CONTEXT_START_HERE.md` - first file to read when a future session needs compressed but durable repo context
+- `docs/CODEBASE_MAP.md` - practical map of frontend, backend, and ownership hotspots
+- `docs/TESTING_OPERATING_MODEL.md` - source of truth for workflow-based testing and focused verification
+- `docs/USE_CASE_REPAIR_PLAN.md` - workflow repair priority and operating rules
+- `docs/ROUTE_POLICY_MATRIX.md` - route-to-API-to-actor matrix and failure modes
+- `docs/DEPLOYMENT.md` - detailed deployment runbook and smoke tests
+- `infra/helm/talentorbit/` - Helm templates and production values
+- `backend/README.md`, `src/README.md`, `infra/helm/talentorbit/README.md` - legacy component READMEs have been consolidated into this file. Use this README as the single source of truth.
 
 ---
 
 Contact
-- infra@talentorbit.com — Infra & production issues
+- infra@talentorbit.com â€” Infra & production issues
 - Open an issue in the repo for feature requests or bugs
 
 ---

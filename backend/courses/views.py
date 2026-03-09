@@ -26,6 +26,7 @@ import logging
 
 from django.db import models as db_models
 from django.db.models import Avg, Count, Prefetch, Q, Sum
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -92,17 +93,28 @@ class CourseQueryMixin:
                 'prerequisites',
                 Prefetch(
                     'modules',
-                    queryset=CourseModule.objects.order_by('position').prefetch_related(
-                        Prefetch(
-                            'lessons',
-                            queryset=Lesson.objects.order_by('position'),
+                    queryset=(
+                        CourseModule.objects
+                        .order_by('position')
+                        .annotate(
+                            _lesson_count=Count('lessons', distinct=True),
+                            _total_duration=Coalesce(
+                                Sum('lessons__estimated_duration_minutes'),
+                                0,
+                            ),
+                        )
+                        .prefetch_related(
+                            Prefetch(
+                                'lessons',
+                                queryset=Lesson.objects.order_by('position'),
+                            )
                         )
                     ),
                 ),
             )
             .annotate(
-                module_count=Count('modules', distinct=True),
-                lesson_count=Count('modules__lessons', distinct=True),
+                _module_count=Count('modules', distinct=True),
+                _lesson_count=Count('modules__lessons', distinct=True),
             )
         )
 
@@ -348,6 +360,11 @@ class EnrollmentListView(generics.ListAPIView):
         status_filter = self.request.query_params.get('status', '').strip()
         if status_filter and status_filter in dict(CourseEnrollment.Status.choices):
             qs = qs.filter(status=status_filter)
+
+        course_filter = self.request.query_params.get('course', '').strip()
+        if course_filter:
+            qs = qs.filter(Q(course__slug=course_filter) | Q(course_id=course_filter))
+
         return qs
 
 
@@ -622,35 +639,76 @@ class CourseProgressOverview(APIView):
             course=course,
         )
 
-        # Per-module progress
         modules = (
             CourseModule.objects
             .filter(course=course)
-            .prefetch_related('lessons')
+            .prefetch_related(
+                Prefetch('lessons', queryset=Lesson.objects.order_by('position')),
+            )
             .order_by('position')
         )
+        progress_records = (
+            LessonProgress.objects
+            .filter(enrollment=enrollment, lesson__module__course=course)
+            .select_related('lesson')
+        )
+        progress_by_lesson_id = {
+            record.lesson_id: record
+            for record in progress_records
+        }
 
         module_progress = []
+        lesson_statuses = {}
+        total_lessons = 0
+        next_lesson = None
+
         for module in modules:
-            lesson_ids = list(module.lessons.values_list('id', flat=True))
-            completed = LessonProgress.objects.filter(
-                enrollment=enrollment,
-                lesson_id__in=lesson_ids,
-                is_completed=True,
-            ).count()
+            lessons = list(module.lessons.all())
+            total_lessons += len(lessons)
+            completed = 0
+
+            for lesson in lessons:
+                progress_record = progress_by_lesson_id.get(lesson.id)
+                is_completed = bool(progress_record and progress_record.is_completed)
+                if is_completed:
+                    completed += 1
+
+                lesson_statuses[str(lesson.id)] = {
+                    'lesson_id': lesson.id,
+                    'lesson_slug': lesson.slug,
+                    'completed': is_completed,
+                    'progress': (
+                        LessonProgressSerializer(progress_record).data
+                        if progress_record is not None else None
+                    ),
+                }
+
+                if next_lesson is None and not is_completed:
+                    next_lesson = {
+                        'lesson_id': lesson.id,
+                        'lesson_slug': lesson.slug,
+                        'title': lesson.title,
+                        'course_slug': course.slug,
+                    }
+
             module_progress.append({
                 'module_id': module.id,
                 'module_title': module.title,
                 'position': module.position,
-                'total_lessons': len(lesson_ids),
+                'total_lessons': len(lessons),
                 'completed_lessons': completed,
                 'percentage': round(
-                    (completed / len(lesson_ids) * 100) if lesson_ids else 0, 1,
+                    (completed / len(lessons) * 100) if lessons else 0, 1,
                 ),
             })
 
         return Response({
             'enrollment': CourseEnrollmentSerializer(enrollment).data,
+            'overall_progress': float(enrollment.progress_percentage),
+            'completed_lessons': enrollment.lessons_completed,
+            'total_lessons': total_lessons,
+            'lesson_statuses': lesson_statuses,
+            'next_lesson': next_lesson,
             'modules': module_progress,
         })
 
@@ -805,3 +863,4 @@ class CertificateVerifyView(APIView):
             data['detail'] = 'Certificate signature verification failed.'
 
         return Response(data, status=status.HTTP_200_OK)
+

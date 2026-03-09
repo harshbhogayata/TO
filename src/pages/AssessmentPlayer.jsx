@@ -6,13 +6,16 @@ import { useAssessmentStore } from '../store/assessmentStore';
 import { getApiErrorMessage } from '../services/api';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
+import { buildAssessmentAnswerPayload, normaliseAssessmentAttempt } from '../utils/learningContracts';
 import './AssessmentPlayer.css';
 
 const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(remainingSeconds).padStart(2, '0')}`;
 };
+
+const hasAnswer = (value) => (Array.isArray(value) ? value.length > 0 : value !== '' && value != null);
 
 const AssessmentPlayer = () => {
     const { assessmentId, attemptId } = useParams();
@@ -29,87 +32,110 @@ const AssessmentPlayer = () => {
 
     usePageTitle('Assessment Player', 'Answer questions within the time limit.');
 
-    // Fetch attempt data
     const fetchAttempt = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const { data } = await assessmentService.getAttempt(assessmentId, attemptId);
-            setAttempt({
-                id: data.id,
-                questions: data.questions || [],
-                answers: data.answers || {},
-                flagged: data.flagged || [],
-                timeRemaining: data.time_remaining ?? (data.time_limit_minutes || 30) * 60,
-                status: data.status || 'in_progress',
-            });
+            const { data } = await assessmentService.getAttempt(attemptId);
+            setAttempt(normaliseAssessmentAttempt(data));
         } catch (err) {
             setError(getApiErrorMessage(err, 'Failed to load assessment attempt.'));
         } finally {
             setLoading(false);
         }
-    }, [assessmentId, attemptId, setAttempt]);
+    }, [attemptId, setAttempt]);
 
-    useEffect(() => { fetchAttempt(); }, [fetchAttempt]);
-
-    // Countdown timer
     useEffect(() => {
-        if (!attempt || attempt.status !== 'in_progress') return;
+        fetchAttempt();
+    }, [fetchAttempt]);
+
+    const handleFinalSubmit = useCallback(async () => {
+        if (!window.confirm('Submit this assessment? You cannot change your answers after submission.')) {
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            const { data } = await assessmentService.finalSubmit(attemptId);
+            clearInterval(timerRef.current);
+            navigate(`/assessments/${assessmentId}/results/${data.attempt_id || attemptId}`);
+        } catch (err) {
+            window.alert(getApiErrorMessage(err, 'Submission failed. Please try again.'));
+        } finally {
+            setSubmitting(false);
+        }
+    }, [assessmentId, attemptId, navigate]);
+
+    useEffect(() => {
+        if (!attempt || attempt.status !== 'in_progress') {
+            return undefined;
+        }
+
         timerRef.current = setInterval(() => {
-            setTimeRemaining((prev) => {
-                if (prev <= 1) {
+            setTimeRemaining((previous) => {
+                if (previous <= 1) {
                     clearInterval(timerRef.current);
-                    handleFinalSubmit();
+                    void handleFinalSubmit();
                     return 0;
                 }
-                return prev - 1;
+                return previous - 1;
             });
         }, 1000);
+
         return () => clearInterval(timerRef.current);
-    }, [attempt?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [attempt, handleFinalSubmit, setTimeRemaining]);
 
     const questions = attempt?.questions || [];
-    const currentQ = questions[currentIdx];
+    const currentQuestion = questions[currentIdx];
     const answers = attempt?.answers || {};
     const flagged = attempt?.flagged || [];
     const timeRemaining = attempt?.timeRemaining ?? 0;
 
-    // Save answer to backend
-    const handleSelectAnswer = async (questionId, value) => {
-        setAnswer(questionId, value);
+    const submitQuestionAnswer = async (question, value, options = {}) => {
+        setAnswer(question.id, value);
         setSavingAnswer(true);
         try {
-            await assessmentService.submitAnswer(assessmentId, attemptId, {
-                question_id: questionId,
-                answer: value,
-            });
-        } catch { /* silent – answers synced on submit */ }
-        finally { setSavingAnswer(false); }
-    };
-
-    const handleToggleFlag = (questionId) => {
-        toggleFlag(questionId);
-    };
-
-    const handleFinalSubmit = async () => {
-        if (!window.confirm('Submit this assessment? You cannot change your answers after submission.')) return;
-        setSubmitting(true);
-        try {
-            const { data } = await assessmentService.finalSubmit(assessmentId, attemptId, { answers });
-            clearInterval(timerRef.current);
-            navigate(`/assessments/${assessmentId}/results/${data.id || attemptId}`);
-        } catch (err) {
-            alert(getApiErrorMessage(err, 'Submission failed. Please try again.'));
+            await assessmentService.submitAnswer(attemptId, buildAssessmentAnswerPayload(question, value, {
+                isBookmarked: flagged.includes(String(question.id)),
+                ...options,
+            }));
+        } catch {
+            // final submit is the last protection if incremental saves fail
         } finally {
-            setSubmitting(false);
+            setSavingAnswer(false);
         }
     };
 
-    // Proctoring – report tab visibility changes
+    const handleSelectAnswer = async (question, value) => {
+        await submitQuestionAnswer(question, value);
+    };
+
+    const handleToggleMultiSelect = async (question, optionId) => {
+        const currentValue = Array.isArray(answers[String(question.id)]) ? answers[String(question.id)] : [];
+        const nextValue = currentValue.includes(optionId)
+            ? currentValue.filter((value) => value !== optionId)
+            : [...currentValue, optionId];
+        await submitQuestionAnswer(question, nextValue);
+    };
+
+    const handleToggleFlag = async (question) => {
+        toggleFlag(question.id);
+        const nextIsBookmarked = !flagged.includes(String(question.id));
+        try {
+            await assessmentService.submitAnswer(attemptId, buildAssessmentAnswerPayload(
+                question,
+                answers[String(question.id)],
+                { isBookmarked: nextIsBookmarked },
+            ));
+        } catch {
+            // keep local bookmark state even if sync fails
+        }
+    };
+
     useEffect(() => {
         const handleVisibility = () => {
             if (document.hidden) {
-                assessmentService.reportProctorEvent(assessmentId, attemptId, {
+                assessmentService.reportProctorEvent(attemptId, {
                     event_type: 'tab_switch',
                     timestamp: new Date().toISOString(),
                 }).catch(() => {});
@@ -117,9 +143,9 @@ const AssessmentPlayer = () => {
         };
         document.addEventListener('visibilitychange', handleVisibility);
         return () => document.removeEventListener('visibilitychange', handleVisibility);
-    }, [assessmentId, attemptId]);
+    }, [attemptId]);
 
-    const answeredCount = Object.keys(answers).length;
+    const answeredCount = Object.keys(answers).filter((questionId) => hasAnswer(answers[questionId])).length;
     const flaggedCount = flagged.length;
     const isUrgent = timeRemaining < 120;
 
@@ -152,24 +178,23 @@ const AssessmentPlayer = () => {
             pageTitleLine2="Player"
         >
             <div className="ap-layout">
-                {/* Question navigator sidebar */}
                 <aside className="ap-navigator">
                     <div className={`ap-timer ${isUrgent ? 'urgent' : ''}`}>
                         <span className="ap-timer__label">Time Remaining</span>
                         <span className="ap-timer__value">{formatTime(timeRemaining)}</span>
                     </div>
                     <div className="ap-nav-grid">
-                        {questions.map((q, i) => {
-                            const isAnswered = answers[q.id] !== undefined;
-                            const isFlagged = flagged.includes(q.id);
-                            const isCurrent = i === currentIdx;
-                            let cls = 'ap-nav-cell';
-                            if (isCurrent) cls += ' current';
-                            if (isAnswered) cls += ' answered';
-                            if (isFlagged) cls += ' flagged';
+                        {questions.map((question, index) => {
+                            const isAnswered = hasAnswer(answers[String(question.id)]);
+                            const isFlagged = flagged.includes(String(question.id));
+                            const isCurrent = index === currentIdx;
+                            let className = 'ap-nav-cell';
+                            if (isCurrent) className += ' current';
+                            if (isAnswered) className += ' answered';
+                            if (isFlagged) className += ' flagged';
                             return (
-                                <button key={q.id} className={cls} onClick={() => setCurrentIdx(i)}>
-                                    {i + 1}
+                                <button key={question.id} className={className} onClick={() => setCurrentIdx(index)}>
+                                    {index + 1}
                                     {isFlagged && <span className="ap-flag-dot" />}
                                 </button>
                             );
@@ -182,116 +207,127 @@ const AssessmentPlayer = () => {
                     </div>
                     <button
                         className="ap-submit-btn"
-                        onClick={handleFinalSubmit}
+                        onClick={() => void handleFinalSubmit()}
                         disabled={submitting}
                     >
-                        {submitting ? 'Submitting…' : 'Submit Assessment'}
+                        {submitting ? 'Submitting...' : 'Submit Assessment'}
                     </button>
                 </aside>
 
-                {/* Question area */}
                 <div className="ap-question-area">
-                    {currentQ ? (
+                    {currentQuestion ? (
                         <>
                             <div className="ap-question-header">
                                 <span className="ap-question-num">Question {currentIdx + 1} of {questions.length}</span>
                                 <button
-                                    className={`ap-flag-btn ${flagged.includes(currentQ.id) ? 'active' : ''}`}
-                                    onClick={() => handleToggleFlag(currentQ.id)}
+                                    className={`ap-flag-btn ${flagged.includes(String(currentQuestion.id)) ? 'active' : ''}`}
+                                    onClick={() => void handleToggleFlag(currentQuestion)}
                                 >
-                                    {flagged.includes(currentQ.id) ? '🚩 Flagged' : '⚑ Flag'}
+                                    {flagged.includes(String(currentQuestion.id)) ? 'Flagged' : 'Flag'}
                                 </button>
                             </div>
 
                             <div className="ap-question-body">
-                                <p className="ap-question-text">{currentQ.text || currentQ.question_text}</p>
+                                <p className="ap-question-text">{currentQuestion.text || currentQuestion.question_text}</p>
 
-                                {/* Multiple choice */}
-                                {(currentQ.question_type === 'mcq' || currentQ.choices || currentQ.options) && (
+                                {(currentQuestion.question_type === 'mcq') && (
                                     <div className="ap-choices">
-                                        {(currentQ.choices || currentQ.options || []).map((opt, oi) => {
-                                            const optValue = typeof opt === 'string' ? opt : opt.id || opt.value;
-                                            const optLabel = typeof opt === 'string' ? opt : opt.text || opt.label;
-                                            const isSelected = answers[currentQ.id] === optValue;
+                                        {currentQuestion.options.map((option, optionIndex) => {
+                                            const optionValue = option.id ?? option.value;
+                                            const isSelected = answers[String(currentQuestion.id)] === optionValue;
                                             return (
-                                                <label
-                                                    key={oi}
-                                                    className={`ap-choice ${isSelected ? 'selected' : ''}`}
-                                                >
+                                                <label key={optionValue || optionIndex} className={`ap-choice ${isSelected ? 'selected' : ''}`}>
                                                     <input
                                                         type="radio"
-                                                        name={`q-${currentQ.id}`}
+                                                        name={`q-${currentQuestion.id}`}
                                                         checked={isSelected}
-                                                        onChange={() => handleSelectAnswer(currentQ.id, optValue)}
+                                                        onChange={() => void handleSelectAnswer(currentQuestion, optionValue)}
                                                     />
-                                                    <span className="ap-choice__letter">{String.fromCharCode(65 + oi)}</span>
-                                                    <span className="ap-choice__text">{optLabel}</span>
+                                                    <span className="ap-choice__letter">{String.fromCharCode(65 + optionIndex)}</span>
+                                                    <span className="ap-choice__text">{option.text}</span>
                                                 </label>
                                             );
                                         })}
                                     </div>
                                 )}
 
-                                {/* True/False */}
-                                {currentQ.question_type === 'true_false' && (
+                                {currentQuestion.question_type === 'multi_select' && (
                                     <div className="ap-choices">
-                                        {['True', 'False'].map((val) => (
+                                        {currentQuestion.options.map((option, optionIndex) => {
+                                            const optionValue = option.id ?? option.value;
+                                            const selectedValues = Array.isArray(answers[String(currentQuestion.id)]) ? answers[String(currentQuestion.id)] : [];
+                                            const isSelected = selectedValues.includes(optionValue);
+                                            return (
+                                                <label key={optionValue || optionIndex} className={`ap-choice ${isSelected ? 'selected' : ''}`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isSelected}
+                                                        onChange={() => void handleToggleMultiSelect(currentQuestion, optionValue)}
+                                                    />
+                                                    <span className="ap-choice__letter">{String.fromCharCode(65 + optionIndex)}</span>
+                                                    <span className="ap-choice__text">{option.text}</span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {currentQuestion.question_type === 'true_false' && (
+                                    <div className="ap-choices">
+                                        {[true, false].map((value) => (
                                             <label
-                                                key={val}
-                                                className={`ap-choice ${answers[currentQ.id] === val.toLowerCase() ? 'selected' : ''}`}
+                                                key={String(value)}
+                                                className={`ap-choice ${answers[String(currentQuestion.id)] === value ? 'selected' : ''}`}
                                             >
                                                 <input
                                                     type="radio"
-                                                    name={`q-${currentQ.id}`}
-                                                    checked={answers[currentQ.id] === val.toLowerCase()}
-                                                    onChange={() => handleSelectAnswer(currentQ.id, val.toLowerCase())}
+                                                    name={`q-${currentQuestion.id}`}
+                                                    checked={answers[String(currentQuestion.id)] === value}
+                                                    onChange={() => void handleSelectAnswer(currentQuestion, value)}
                                                 />
-                                                <span className="ap-choice__text">{val}</span>
+                                                <span className="ap-choice__text">{value ? 'True' : 'False'}</span>
                                             </label>
                                         ))}
                                     </div>
                                 )}
 
-                                {/* Short answer / essay */}
-                                {(currentQ.question_type === 'short_answer' || currentQ.question_type === 'essay') && (
+                                {(currentQuestion.question_type === 'short_answer' || currentQuestion.question_type === 'essay') && (
                                     <textarea
                                         className="ap-text-answer"
-                                        rows={currentQ.question_type === 'essay' ? 8 : 3}
+                                        rows={currentQuestion.question_type === 'essay' ? 8 : 3}
                                         placeholder="Type your answer here..."
-                                        value={answers[currentQ.id] || ''}
-                                        onChange={(e) => handleSelectAnswer(currentQ.id, e.target.value)}
+                                        value={answers[String(currentQuestion.id)] || ''}
+                                        onChange={(event) => void handleSelectAnswer(currentQuestion, event.target.value)}
                                     />
                                 )}
 
-                                {/* Code */}
-                                {currentQ.question_type === 'code' && (
+                                {currentQuestion.question_type === 'code' && (
                                     <textarea
                                         className="ap-code-answer"
                                         rows={12}
                                         placeholder="Write your code here..."
-                                        value={answers[currentQ.id] || ''}
-                                        onChange={(e) => handleSelectAnswer(currentQ.id, e.target.value)}
+                                        value={answers[String(currentQuestion.id)] || ''}
+                                        onChange={(event) => void handleSelectAnswer(currentQuestion, event.target.value)}
                                         spellCheck={false}
                                     />
                                 )}
                             </div>
 
-                            {/* Nav buttons */}
                             <div className="ap-question-nav">
                                 <button
                                     className="ap-nav-btn"
-                                    onClick={() => setCurrentIdx((p) => Math.max(0, p - 1))}
+                                    onClick={() => setCurrentIdx((previous) => Math.max(0, previous - 1))}
                                     disabled={currentIdx === 0}
                                 >
-                                    ← Previous
+                                    Previous
                                 </button>
-                                {savingAnswer && <span className="ap-saving">Saving…</span>}
+                                {savingAnswer && <span className="ap-saving">Saving...</span>}
                                 <button
                                     className="ap-nav-btn"
-                                    onClick={() => setCurrentIdx((p) => Math.min(questions.length - 1, p + 1))}
+                                    onClick={() => setCurrentIdx((previous) => Math.min(questions.length - 1, previous + 1))}
                                     disabled={currentIdx === questions.length - 1}
                                 >
-                                    Next →
+                                    Next
                                 </button>
                             </div>
                         </>
@@ -305,3 +341,6 @@ const AssessmentPlayer = () => {
 };
 
 export default AssessmentPlayer;
+
+
+

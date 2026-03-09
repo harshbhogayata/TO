@@ -29,7 +29,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
-from accounts.permissions import IsEmailVerified
+from accounts.permissions import IsCompanyUser, IsEmailVerified
 from compliance.constants import AuditAction, AuditCategory
 from compliance.decorators import audit_action, create_audit_log
 from payments.idempotency import idempotent
@@ -789,7 +789,7 @@ def my_referral_rewards(request):
 class SponsoredCampaignListCreateView(generics.ListCreateAPIView):
     """GET/POST /api/v1/payments/sponsored/"""
     serializer_class = SponsoredJobCampaignSerializer
-    permission_classes = [IsAuthenticated, IsEmailVerified]
+    permission_classes = [IsAuthenticated, IsCompanyUser, IsEmailVerified]
 
     def get_queryset(self):
         return SponsoredJobCampaign.objects.filter(company=self.request.user).select_related('job')
@@ -801,7 +801,7 @@ class SponsoredCampaignListCreateView(generics.ListCreateAPIView):
 class SponsoredCampaignDetailView(generics.RetrieveUpdateAPIView):
     """GET/PATCH /api/v1/payments/sponsored/<id>/"""
     serializer_class = SponsoredJobCampaignSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyUser, IsEmailVerified]
     lookup_field = 'pk'
 
     def get_queryset(self):
@@ -809,7 +809,7 @@ class SponsoredCampaignDetailView(generics.RetrieveUpdateAPIView):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsCompanyUser, IsEmailVerified])
 @transaction.atomic
 def toggle_campaign_status(request, pk):
     """POST /api/v1/payments/sponsored/<id>/toggle/"""
@@ -833,7 +833,7 @@ def toggle_campaign_status(request, pk):
 class TalentPoolPipelineListCreateView(generics.ListCreateAPIView):
     """GET/POST /api/v1/payments/pipelines/"""
     serializer_class = TalentPoolPipelineSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyUser, IsEmailVerified]
 
     def get_queryset(self):
         return TalentPoolPipeline.objects.filter(company=self.request.user, is_archived=False)
@@ -848,7 +848,7 @@ class TalentPoolPipelineListCreateView(generics.ListCreateAPIView):
 class TalentPoolPipelineDetailView(generics.RetrieveUpdateDestroyAPIView):
     """GET/PATCH/DELETE /api/v1/payments/pipelines/<id>/"""
     serializer_class = TalentPoolPipelineSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyUser, IsEmailVerified]
     lookup_field = 'pk'
 
     def get_queryset(self):
@@ -862,7 +862,7 @@ class TalentPoolPipelineDetailView(generics.RetrieveUpdateDestroyAPIView):
 class TalentPoolCandidateListCreateView(generics.ListCreateAPIView):
     """GET/POST /api/v1/payments/pipelines/<pipeline_pk>/candidates/"""
     serializer_class = TalentPoolCandidateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyUser, IsEmailVerified]
 
     def get_queryset(self):
         pipeline_pk = self.kwargs['pipeline_pk']
@@ -884,7 +884,7 @@ class TalentPoolCandidateListCreateView(generics.ListCreateAPIView):
 class TalentPoolCandidateDetailView(generics.RetrieveUpdateDestroyAPIView):
     """GET/PATCH/DELETE /api/v1/payments/candidates/<id>/"""
     serializer_class = TalentPoolCandidateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCompanyUser, IsEmailVerified]
     lookup_field = 'pk'
 
     def get_queryset(self):
@@ -892,7 +892,7 @@ class TalentPoolCandidateDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsCompanyUser, IsEmailVerified])
 @transaction.atomic
 def move_candidate(request, pk):
     """POST /api/v1/payments/candidates/<pk>/move/"""
@@ -905,7 +905,7 @@ def move_candidate(request, pk):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsCompanyUser, IsEmailVerified])
 @transaction.atomic
 def bulk_move_candidates(request):
     """POST /api/v1/payments/candidates/bulk-move/"""
@@ -980,3 +980,5 @@ def revenue_trend(request):
         })
 
     return Response({'trend': trend})
+
+

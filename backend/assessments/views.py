@@ -40,7 +40,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
-from accounts.permissions import IsEmailVerified
+from accounts.models import User
+from accounts.permissions import IsCompanyUser, IsEmailVerified
 
 from compliance.constants import AuditAction, AuditCategory
 from compliance.decorators import audit_action
@@ -752,7 +753,10 @@ class AttemptResultView(generics.RetrieveAPIView):
             pk=self.kwargs['attempt_id'],
         )
         self.check_object_permissions(self.request, attempt)
-        result = get_object_or_404(AssessmentResult, attempt=attempt)
+        result = get_object_or_404(
+            AssessmentResult.objects.select_related('attempt', 'assessment'),
+            attempt=attempt,
+        )
         return result
 
 
@@ -766,7 +770,7 @@ class MyResultsView(generics.ListAPIView):
         return (
             AssessmentResult.objects
             .filter(user=self.request.user)
-            .select_related('assessment')
+            .select_related('assessment', 'attempt')
             .order_by('-graded_at')
         )
 
@@ -880,7 +884,7 @@ class MyInvitationsView(generics.ListAPIView):
 
 class SendInvitationView(APIView):
     """POST /api/v1/assessments/invitations/send/ — Company sends invitation."""
-    permission_classes = [permissions.IsAuthenticated, IsEmailVerified]
+    permission_classes = [permissions.IsAuthenticated, IsCompanyUser, IsEmailVerified]
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'assessment_invite'
 
@@ -889,16 +893,19 @@ class SendInvitationView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        assessment = Assessment.objects.get(pk=data['assessment_id'])
         user = request.user
         company = getattr(user, 'company_profile', None)
+        assessment = get_object_or_404(
+            Assessment,
+            pk=data['assessment_id'],
+            owner_company=company,
+        )
 
         # Resolve candidate
-        from accounts.models import CustomUser
         candidate = None
         try:
-            candidate = CustomUser.objects.get(email=data['candidate_email'])
-        except CustomUser.DoesNotExist:
+            candidate = User.objects.get(email=data['candidate_email'])
+        except User.DoesNotExist:
             pass
 
         invitation = AssessmentInvitation.objects.create(
@@ -1121,3 +1128,6 @@ class QuestionReportListView(generics.ListAPIView):
             qs = qs.filter(status=report_status)
 
         return qs
+
+
+

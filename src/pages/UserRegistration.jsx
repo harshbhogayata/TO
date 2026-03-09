@@ -133,7 +133,7 @@ const UserRegistration = () => {
     // --- RENDERS ---
     if (step === 1) {
         return (
-            <div style={{ background: 'var(--bg-beige)', color: 'var(--text-black)', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--bg-beige)', color: 'var(--text-black)', width: '100%', minHeight: '100vh', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
                 <div className="wizard-tape-bar">
                     <span>// TalentOrbit Registry System v1.0</span>
                     <span>// Security: Encrypted Tunnel</span>
@@ -203,7 +203,7 @@ const UserRegistration = () => {
 
     if (step === 2) {
         return (
-            <div style={{ background: 'var(--bg-beige)', color: 'var(--text-black)', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--bg-beige)', color: 'var(--text-black)', width: '100%', minHeight: '100vh', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
                 <div className="wizard-tape-bar">
                     <span>// TalentOrbit Onboarding Protocol</span>
                     <span>// Module: Profile Building</span>
@@ -290,7 +290,7 @@ const UserRegistration = () => {
 
     if (step === 3) {
         return (
-            <div style={{ background: 'var(--bg-beige)', color: 'var(--text-black)', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: 'var(--bg-beige)', color: 'var(--text-black)', width: '100%', minHeight: '100vh', minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
                 <div className="wizard-tape-bar">
                     <span>// TalentOrbit Admin Console v2.1</span>
                     <span>// Onboarding Status: Finalizing Node</span>

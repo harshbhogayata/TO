@@ -9,8 +9,8 @@ import usePageTitle from '../hooks/usePageTitle';
 /* ── Design-faithful inline styles (Design 4) ────────────────────────────── */
 const s = {
     body: {
-        minHeight: '100vh', background: '#E6E2D8', display: 'flex',
-        flexDirection: 'column', position: 'relative', overflow: 'hidden',
+        minHeight: '100vh', minHeight: '100dvh', background: '#E6E2D8', display: 'flex',
+        flexDirection: 'column', position: 'relative', overflowX: 'hidden',
     },
     container: {
         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',

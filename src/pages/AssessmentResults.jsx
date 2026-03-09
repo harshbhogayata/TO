@@ -1,43 +1,57 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import assessmentService from '../services/assessmentService';
 import { useAssessmentStore } from '../store/assessmentStore';
 import { getApiErrorMessage } from '../services/api';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
+import { normaliseAssessmentResult } from '../utils/learningContracts';
 import './AssessmentResults.css';
 
 const AssessmentResults = () => {
-    const { assessmentId, resultId } = useParams();
-    const navigate = useNavigate();
+    const { assessmentId, resultId: attemptId } = useParams();
     const { activeResult, setActiveResult } = useAssessmentStore();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [gradingPending, setGradingPending] = useState(false);
 
     usePageTitle('Assessment Results', 'Review your performance and answers.');
 
     const fetchResult = useCallback(async () => {
         setLoading(true);
         setError(null);
+        setGradingPending(false);
+        setActiveResult(null);
+
         try {
-            const { data } = await assessmentService.getResult(assessmentId, resultId);
-            setActiveResult(data);
+            const { data } = await assessmentService.getResult(attemptId);
+            setActiveResult(normaliseAssessmentResult(data));
         } catch (err) {
+            if (err?.response?.status === 404) {
+                setGradingPending(true);
+                return;
+            }
+
             setError(getApiErrorMessage(err, 'Failed to load results.'));
         } finally {
             setLoading(false);
         }
-    }, [assessmentId, resultId, setActiveResult]);
+    }, [attemptId, setActiveResult]);
 
-    useEffect(() => { fetchResult(); }, [fetchResult]);
+    useEffect(() => {
+        fetchResult();
+    }, [fetchResult]);
 
     const result = activeResult;
-    const passed = result?.passed;
-    const score = result?.score ?? result?.percentage ?? 0;
+    const passed = Boolean(result?.passed);
+    const score = Math.round(result?.score ?? result?.percentage ?? 0);
     const correct = result?.correct_count ?? 0;
     const total = result?.total_questions ?? result?.question_count ?? 0;
-    const timeTaken = result?.time_taken_seconds ? Math.round(result.time_taken_seconds / 60) : null;
+    const timeTakenMinutes = result?.time_taken_seconds
+        ? Math.max(1, Math.round(result.time_taken_seconds / 60))
+        : null;
+    const percentile = result?.percentile != null ? Math.round(result.percentile) : null;
 
     if (loading) {
         return (
@@ -58,18 +72,40 @@ const AssessmentResults = () => {
         );
     }
 
+    if (gradingPending) {
+        return (
+            <DashboardLayout pageTitleLine1="Assessment" pageTitleLine2="Results">
+                <div className="ar-page">
+                    <div className="ar-stats-grid">
+                        <div className="ar-stat-block">
+                            <h4>Results Pending</h4>
+                            <p>Your assessment was submitted successfully and is still being graded.</p>
+                        </div>
+                    </div>
+                    <div className="ar-actions">
+                        <Link to="/my-assessments" className="ar-action-btn">
+                            My Assessments
+                        </Link>
+                        <Link to={`/assessments/${assessmentId}`} className="ar-action-btn ar-action-btn--secondary">
+                            Back to Assessment
+                        </Link>
+                    </div>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
     return (
         <DashboardLayout
             tapeBarProps={{
                 title: 'Assessment Results',
-                status: passed ? 'Passed ✓' : 'Failed ✗',
+                status: passed ? 'Passed' : 'Not passed',
                 info: `Score: ${score}%`,
             }}
             pageTitleLine1="Assessment"
             pageTitleLine2="Results"
         >
             <div className="ar-page">
-                {/* Score circle */}
                 <div className={`ar-score-circle ${passed ? 'passed' : 'failed'}`}>
                     <svg viewBox="0 0 120 120" className="ar-score-ring">
                         <circle cx="60" cy="60" r="54" className="ar-score-ring__bg" />
@@ -87,7 +123,6 @@ const AssessmentResults = () => {
                     </div>
                 </div>
 
-                {/* Stats grid */}
                 <div className="ar-stats-grid">
                     <div className="ar-stat-block">
                         <h4>Correct</h4>
@@ -97,76 +132,79 @@ const AssessmentResults = () => {
                         <h4>Passing Score</h4>
                         <p>{result?.passing_score ?? 70}%</p>
                     </div>
-                    {timeTaken && (
+                    {timeTakenMinutes != null && (
                         <div className="ar-stat-block">
                             <h4>Time Taken</h4>
-                            <p>{timeTaken} min</p>
+                            <p>{timeTakenMinutes} min</p>
                         </div>
                     )}
-                    {result?.percentile != null && (
+                    {percentile != null && (
                         <div className="ar-stat-block">
                             <h4>Percentile</h4>
-                            <p>Top {result.percentile}%</p>
+                            <p>Top {percentile}%</p>
                         </div>
                     )}
                 </div>
 
-                {/* Skill breakdown */}
-                {result?.skill_breakdown && result.skill_breakdown.length > 0 && (
+                {result?.skill_breakdown?.length > 0 && (
                     <section className="ar-skills">
                         <h3 className="ar-section-title">Skill Breakdown</h3>
                         <div className="ar-skill-bars">
-                            {result.skill_breakdown.map((skill, i) => (
-                                <div key={i} className="ar-skill-row">
-                                    <span className="ar-skill-name">{skill.name || skill.skill}</span>
-                                    <div className="ar-skill-bar">
-                                        <div
-                                            className="ar-skill-bar__fill"
-                                            style={{ width: `${skill.score || skill.percentage || 0}%` }}
-                                        />
+                            {result.skill_breakdown.map((skill, index) => {
+                                const skillScore = skill.score ?? skill.percentage ?? 0;
+                                return (
+                                    <div key={skill.name || skill.skill || index} className="ar-skill-row">
+                                        <span className="ar-skill-name">{skill.name || skill.skill}</span>
+                                        <div className="ar-skill-bar">
+                                            <div
+                                                className="ar-skill-bar__fill"
+                                                style={{ width: `${skillScore}%` }}
+                                            />
+                                        </div>
+                                        <span className="ar-skill-pct">{skillScore}%</span>
                                     </div>
-                                    <span className="ar-skill-pct">{skill.score || skill.percentage || 0}%</span>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </section>
                 )}
 
-                {/* Answer review (if allowed) */}
-                {result?.show_answers && result?.answers && (
+                {result?.show_answers && result?.answers?.length > 0 && (
                     <section className="ar-answers">
                         <h3 className="ar-section-title">Answer Review</h3>
-                        {result.answers.map((ans, i) => (
-                            <div key={i} className={`ar-answer-card ${ans.is_correct ? 'correct' : 'incorrect'}`}>
+                        {result.answers.map((answer, index) => (
+                            <div
+                                key={answer.question_id || index}
+                                className={`ar-answer-card ${answer.is_correct ? 'correct' : 'incorrect'}`}
+                            >
                                 <div className="ar-answer-card__header">
-                                    <span>Q{i + 1}</span>
-                                    <span>{ans.is_correct ? '✓ Correct' : '✗ Incorrect'}</span>
+                                    <span>Q{index + 1}</span>
+                                    <span>{answer.is_correct ? 'Correct' : 'Incorrect'}</span>
                                 </div>
-                                <p className="ar-answer-card__question">{ans.question_text}</p>
-                                <p className="ar-answer-card__your">Your answer: {ans.user_answer || '—'}</p>
-                                {!ans.is_correct && ans.correct_answer && (
-                                    <p className="ar-answer-card__correct">Correct answer: {ans.correct_answer}</p>
+                                <p className="ar-answer-card__question">{answer.question_text || 'Question review unavailable.'}</p>
+                                <p className="ar-answer-card__your">
+                                    Your answer: {answer.user_answer || 'No answer submitted'}
+                                </p>
+                                {!answer.is_correct && answer.correct_answer && (
+                                    <p className="ar-answer-card__correct">Correct answer: {answer.correct_answer}</p>
                                 )}
-                                {ans.explanation && (
-                                    <p className="ar-answer-card__explanation">{ans.explanation}</p>
+                                {answer.explanation && (
+                                    <p className="ar-answer-card__explanation">{answer.explanation}</p>
                                 )}
                             </div>
                         ))}
                     </section>
                 )}
 
-                {/* Badge earned */}
                 {result?.badge && (
                     <div className="ar-badge-earned">
-                        <span className="ar-badge-icon">🏅</span>
                         <div>
-                            <h4>Badge Earned!</h4>
+                            <h4>Badge Earned</h4>
                             <p>{result.badge.name || result.badge.title}</p>
                         </div>
                     </div>
                 )}
 
-                {/* Actions */}
                 <div className="ar-actions">
                     <Link to="/my-assessments" className="ar-action-btn">
                         My Assessments

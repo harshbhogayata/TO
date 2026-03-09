@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import courseService from '../services/courseService';
 import { useCourseStore } from '../store/courseStore';
@@ -6,10 +6,12 @@ import { getApiErrorMessage } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
+import { getCourseRoute, normaliseCourseListItem } from '../utils/learningContracts';
 import './CourseCatalog.css';
 
 const CourseCard = ({ course, onView }) => {
     const [hovered, setHovered] = useState(false);
+
     return (
         <div className="cc-card">
             <img
@@ -22,11 +24,11 @@ const CourseCard = ({ course, onView }) => {
                 <span className="cc-card__level">{course.level || 'Beginner'}</span>
                 <h3 className="cc-card__title">{course.title}</h3>
                 <p className="cc-card__instructor">
-                    Instructor: {course.instructor_name || course.instructor?.name || 'TBA'}
+                    Instructor: {course.instructor_name || 'TBA'}
                 </p>
                 <div className="cc-card__meta-bottom">
                     <span className="cc-card__rating">
-                        {course.average_rating ? `${course.average_rating} ★` : '— ★'}
+                        {course.average_rating ? `${course.average_rating} *` : '- *'}
                     </span>
                     <span className="cc-card__enrolled">
                         {course.enrollment_count ?? 0} Enrolled
@@ -34,7 +36,7 @@ const CourseCard = ({ course, onView }) => {
                 </div>
             </div>
             <div className="cc-card__footer">
-                <span>{course.estimated_duration || '—'}</span>
+                <span>{course.estimated_duration || '-'}</span>
                 <span>{course.access_level === 'free' ? 'Free' : 'Premium'}</span>
             </div>
             <button
@@ -42,7 +44,7 @@ const CourseCard = ({ course, onView }) => {
                 style={{ opacity: hovered ? 0.85 : 1 }}
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
-                onClick={() => onView(course.id)}
+                onClick={() => onView(course)}
             >
                 View Course
             </button>
@@ -68,11 +70,12 @@ const CourseCatalog = () => {
             if (filters.search) params.search = filters.search;
             if (filters.category) params.category = filters.category;
             if (filters.level) params.level = filters.level;
-            if (filters.access) params.access_level = filters.access;
+            if (filters.access) params.access = filters.access;
             if (filters.sort) params.ordering = filters.sort;
             const { data } = await courseService.listCourses(params);
-            setCourses(data.results || data);
-            setTotalCount(data.count ?? (data.results || data).length);
+            const items = (data.results || data).map(normaliseCourseListItem);
+            setCourses(items);
+            setTotalCount(data.count ?? items.length);
         } catch (err) {
             setCoursesError(getApiErrorMessage(err, 'Failed to load courses.'));
         } finally {
@@ -84,7 +87,9 @@ const CourseCatalog = () => {
         try {
             const { data } = await courseService.listCategories();
             setCategories(data.results || data);
-        } catch { /* silent */ }
+        } catch {
+            // leave filters usable without category data
+        }
     }, [setCategories]);
 
     useEffect(() => {
@@ -92,16 +97,16 @@ const CourseCatalog = () => {
     }, [fetchCategories]);
 
     useEffect(() => {
-        const t = setTimeout(fetchCourses, 300);
-        return () => clearTimeout(t);
+        const timeoutId = setTimeout(fetchCourses, 300);
+        return () => clearTimeout(timeoutId);
     }, [fetchCourses]);
 
-    const handleView = (id) => navigate(`/courses/${id}`);
+    const handleView = (course) => navigate(getCourseRoute(course));
 
     const sortOptions = [
-        { value: '-popularity', label: 'Popularity' },
-        { value: '-created_at', label: 'Newest' },
-        { value: '-average_rating', label: 'Rating' },
+        { value: 'popular', label: 'Popularity' },
+        { value: 'newest', label: 'Newest' },
+        { value: 'rating', label: 'Rating' },
     ];
 
     const levelOptions = ['beginner', 'intermediate', 'advanced'];
@@ -126,19 +131,18 @@ const CourseCatalog = () => {
             }
         >
             <div className="cc-catalog-layout">
-                {/* Filters sidebar */}
                 <aside className="cc-filters-panel">
                     <div className="cc-filter-group">
                         <h4 className="cc-filter-title">Sort By</h4>
-                        {sortOptions.map((opt) => (
-                            <label key={opt.value} className="cc-filter-option">
+                        {sortOptions.map((option) => (
+                            <label key={option.value} className="cc-filter-option">
                                 <input
                                     type="radio"
                                     name="sort"
-                                    checked={filters.sort === opt.value}
-                                    onChange={() => setFilter('sort', opt.value)}
+                                    checked={filters.sort === option.value}
+                                    onChange={() => setFilter('sort', option.value)}
                                 />
-                                {opt.label}
+                                {option.label}
                             </label>
                         ))}
                     </div>
@@ -155,15 +159,15 @@ const CourseCatalog = () => {
                                 />
                                 All
                             </label>
-                            {categories.map((cat) => (
-                                <label key={cat.id} className="cc-filter-option">
+                            {categories.map((category) => (
+                                <label key={category.id} className="cc-filter-option">
                                     <input
                                         type="radio"
                                         name="category"
-                                        checked={filters.category === String(cat.id)}
-                                        onChange={() => setFilter('category', String(cat.id))}
+                                        checked={filters.category === String(category.slug)}
+                                        onChange={() => setFilter('category', String(category.slug))}
                                     />
-                                    {cat.name}
+                                    {category.name}
                                 </label>
                             ))}
                         </div>
@@ -179,34 +183,33 @@ const CourseCatalog = () => {
                             />
                             All
                         </label>
-                        {levelOptions.map((lvl) => (
-                            <label key={lvl} className="cc-filter-option">
+                        {levelOptions.map((level) => (
+                            <label key={level} className="cc-filter-option">
                                 <input
                                     type="checkbox"
-                                    checked={filters.level === lvl}
-                                    onChange={() => setFilter('level', filters.level === lvl ? '' : lvl)}
+                                    checked={filters.level === level}
+                                    onChange={() => setFilter('level', filters.level === level ? '' : level)}
                                 />
-                                {lvl.charAt(0).toUpperCase() + lvl.slice(1)}
+                                {level.charAt(0).toUpperCase() + level.slice(1)}
                             </label>
                         ))}
                     </div>
 
                     <div className="cc-filter-group">
                         <h4 className="cc-filter-title">Access</h4>
-                        {accessOptions.map((acc) => (
-                            <label key={acc} className="cc-filter-option">
+                        {accessOptions.map((access) => (
+                            <label key={access} className="cc-filter-option">
                                 <input
                                     type="checkbox"
-                                    checked={filters.access === acc}
-                                    onChange={() => setFilter('access', filters.access === acc ? '' : acc)}
+                                    checked={filters.access === access}
+                                    onChange={() => setFilter('access', filters.access === access ? '' : access)}
                                 />
-                                {acc.charAt(0).toUpperCase() + acc.slice(1)}
+                                {access.charAt(0).toUpperCase() + access.slice(1)}
                             </label>
                         ))}
                     </div>
                 </aside>
 
-                {/* Main content */}
                 <div className="cc-catalog-content">
                     <div className="cc-search-strip">
                         <div className="cc-search-wrapper">
@@ -215,7 +218,7 @@ const CourseCatalog = () => {
                                 className="cc-search-input"
                                 placeholder="Search courses, instructors, keywords..."
                                 value={filters.search}
-                                onChange={(e) => setFilter('search', e.target.value)}
+                                onChange={(event) => setFilter('search', event.target.value)}
                             />
                         </div>
                         <span className="cc-results-count">
@@ -229,8 +232,8 @@ const CourseCatalog = () => {
 
                     {coursesLoading ? (
                         <div className="cc-grid">
-                            {Array.from({ length: 6 }).map((_, i) => (
-                                <div key={i} className="cc-card">
+                            {Array.from({ length: 6 }).map((_, index) => (
+                                <div key={index} className="cc-card">
                                     <Skeleton style={{ width: '100%', aspectRatio: '16/9' }} />
                                     <div className="cc-card__body">
                                         <Skeleton style={{ width: '60px', height: '16px', marginBottom: '12px' }} />

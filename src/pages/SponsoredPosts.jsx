@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
 import { usePaymentStore } from '../store/paymentStore';
 import { useToast } from '../contexts/ToastContext';
 import { getApiErrorMessage, paymentsService } from '../services/api';
+import { boostCampaignSchema } from '../utils/schemas';
 
-/* ── Styles (content-level only — layout chrome lives in DashboardLayout) ── */
 const styles = {
   viewGrid: {
     display: 'grid',
@@ -165,13 +165,33 @@ const styles = {
   },
 };
 
-/* ── Sub-components ─────────────────────────────────────────────────────── */
+const toAmount = (value) => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const parsed = Number.parseFloat(String(value ?? '').replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatCurrency = (value) => `$${toAmount(value).toFixed(2)}`;
+
+const humaniseStatus = (value) => {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (!raw) {
+    return 'Scheduled';
+  }
+
+  return raw
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
 
 const CampaignTable = ({ campaigns }) => {
   const defaultCampaigns = [
-    { name: 'Senior Art Director', sub: 'Volume One Studios • End: 12/04', status: 'active', impressions: '12.4k', clicks: '842', apps: '45', spend: '$450.00' },
-    { name: 'Frontend Lead', sub: 'TechFlow Inc • End: 15/04', status: 'active', impressions: '8.1k', clicks: '510', apps: '22', spend: '$310.00' },
-    { name: 'UX Researcher', sub: 'Design Co • Starts: 20/04', status: 'scheduled', impressions: '0', clicks: '0', apps: '0', spend: '$0.00' },
+    { name: 'Senior Art Director', sub: 'Volume One Studios', status: 'active', impressions: '12.4k', clicks: '842', apps: '45', spend: '$450.00' },
+    { name: 'Frontend Lead', sub: 'TechFlow Inc', status: 'active', impressions: '8.1k', clicks: '510', apps: '22', spend: '$310.00' },
+    { name: 'UX Researcher', sub: 'Design Co', status: 'scheduled', impressions: '0', clicks: '0', apps: '0', spend: '$0.00' },
   ];
   const rows = campaigns?.length ? campaigns : defaultCampaigns;
 
@@ -188,23 +208,26 @@ const CampaignTable = ({ campaigns }) => {
         </tr>
       </thead>
       <tbody>
-        {rows.map((c, i) => (
-          <tr key={i}>
-            <td style={styles.campaignTableTd}>
-              <span style={styles.campaignName}>{c.name || c.job_title}</span>
-              <span style={styles.campaignSub}>{c.sub || c.description}</span>
-            </td>
-            <td style={styles.campaignTableTd}>
-              <span style={c.status === 'active' ? styles.badgeActive : styles.badgeScheduled}>
-                {c.status === 'active' ? 'Active' : 'Scheduled'}
-              </span>
-            </td>
-            <td style={styles.campaignTableTd}>{c.impressions ?? 0}</td>
-            <td style={styles.campaignTableTd}>{c.clicks ?? 0}</td>
-            <td style={styles.campaignTableTd}>{c.apps ?? c.applications ?? 0}</td>
-            <td style={styles.campaignTableTd}>{typeof c.spend === 'number' ? `$${c.spend.toFixed(2)}` : c.spend ?? '$0.00'}</td>
-          </tr>
-        ))}
+        {rows.map((campaign, index) => {
+          const statusValue = String(campaign.status ?? '').toLowerCase();
+          return (
+            <tr key={campaign.id || index}>
+              <td style={styles.campaignTableTd}>
+                <span style={styles.campaignName}>{campaign.name || campaign.job_title}</span>
+                <span style={styles.campaignSub}>{campaign.sub || campaign.description || campaign.target_audience || ''}</span>
+              </td>
+              <td style={styles.campaignTableTd}>
+                <span style={statusValue === 'active' ? styles.badgeActive : styles.badgeScheduled}>
+                  {humaniseStatus(statusValue)}
+                </span>
+              </td>
+              <td style={styles.campaignTableTd}>{campaign.impressions ?? 0}</td>
+              <td style={styles.campaignTableTd}>{campaign.clicks ?? 0}</td>
+              <td style={styles.campaignTableTd}>{campaign.apps ?? campaign.applications ?? 0}</td>
+              <td style={styles.campaignTableTd}>{formatCurrency(campaign.spend ?? campaign.amount_spent)}</td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
@@ -212,7 +235,6 @@ const CampaignTable = ({ campaigns }) => {
 
 const BoostForm = ({ onSuccess }) => {
   const { addToast } = useToast();
-  const { boostCampaignSchema } = require('../utils/schemas');
   const [selectedJob, setSelectedJob] = useState('Marketing Strategist - Global Brands');
   const [budget, setBudget] = useState('');
   const [duration, setDuration] = useState('7');
@@ -220,10 +242,11 @@ const BoostForm = ({ onSuccess }) => {
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e?.preventDefault?.();
+  const handleSubmit = async (event) => {
+    event?.preventDefault?.();
     setFormError('');
     setSubmitting(true);
+
     try {
       const result = boostCampaignSchema.safeParse({
         jobId: selectedJob,
@@ -236,10 +259,11 @@ const BoostForm = ({ onSuccess }) => {
         setSubmitting(false);
         return;
       }
+
       await paymentsService.createSponsoredCampaign({
         job_title: selectedJob,
         daily_budget: Number(budget),
-        duration: duration,
+        duration,
         target_audience: audience,
       });
       addToast('Campaign initialized successfully!', 'success');
@@ -249,8 +273,8 @@ const BoostForm = ({ onSuccess }) => {
       setAudience('Senior Professionals (5+ yrs)');
       setSelectedJob('Marketing Strategist - Global Brands');
       setSubmitting(false);
-    } catch (err) {
-      setFormError(getApiErrorMessage(err, 'Failed to create campaign.'));
+    } catch (error) {
+      setFormError(getApiErrorMessage(error, 'Failed to create campaign.'));
       setSubmitting(false);
     }
   };
@@ -259,7 +283,7 @@ const BoostForm = ({ onSuccess }) => {
     <form style={styles.formContainer} onSubmit={handleSubmit}>
       <div style={styles.formGroup}>
         <label style={styles.formLabel}>Select Active Job</label>
-        <select style={styles.formSelect} value={selectedJob} onChange={(e) => setSelectedJob(e.target.value)} required>
+        <select style={styles.formSelect} value={selectedJob} onChange={(event) => setSelectedJob(event.target.value)} required>
           <option>Marketing Strategist - Global Brands</option>
           <option>Project Manager - BuildIt</option>
           <option>Junior Designer - Studio 4</option>
@@ -267,11 +291,11 @@ const BoostForm = ({ onSuccess }) => {
       </div>
       <div style={styles.formGroup}>
         <label style={styles.formLabel}>Daily Budget (USD)</label>
-        <input type="number" style={styles.formInput} placeholder="50.00" value={budget} onChange={(e) => setBudget(e.target.value)} required min={1} max={10000} />
+        <input type="number" style={styles.formInput} placeholder="50.00" value={budget} onChange={(event) => setBudget(event.target.value)} required min={1} max={10000} />
       </div>
       <div style={styles.formGroup}>
         <label style={styles.formLabel}>Duration (Days)</label>
-        <select style={styles.formSelect} value={duration} onChange={(e) => setDuration(e.target.value)} required>
+        <select style={styles.formSelect} value={duration} onChange={(event) => setDuration(event.target.value)} required>
           <option value="7">7</option>
           <option value="14">14</option>
           <option value="30">30</option>
@@ -280,7 +304,7 @@ const BoostForm = ({ onSuccess }) => {
       </div>
       <div style={styles.formGroup}>
         <label style={styles.formLabel}>Target Audience</label>
-        <select style={styles.formSelect} value={audience} onChange={(e) => setAudience(e.target.value)} required>
+        <select style={styles.formSelect} value={audience} onChange={(event) => setAudience(event.target.value)} required>
           <option>Senior Professionals (5+ yrs)</option>
           <option>Regional: North America</option>
           <option>Skill-based: Creative Suite</option>
@@ -292,7 +316,7 @@ const BoostForm = ({ onSuccess }) => {
         style={{ ...styles.btnSolid, ...(submitting ? { background: '#333', opacity: 0.8 } : {}) }}
         disabled={submitting}
       >
-        {submitting ? '✓ Campaign Initialized' : 'Initialize Boost Campaign'}
+        {submitting ? 'Campaign Initialized' : 'Initialize Boost Campaign'}
       </button>
     </form>
   );
@@ -303,8 +327,6 @@ const chartBars = [
   { height: '70%' }, { height: '95%' }, { height: '60%' },
 ];
 
-/* ── Main component ─────────────────────────────────────────────────────── */
-
 const SponsoredPosts = () => {
   usePageTitle('Sponsored Posts', 'Boost your job listings with targeted campaigns.');
 
@@ -312,50 +334,45 @@ const SponsoredPosts = () => {
   const { addToast } = useToast();
   const [fetchError, setFetchError] = useState(null);
 
-  const loadCampaigns = useCallback(async (signal) => {
+  const loadCampaigns = useCallback(async (options = {}) => {
     setFetchError(null);
     try {
-      await fetchCampaigns(signal);
-    } catch (err) {
-      if (signal?.aborted) return;
-      setFetchError(err);
-      addToast(getApiErrorMessage(err, 'Failed to load campaigns.'), 'error');
+      await fetchCampaigns(options);
+    } catch (error) {
+      if (options.signal?.aborted) {
+        return;
+      }
+      setFetchError(error);
+      addToast(getApiErrorMessage(error, 'Failed to load campaigns.'), 'error');
     }
   }, [fetchCampaigns, addToast]);
 
   useEffect(() => {
     const controller = new AbortController();
-    loadCampaigns(controller.signal);
+    loadCampaigns({ signal: controller.signal });
     return () => controller.abort();
   }, [loadCampaigns]);
 
-  /* ── Derived stats ────────────────────────────────────────────────────── */
-  const totalSpend = campaigns?.reduce((sum, c) => {
-    const amount = typeof c.spend === 'number' ? c.spend : parseFloat(String(c.spend).replace(/[^0-9.]/g, '')) || 0;
-    return sum + amount;
-  }, 0) ?? 0;
+  const totalSpend = campaigns?.reduce((sum, campaign) => sum + toAmount(campaign.spend ?? campaign.amount_spent), 0) ?? 0;
 
-  /* ── Header right stats ───────────────────────────────────────────────── */
   const headerRight = (
     <div style={{ display: 'flex', gap: '40px' }}>
       <div>
         <h3 style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '600', opacity: '0.6', marginBottom: '4px' }}>Total Spend</h3>
         <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px' }}>
-          {campaignsLoading ? '…' : `$${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2 })} MTD`}
+          {campaignsLoading ? '...' : `$${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2 })} MTD`}
         </p>
       </div>
       <div>
         <h3 style={{ fontSize: '11px', textTransform: 'uppercase', fontWeight: '600', opacity: '0.6', marginBottom: '4px' }}>Avg. ROI</h3>
         <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px' }}>
-          {campaignsLoading ? '…' : '4.2x Yield'}
+          {campaignsLoading ? '...' : '4.2x Yield'}
         </p>
       </div>
     </div>
   );
 
-  /* ── Render content ───────────────────────────────────────────────────── */
   const renderContent = () => {
-    /* Loading state */
     if (campaignsLoading && !campaigns?.length) {
       return (
         <div style={styles.loadingGrid}>
@@ -371,7 +388,6 @@ const SponsoredPosts = () => {
       );
     }
 
-    /* Error state */
     if (fetchError && !campaigns?.length) {
       return (
         <div style={styles.errorState}>
@@ -388,7 +404,6 @@ const SponsoredPosts = () => {
       );
     }
 
-    /* Empty state */
     if (!campaigns?.length) {
       return (
         <div style={styles.emptyState}>
@@ -402,7 +417,6 @@ const SponsoredPosts = () => {
       );
     }
 
-    /* Normal content */
     return (
       <div style={styles.viewGrid}>
         <div style={styles.sectionColumn}>
@@ -410,8 +424,8 @@ const SponsoredPosts = () => {
             <h2 style={styles.listHeaderH2}>Active Campaigns</h2>
           </div>
           <div style={styles.chartContainer}>
-            {chartBars.map((bar, i) => (
-              <div key={i} style={{ ...styles.chartBar, height: bar.height }} />
+            {chartBars.map((bar, index) => (
+              <div key={index} style={{ ...styles.chartBar, height: bar.height }} />
             ))}
           </div>
           <CampaignTable campaigns={campaigns} />

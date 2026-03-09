@@ -1,12 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
 import { usePaymentStore } from '../store/paymentStore';
-import { useToast } from '../contexts/ToastContext';
 import { getApiErrorMessage, paymentsService } from '../services/api';
+import { moveCandidateSchema } from '../utils/schemas';
 
-/* ── Styles (content-level only — layout chrome lives in DashboardLayout) ── */
 const styles = {
   analyticsStrip: {
     display: 'flex',
@@ -204,7 +203,39 @@ const styles = {
   },
 };
 
-/* ── Sub-components ─────────────────────────────────────────────────────── */
+const getStageTitle = (stage = {}) => stage.name || stage.label || stage.id || 'Stage';
+
+const getCandidateName = (candidate = {}) => (
+  candidate.name
+  || candidate.display_name
+  || candidate.user_name
+  || candidate.candidate_name
+  || candidate.external_name
+  || candidate.display_email
+  || candidate.external_email
+  || 'Unknown'
+);
+
+const getCandidateScore = (candidate = {}) => {
+  if (candidate.score_display) {
+    return candidate.score_display;
+  }
+  if (candidate.match_score !== undefined && candidate.match_score !== null) {
+    return `${candidate.match_score}%`;
+  }
+  if (candidate.rating !== undefined && candidate.rating !== null) {
+    return `${candidate.rating}/5`;
+  }
+  return '�';
+};
+
+const getCandidateBadge = (candidate = {}) => (
+  candidate.badge
+  || candidate.status
+  || candidate.source_label
+  || candidate.source
+  || ''
+);
 
 const CandidateCard = ({ name, score, role, badge, badgeDark, highlighted }) => {
   const [hovered, setHovered] = useState(false);
@@ -235,28 +266,26 @@ const PipelineColumn = ({ title, count, cards, isLast }) => (
       <span style={styles.columnCount}>{count}</span>
     </div>
     <div style={styles.cardsList}>
-      {cards.map((card, idx) => (
-        <CandidateCard key={card.id || idx} {...card} />
+      {cards.map((card, index) => (
+        <CandidateCard key={card.id || index} {...card} />
       ))}
     </div>
   </div>
 );
 
-/* ── Loading skeleton ───────────────────────────────────────────────────── */
-
 const PipelineSkeleton = () => (
   <>
     <div style={styles.analyticsStrip}>
-      {[0, 1, 2, 3].map(i => (
-        <div key={i} style={i < 3 ? styles.analyticsItem : styles.analyticsItemLast}>
+      {[0, 1, 2, 3].map((index) => (
+        <div key={index} style={index < 3 ? styles.analyticsItem : styles.analyticsItemLast}>
           <Skeleton width="60%" height={10} style={{ marginBottom: 6 }} />
           <Skeleton width="80%" height={16} />
         </div>
       ))}
     </div>
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-      {[0, 1, 2, 3, 4].map(i => (
-        <div key={i} style={{ ...styles.pipelineColumn, padding: '16px' }}>
+      {[0, 1, 2, 3, 4].map((index) => (
+        <div key={index} style={{ ...styles.pipelineColumn, padding: '16px' }}>
           <Skeleton width="50%" height={20} style={{ marginBottom: 16 }} />
           <Skeleton height={80} style={{ marginBottom: 12 }} />
           <Skeleton height={80} style={{ marginBottom: 12 }} />
@@ -265,8 +294,6 @@ const PipelineSkeleton = () => (
     </div>
   </>
 );
-
-/* ── Main component ─────────────────────────────────────────────────────── */
 
 const CRMPipeline = () => {
   usePageTitle('CRM Pipeline', 'Manage your talent pipeline and track candidates.');
@@ -282,15 +309,14 @@ const CRMPipeline = () => {
     fetchCandidates,
   } = usePaymentStore();
 
-  const { addToast } = useToast();
   const [error, setError] = useState(null);
+  const [moveError, setMoveError] = useState('');
+  const [moveSubmitting, setMoveSubmitting] = useState(false);
 
-  /* Fetch pipelines on mount */
   useEffect(() => {
-    fetchPipelines().catch(err => setError(getApiErrorMessage(err)));
+    fetchPipelines().catch((fetchError) => setError(getApiErrorMessage(fetchError)));
   }, [fetchPipelines]);
 
-  /* Auto-select first pipeline; fetch candidates when active pipeline changes */
   useEffect(() => {
     if (!activePipeline && pipelines.length > 0) {
       setActivePipeline(pipelines[0]);
@@ -299,74 +325,42 @@ const CRMPipeline = () => {
 
   useEffect(() => {
     if (activePipeline?.id) {
-      fetchCandidates(activePipeline.id).catch(err =>
-        setError(getApiErrorMessage(err)),
-      );
+      fetchCandidates(activePipeline.id).catch((fetchError) => setError(getApiErrorMessage(fetchError)));
     }
   }, [activePipeline, fetchCandidates]);
 
-  /* Optimistic card move */
-  const { moveCandidateSchema } = require('../utils/schemas');
-  const [moveCandidateId, setMoveCandidateId] = useState('');
-  const [moveStageId, setMoveStageId] = useState('');
-  const [moveError, setMoveError] = useState('');
-  const [moveSubmitting, setMoveSubmitting] = useState(false);
   const moveCard = useCallback(async (candidateId, newStageId) => {
     setMoveError('');
     setMoveSubmitting(true);
     const previous = candidates;
-    // Validate with Zod
     const result = moveCandidateSchema.safeParse({ candidateId, stageId: newStageId });
+
     if (!result.success) {
       setMoveError(result.error.errors[0]?.message || 'Validation error');
       setMoveSubmitting(false);
       return;
     }
-    // optimistic: update local list so UI feels instant
+
     usePaymentStore.setState({
-      candidates: candidates.map(c =>
-        c.id === candidateId ? { ...c, stage_id: newStageId } : c,
-      ),
+      candidates: candidates.map((candidate) => (
+        candidate.id === candidateId ? { ...candidate, stage_id: newStageId } : candidate
+      )),
     });
+
     try {
       await paymentsService.moveCandidate(candidateId, newStageId);
-      setMoveCandidateId('');
-      setMoveStageId('');
       setMoveSubmitting(false);
-    } catch (err) {
-      // rollback
+    } catch {
       usePaymentStore.setState({ candidates: previous });
       setMoveError('Failed to move candidate. Reverted.');
       setMoveSubmitting(false);
     }
-  }, [candidates, addToast]);
-  // Example move candidate form (for demo, should be placed in UI as needed)
-  /*
-  <form onSubmit={e => { e.preventDefault(); moveCard(moveCandidateId, moveStageId); }} style={{ margin: '16px 0' }}>
-    <input
-      type="text"
-      placeholder="Candidate ID"
-      value={moveCandidateId}
-      onChange={e => setMoveCandidateId(e.target.value)}
-      required
-      style={{ marginRight: '8px' }}
-    />
-    <input
-      type="text"
-      placeholder="Stage ID"
-      value={moveStageId}
-      onChange={e => setMoveStageId(e.target.value)}
-      required
-      style={{ marginRight: '8px' }}
-    />
-    <button type="submit" disabled={moveSubmitting}>
-      {moveSubmitting ? 'Moving...' : 'Move Candidate'}
-    </button>
-    {moveError && <span style={{ color: 'red', marginLeft: '8px' }}>{moveError}</span>}
-  </form>
-  */
+  }, [candidates]);
 
-  /* Derive columns from pipeline stages + candidates */
+  void moveCard;
+  void moveSubmitting;
+  void moveError;
+
   const fallbackColumns = [
     { title: 'Sourced', count: '12', cards: [
       { name: 'Alex Rivera', score: '94%', role: 'Senior Product Designer', badge: 'Portfolio Passed' },
@@ -385,35 +379,34 @@ const CRMPipeline = () => {
     { title: 'Rejected', count: '45', cards: [] },
   ];
 
-  const columns = activePipeline?.stages
-    ? activePipeline.stages.map((stage, idx, arr) => {
-        const stageCards = candidates.filter(c => c.stage_id === stage.id);
+  const columns = activePipeline?.stages?.length
+    ? activePipeline.stages.map((stage, index, list) => {
+        const stageCards = candidates.filter((candidate) => candidate.stage_id === stage.id);
         return {
-          title: stage.name,
+          title: getStageTitle(stage),
           count: String(stageCards.length).padStart(2, '0'),
-          cards: stageCards.map(c => ({
-            id: c.id,
-            name: c.name || c.candidate_name || 'Unknown',
-            score: c.match_score ? `${c.match_score}%` : '—',
-            role: c.role || c.position || '',
-            badge: c.badge || c.status || '',
-            badgeDark: c.badge_dark || false,
-            highlighted: c.highlighted || false,
+          cards: stageCards.map((candidate) => ({
+            id: candidate.id,
+            name: getCandidateName(candidate),
+            score: getCandidateScore(candidate),
+            role: candidate.role || candidate.position || candidate.headline || '',
+            badge: getCandidateBadge(candidate),
+            badgeDark: candidate.badge_dark || false,
+            highlighted: candidate.highlighted || false,
           })),
-          isLast: idx === arr.length - 1,
+          isLast: index === list.length - 1,
         };
       })
     : fallbackColumns;
 
   const isLoading = pipelinesLoading || candidatesLoading;
 
-  /* Header right content */
   const headerRight = (
     <div style={{ display: 'flex', gap: '30px', textAlign: 'right' }}>
       <div>
         <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '12px', textTransform: 'uppercase' }}>Open Positions</h3>
         <p style={{ fontSize: '11px', opacity: 0.7 }}>
-          {pipelines.length ? `${pipelines.length} Active Leads` : '—'}
+          {pipelines.length ? `${pipelines.length} Active Leads` : '�'}
         </p>
       </div>
       <div>
@@ -430,7 +423,6 @@ const CRMPipeline = () => {
       pageTitleLine2="Pipeline"
       headerRightContent={headerRight}
     >
-      {/* ── Error state ────────────────────────────────────────────── */}
       {error && !isLoading && (
         <div style={styles.errorState}>
           <div style={styles.errorTitle}>Pipeline Unavailable</div>
@@ -438,18 +430,14 @@ const CRMPipeline = () => {
         </div>
       )}
 
-      {/* ── Loading state ──────────────────────────────────────────── */}
       {isLoading && <PipelineSkeleton />}
 
-      {/* ── Empty state ────────────────────────────────────────────── */}
       {!isLoading && !error && pipelines.length === 0 && (
         <div style={styles.emptyState}>No pipelines configured yet.</div>
       )}
 
-      {/* ── Loaded state ───────────────────────────────────────────── */}
       {!isLoading && !error && columns.length > 0 && (
         <>
-          {/* Analytics strip */}
           <div style={styles.analyticsStrip}>
             <div style={styles.analyticsItem}>
               <span style={styles.analyticsLabel}>Conversion Rate</span>
@@ -469,21 +457,19 @@ const CRMPipeline = () => {
             </div>
           </div>
 
-          {/* Bulk action bar */}
           <div style={styles.bulkActionBar}>
             <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>3 Candidates Selected</span>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button style={styles.btnSm} onMouseEnter={e => { e.currentTarget.style.background = 'var(--text-white)'; e.currentTarget.style.color = 'var(--bg-dark)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-white)'; }}>Move Stage</button>
-              <button style={styles.btnSm} onMouseEnter={e => { e.currentTarget.style.background = 'var(--text-white)'; e.currentTarget.style.color = 'var(--bg-dark)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-white)'; }}>Bulk Email</button>
-              <button style={styles.btnSmLight} onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-dark)'; e.currentTarget.style.color = 'var(--text-white)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-beige)'; e.currentTarget.style.color = 'var(--text-black)'; }}>Archive</button>
+              <button style={styles.btnSm}>Move Stage</button>
+              <button style={styles.btnSm}>Bulk Email</button>
+              <button style={styles.btnSmLight}>Archive</button>
             </div>
           </div>
 
-          {/* Pipeline columns */}
           <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
             <div style={styles.pipelineContainer}>
-              {columns.map((col, idx) => (
-                <PipelineColumn key={col.title || idx} title={col.title} count={col.count} cards={col.cards} isLast={col.isLast} />
+              {columns.map((column, index) => (
+                <PipelineColumn key={column.title || index} title={column.title} count={column.count} cards={column.cards} isLast={column.isLast} />
               ))}
             </div>
             <div style={styles.verticalLabel}>CRM WORKFLOW // PIPELINE VIEW</div>

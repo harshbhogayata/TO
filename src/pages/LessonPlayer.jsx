@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import courseService from '../services/courseService';
@@ -7,10 +7,11 @@ import { getApiErrorMessage } from '../services/api';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
 import { sanitizeHTML } from '../utils/sanitize';
+import { getLessonRoute, normaliseCourseDetail } from '../utils/learningContracts';
 import './LessonPlayer.css';
 
 const LessonPlayer = () => {
-    const { courseId, lessonId } = useParams();
+    const { courseId: courseSlug, lessonId: lessonSlug } = useParams();
     const navigate = useNavigate();
     const { activeLesson, setActiveLesson, activeCourse, setActiveCourse } = useCourseStore();
     const [loading, setLoading] = useState(true);
@@ -20,73 +21,135 @@ const LessonPlayer = () => {
     const [saving, setSaving] = useState(false);
     const [completed, setCompleted] = useState(false);
     const videoRef = useRef(null);
+    const lastSavedPositionRef = useRef(0);
 
     usePageTitle('Lesson Player', 'Watch and learn - track your progress as you go.');
 
-    // Fetch course if not loaded yet
     const ensureCourse = useCallback(async () => {
-        if (activeCourse?.id === Number(courseId)) return;
-        try {
-            const { data } = await courseService.getCourse(courseId);
-            setActiveCourse(data);
-        } catch { /* will still load lesson */ }
-    }, [courseId, activeCourse, setActiveCourse]);
+        if (activeCourse?.slug === courseSlug) {
+            return;
+        }
 
-    // Flatten all lessons from modules
+        try {
+            const { data } = await courseService.getCourse(courseSlug);
+            setActiveCourse(normaliseCourseDetail(data));
+        } catch {
+            // lesson fetch will surface the user-visible error if this fails too
+        }
+    }, [courseSlug, activeCourse, setActiveCourse]);
+
     useEffect(() => {
-        if (!activeCourse?.modules) return;
-        const flat = activeCourse.modules.flatMap((mod) =>
-            (mod.lessons || []).map((l) => ({ ...l, moduleName: mod.title }))
+        if (!activeCourse?.modules) {
+            return;
+        }
+
+        const flatLessons = activeCourse.modules.flatMap((module) =>
+            (module.lessons || []).map((lesson) => ({ ...lesson, moduleName: module.title })),
         );
-        setSidebarLessons(flat);
+        setSidebarLessons(flatLessons);
     }, [activeCourse]);
 
     const fetchLesson = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const { data } = await courseService.getLesson(courseId, lessonId);
+            const { data } = await courseService.getLesson(courseSlug, lessonSlug);
+            const savedPosition = Number(data.progress?.video_position_seconds ?? 0);
+            const duration = Number(data.video_duration_seconds ?? 0);
             setActiveLesson(data);
-            setCompleted(data.is_completed || false);
+            setCompleted(Boolean(data.is_completed));
+            setProgressPct(data.is_completed ? 100 : duration > 0 ? Math.round((savedPosition / duration) * 100) : Number(data.progress?.progress_pct ?? 0));
+            lastSavedPositionRef.current = savedPosition;
         } catch (err) {
             setError(getApiErrorMessage(err, 'Failed to load lesson.'));
         } finally {
             setLoading(false);
         }
-    }, [courseId, lessonId, setActiveLesson]);
+    }, [courseSlug, lessonSlug, setActiveLesson]);
 
     useEffect(() => {
         ensureCourse();
         fetchLesson();
     }, [ensureCourse, fetchLesson]);
 
-    // Auto-save progress on video time update
+    useEffect(() => {
+        if (!videoRef.current || !activeLesson?.video_duration_seconds) {
+            return undefined;
+        }
+
+        const element = videoRef.current;
+        const savedPosition = Number(activeLesson.progress?.video_position_seconds ?? 0);
+
+        const syncPosition = () => {
+            if (savedPosition > 0 && savedPosition < element.duration) {
+                element.currentTime = savedPosition;
+            }
+            if (!completed && element.duration > 0) {
+                setProgressPct(Math.round((savedPosition / element.duration) * 100));
+            }
+        };
+
+        element.addEventListener('loadedmetadata', syncPosition);
+        return () => element.removeEventListener('loadedmetadata', syncPosition);
+    }, [activeLesson, completed]);
+
+    const persistProgress = useCallback(async ({ markComplete = false, force = false } = {}) => {
+        const currentPosition = Math.round(videoRef.current?.currentTime ?? activeLesson?.progress?.video_position_seconds ?? 0);
+        const previousPosition = lastSavedPositionRef.current;
+        const additionalTime = Math.max(currentPosition - previousPosition, 0);
+
+        if (!markComplete && !force && additionalTime <= 0) {
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const payload = {
+                video_position_seconds: currentPosition,
+            };
+            if (additionalTime > 0) {
+                payload.time_spent_seconds = additionalTime;
+            }
+            if (markComplete) {
+                payload.mark_completed = true;
+            }
+
+            const { data } = await courseService.updateLessonProgress(courseSlug, lessonSlug, payload);
+            lastSavedPositionRef.current = currentPosition;
+            setCompleted(Boolean(markComplete || data?.is_completed));
+            setActiveLesson(activeLesson ? {
+                ...activeLesson,
+                progress: data,
+                is_completed: Boolean(markComplete || data?.is_completed),
+            } : activeLesson);
+        } catch {
+            // keep the player usable if persistence fails
+        } finally {
+            setSaving(false);
+        }
+    }, [activeLesson, courseSlug, lessonSlug, setActiveLesson]);
+
+    useEffect(() => () => {
+        void persistProgress({ force: true });
+    }, [persistProgress]);
+
     const handleTimeUpdate = useCallback(() => {
-        if (!videoRef.current) return;
+        if (!videoRef.current || !videoRef.current.duration) {
+            return;
+        }
         const pct = Math.round((videoRef.current.currentTime / videoRef.current.duration) * 100) || 0;
         setProgressPct(pct);
     }, []);
 
-    const saveProgress = async (markComplete = false) => {
-        setSaving(true);
-        try {
-            await courseService.updateLessonProgress(courseId, lessonId, {
-                progress_pct: markComplete ? 100 : progressPct,
-                completed: markComplete,
-            });
-            if (markComplete) setCompleted(true);
-        } catch { /* silent */ }
-        finally { setSaving(false); }
+    const handleMarkComplete = () => {
+        void persistProgress({ markComplete: true, force: true });
     };
 
-    const handleMarkComplete = () => saveProgress(true);
-
-    // Navigation helpers
-    const currentIdx = sidebarLessons.findIndex((l) => String(l.id) === String(lessonId));
+    const currentIdx = sidebarLessons.findIndex((lesson) => String(lesson.slug || lesson.id) === String(lessonSlug));
     const prevLesson = currentIdx > 0 ? sidebarLessons[currentIdx - 1] : null;
     const nextLesson = currentIdx < sidebarLessons.length - 1 ? sidebarLessons[currentIdx + 1] : null;
 
-    const goToLesson = (lid) => navigate(`/courses/${courseId}/lessons/${lid}`);
+    const goToLesson = (lesson) => navigate(getLessonRoute(activeCourse || { slug: courseSlug }, lesson));
 
     const lesson = activeLesson;
     const lessonHtml = sanitizeHTML(lesson?.text_content || '');
@@ -115,33 +178,31 @@ const LessonPlayer = () => {
             tapeBarProps={{
                 title: 'Lesson Player',
                 status: completed ? 'Completed' : `${progressPct}% watched`,
-                info: `Course #${courseId}`,
+                info: activeCourse?.slug ? `Course: ${activeCourse.slug}` : `Course: ${courseSlug}`,
             }}
             pageTitleLine1="Lesson"
             pageTitleLine2="Player"
         >
             <div className="lp-layout">
-                {/* Sidebar: lesson list */}
                 <aside className="lp-sidebar">
                     <h4 className="lp-sidebar__heading">Lessons</h4>
                     <ul className="lp-sidebar__list">
-                        {sidebarLessons.map((l, i) => (
+                        {sidebarLessons.map((lessonItem, index) => (
                             <li
-                                key={l.id}
-                                className={`lp-sidebar__item ${String(l.id) === String(lessonId) ? 'active' : ''}`}
-                                onClick={() => goToLesson(l.id)}
+                                key={lessonItem.slug || lessonItem.id}
+                                className={`lp-sidebar__item ${String(lessonItem.slug || lessonItem.id) === String(lessonSlug) ? 'active' : ''}`}
+                                onClick={() => goToLesson(lessonItem)}
                             >
-                                <span className="lp-sidebar__num">{String(i + 1).padStart(2, '0')}</span>
+                                <span className="lp-sidebar__num">{String(index + 1).padStart(2, '0')}</span>
                                 <div className="lp-sidebar__meta">
-                                    <span className="lp-sidebar__title">{l.title}</span>
-                                    <span className="lp-sidebar__module">{l.moduleName}</span>
+                                    <span className="lp-sidebar__title">{lessonItem.title}</span>
+                                    <span className="lp-sidebar__module">{lessonItem.moduleName}</span>
                                 </div>
                             </li>
                         ))}
                     </ul>
                 </aside>
 
-                {/* Main player area */}
                 <div className="lp-main">
                     <div className="lp-player-wrap">
                         {lesson?.content_type === 'video' || lesson?.video_url ? (
@@ -151,7 +212,8 @@ const LessonPlayer = () => {
                                 src={lesson?.video_url}
                                 controls
                                 onTimeUpdate={handleTimeUpdate}
-                                onEnded={() => saveProgress(true)}
+                                onPause={() => void persistProgress({ force: true })}
+                                onEnded={() => void persistProgress({ markComplete: true, force: true })}
                             />
                         ) : (
                             <div className="lp-content-block">
@@ -160,7 +222,6 @@ const LessonPlayer = () => {
                         )}
                     </div>
 
-                    {/* Progress bar */}
                     <div className="lp-progress-strip">
                         <div className="lp-progress-bar">
                             <div className="lp-progress-bar__fill" style={{ width: `${progressPct}%` }} />
@@ -168,16 +229,14 @@ const LessonPlayer = () => {
                         <span className="lp-progress-label">{progressPct}%</span>
                     </div>
 
-                    {/* Lesson info */}
                     <div className="lp-lesson-info">
                         <h2 className="lp-lesson-title">{lesson?.title}</h2>
                         <p className="lp-lesson-desc">{lesson?.description}</p>
                     </div>
 
-                    {/* Actions */}
                     <div className="lp-actions">
                         {prevLesson && (
-                            <button className="lp-nav-btn" onClick={() => goToLesson(prevLesson.id)}>
+                            <button className="lp-nav-btn" onClick={() => goToLesson(prevLesson)}>
                                 Previous
                             </button>
                         )}
@@ -188,21 +247,20 @@ const LessonPlayer = () => {
                         )}
                         {completed && <span className="lp-completed-badge">Completed</span>}
                         {nextLesson && (
-                            <button className="lp-nav-btn" onClick={() => goToLesson(nextLesson.id)}>
+                            <button className="lp-nav-btn" onClick={() => goToLesson(nextLesson)}>
                                 Next
                             </button>
                         )}
                     </div>
 
-                    {/* Attachments / Resources */}
                     {lesson?.attachments && lesson.attachments.length > 0 && (
                         <section className="lp-resources">
                             <h4>Resources</h4>
                             <ul>
-                                {lesson.attachments.map((att, i) => (
-                                    <li key={i}>
-                                        <a href={att.url || att.file} target="_blank" rel="noreferrer">
-                                            {att.title || att.name || `Resource ${i + 1}`}
+                                {lesson.attachments.map((attachment, index) => (
+                                    <li key={attachment.id || index}>
+                                        <a href={attachment.file_url || attachment.url || attachment.file} target="_blank" rel="noreferrer">
+                                            {attachment.title || attachment.name || `Resource ${index + 1}`}
                                         </a>
                                     </li>
                                 ))}

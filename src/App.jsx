@@ -8,7 +8,9 @@ import { ToastProvider, useToast } from './contexts/ToastContext';
 const PageLoader = () => (
     <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', width: '100vw',
+        width: '100%',
+        minHeight: '100vh',
+        minHeight: '100dvh',
         background: 'var(--bg-cream, #f5f0eb)', color: 'var(--text-black, #1a1a1a)',
         fontFamily: 'var(--font-display, "Anton", sans-serif)',
         fontSize: 'clamp(14px, 3vw, 18px)', letterSpacing: '2px', textTransform: 'uppercase',

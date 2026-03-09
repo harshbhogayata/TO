@@ -5,7 +5,7 @@ Webhook URL validation for the developer platform.
 Enforces denylist rules that prevent webhook endpoints from targeting
 internal infrastructure, cloud metadata endpoints, or localhost.
 
-Security rationale (OWASP A10 — SSRF):
+Security rationale (OWASP A10 - SSRF):
     Without URL validation, a malicious developer could register a webhook
     pointing at 169.254.169.254 (cloud metadata) or internal services,
     exfiltrating secrets or causing internal requests.
@@ -19,7 +19,6 @@ Denylist approach:
 """
 import ipaddress
 import logging
-import re
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -29,34 +28,33 @@ logger = logging.getLogger(__name__)
 # Private/reserved IP ranges that MUST NOT be targeted by webhooks
 _DENIED_NETWORKS = [
     ipaddress.ip_network('127.0.0.0/8'),       # Loopback
-    ipaddress.ip_network('10.0.0.0/8'),         # Private Class A
-    ipaddress.ip_network('172.16.0.0/12'),      # Private Class B
-    ipaddress.ip_network('192.168.0.0/16'),     # Private Class C
-    ipaddress.ip_network('169.254.0.0/16'),     # Link-local (includes cloud metadata)
-    ipaddress.ip_network('0.0.0.0/8'),          # "This" network
-    ipaddress.ip_network('100.64.0.0/10'),      # Shared address space (CGN)
-    ipaddress.ip_network('198.18.0.0/15'),      # Benchmarking
-    ipaddress.ip_network('::1/128'),            # IPv6 loopback
-    ipaddress.ip_network('fc00::/7'),           # IPv6 unique local
-    ipaddress.ip_network('fe80::/10'),          # IPv6 link-local
+    ipaddress.ip_network('10.0.0.0/8'),        # Private Class A
+    ipaddress.ip_network('172.16.0.0/12'),     # Private Class B
+    ipaddress.ip_network('192.168.0.0/16'),    # Private Class C
+    ipaddress.ip_network('169.254.0.0/16'),    # Link-local (includes cloud metadata)
+    ipaddress.ip_network('0.0.0.0/8'),         # "This" network
+    ipaddress.ip_network('100.64.0.0/10'),     # Shared address space (CGN)
+    ipaddress.ip_network('198.18.0.0/15'),     # Benchmarking
+    ipaddress.ip_network('::1/128'),           # IPv6 loopback
+    ipaddress.ip_network('fc00::/7'),          # IPv6 unique local
+    ipaddress.ip_network('fe80::/10'),         # IPv6 link-local
 ]
 
 # Hostnames that are always denied regardless of IP resolution
 _DENIED_HOSTNAMES = {
     'localhost',
     'localhost.localdomain',
-    'metadata.google.internal',           # GCP metadata
+    'metadata.google.internal',
     'metadata.internal',
-    'instance-data',                      # AWS alternative
+    'instance-data',
 }
 
-# Cloud metadata IP — explicit check beyond CIDR ranges
+# Cloud metadata IP - explicit check beyond CIDR ranges
 _CLOUD_METADATA_IPS = {'169.254.169.254', '169.254.170.2'}
 
 
 class WebhookURLValidationError(ValueError):
     """Raised when a webhook URL fails validation."""
-    pass
 
 
 def validate_webhook_url(url: str) -> str:
@@ -77,19 +75,16 @@ def validate_webhook_url(url: str) -> str:
 
     url = url.strip()
 
-    # Parse URL
     try:
         parsed = urlparse(url)
-    except Exception:
-        raise WebhookURLValidationError('Invalid URL format.')
+    except Exception as exc:
+        raise WebhookURLValidationError('Invalid URL format.') from exc
 
-    # Scheme validation
     if parsed.scheme not in ('http', 'https'):
         raise WebhookURLValidationError(
             f'Unsupported scheme: {parsed.scheme}. Only HTTP/HTTPS allowed.'
         )
 
-    # Enforce HTTPS in production
     if not settings.DEBUG and parsed.scheme != 'https':
         raise WebhookURLValidationError(
             'Webhook URLs must use HTTPS in production.'
@@ -99,35 +94,32 @@ def validate_webhook_url(url: str) -> str:
     if not hostname:
         raise WebhookURLValidationError('URL must include a hostname.')
 
-    # Check denied hostnames
     if hostname in _DENIED_HOSTNAMES:
         raise WebhookURLValidationError(
             f'Webhook URL hostname "{hostname}" is not allowed '
             f'(internal/localhost targets are prohibited).'
         )
 
-    # Check if hostname is an IP address
     try:
         ip = ipaddress.ip_address(hostname)
+    except ValueError:
+        ip = None
 
-        # Check cloud metadata IPs
+    if ip is not None:
         if hostname in _CLOUD_METADATA_IPS:
             raise WebhookURLValidationError(
                 'Webhook URL must not target cloud metadata endpoints.'
             )
 
-        # Check denied CIDR ranges
         for network in _DENIED_NETWORKS:
+            if ip.version != network.version:
+                continue
             if ip in network:
                 raise WebhookURLValidationError(
                     f'Webhook URL must not target private/reserved IP ranges '
                     f'({network}).'
                 )
-    except ValueError:
-        # hostname is not an IP address — that's fine, it's a domain name
-        pass
 
-    # Port validation — block common internal service ports
     port = parsed.port
     if port and port in (6379, 5432, 3306, 27017, 9200, 11211):
         raise WebhookURLValidationError(

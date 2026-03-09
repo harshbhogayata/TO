@@ -111,6 +111,12 @@ def set_cached_trending(entity_type, data, ttl=TRENDING_TTL):
     cache.set(key, data, ttl)
 
 
+def invalidate_trending_cache(entity_type):
+    """Invalidate cached trending queries for an entity type and the global feed."""
+    cache.delete(f'search:trending:{entity_type}')
+    cache.delete('search:trending:all')
+
+
 # ─── Bulk invalidation ───────────────────────────────────────────────────────
 
 def invalidate_entity_cache(entity_type):
@@ -120,5 +126,4 @@ def invalidate_entity_cache(entity_type):
     """
     bump_entity_version(entity_type)
     # Also clear trending since results changed
-    cache.delete(f'search:trending:{entity_type}')
-    cache.delete('search:trending:all')
+    invalidate_trending_cache(entity_type)

@@ -1,47 +1,49 @@
-/**
+﻿/**
  * src/services/assessmentService.js
  * API service for the Assessment Engine module.
  * Maps to backend endpoints under /api/v1/assessments/
  */
 import api from './api';
 
+const resolveAttemptId = (primary, secondary) => secondary ?? primary;
+const resolvePayload = (secondary, tertiary) => tertiary ?? secondary ?? {};
+
 const assessmentService = {
-    // ── Catalog & Detail ─────────────────────────────────────────────────────
     listAssessments: (params) => api.get('/assessments/', { params }),
     getAssessment: (id) => api.get(`/assessments/${id}/`),
 
-    // ── Attempts ─────────────────────────────────────────────────────────────
     startAttempt: (assessmentId) =>
         api.post(`/assessments/${assessmentId}/start/`),
-    getAttempt: (attemptId) =>
-        api.get(`/assessments/attempts/${attemptId}/`),
-    submitAnswer: (attemptId, data) =>
-        api.post(`/assessments/attempts/${attemptId}/answer/`, data),
-    finalSubmit: (attemptId) =>
-        api.post(`/assessments/attempts/${attemptId}/submit/`),
+    getAttempt: (assessmentIdOrAttemptId, attemptId) =>
+        api.get(`/assessments/attempts/${resolveAttemptId(assessmentIdOrAttemptId, attemptId)}/`),
+    submitAnswer: (assessmentIdOrAttemptId, attemptIdOrData, maybeData) => {
+        const attemptId = resolveAttemptId(assessmentIdOrAttemptId, maybeData ? attemptIdOrData : undefined);
+        const data = resolvePayload(attemptIdOrData, maybeData);
+        return api.post(`/assessments/attempts/${attemptId}/answer/`, data);
+    },
+    finalSubmit: (assessmentIdOrAttemptId, attemptId) =>
+        api.post(`/assessments/attempts/${resolveAttemptId(assessmentIdOrAttemptId, attemptId)}/submit/`),
 
-    // ── Results ──────────────────────────────────────────────────────────────
-    getResult: (attemptId) =>
-        api.get(`/assessments/attempts/${attemptId}/result/`),
+    getResult: (assessmentIdOrAttemptId, attemptId) =>
+        api.get(`/assessments/attempts/${resolveAttemptId(assessmentIdOrAttemptId, attemptId)}/result/`),
     myResults: (params) =>
         api.get('/assessments/my-results/', { params }),
 
-    // ── Invitations ──────────────────────────────────────────────────────────
     myInvitations: () => api.get('/assessments/invitations/'),
     acceptInvitation: (token) =>
         api.post(`/assessments/invitations/${token}/accept/`),
     declineInvitation: (token) =>
         api.post(`/assessments/invitations/${token}/decline/`),
 
-    // ── Skill Badges ─────────────────────────────────────────────────────────
     myBadges: (params) => api.get('/assessments/badges/', { params }),
-    verifyBadge: (uuid) => api.get(`/assessments/badges/${uuid}/verify/`),
+    verifyBadge: (badgeId) => api.get(`/assessments/badges/verify/${badgeId}/`),
 
-    // ── Proctor Events ───────────────────────────────────────────────────────
-    reportProctorEvent: (attemptId, data) =>
-        api.post(`/assessments/attempts/${attemptId}/proctor-event/`, data),
+    reportProctorEvent: (assessmentIdOrAttemptId, attemptIdOrData, maybeData) => {
+        const attemptId = resolveAttemptId(assessmentIdOrAttemptId, maybeData ? attemptIdOrData : undefined);
+        const data = resolvePayload(attemptIdOrData, maybeData);
+        return api.post(`/assessments/attempts/${attemptId}/proctor-event/`, data);
+    },
 
-    // ── Company Dashboard ────────────────────────────────────────────────────
     companyAssessments: (params) =>
         api.get('/assessments/company/', { params }),
     createAssessment: (data) =>
@@ -58,7 +60,6 @@ const assessmentService = {
             responseType: 'blob',
         }),
 
-    // ── Question Bank (company) ──────────────────────────────────────────────
     listQuestionBanks: (params) =>
         api.get('/assessments/question-banks/', { params }),
     createQuestionBank: (data) =>
@@ -70,7 +71,6 @@ const assessmentService = {
     deleteQuestionBank: (id) =>
         api.delete(`/assessments/question-banks/${id}/`),
 
-    // ── Questions within a bank ──────────────────────────────────────────────
     listQuestions: (bankId, params) =>
         api.get(`/assessments/question-banks/${bankId}/questions/`, { params }),
     createQuestion: (bankId, data) =>
@@ -86,7 +86,6 @@ const assessmentService = {
     bulkApproveQuestions: (questionIds) =>
         api.post('/assessments/questions/bulk-approve/', { question_ids: questionIds }),
 
-    // ── Tags ─────────────────────────────────────────────────────────────────
     listTags: (params) =>
         api.get('/assessments/tags/', { params }),
 };

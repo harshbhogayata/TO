@@ -1,4 +1,4 @@
-﻿"""Runtime smoke checks for launch-critical backend imports."""
+"""Runtime smoke checks for launch-critical backend imports."""
 
 from __future__ import annotations
 
@@ -18,6 +18,10 @@ os.environ.setdefault('SENTRY_DSN', '')
 os.environ.setdefault('SECRET_KEY', 'runtime-smoke-secret')
 os.environ.setdefault('DEBUG', 'True')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'talentorbit.test_settings')
+
+import django
+
+django.setup()
 
 REQUIRED_MODULES = [
     'django',

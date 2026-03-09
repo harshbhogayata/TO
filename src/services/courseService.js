@@ -1,46 +1,46 @@
-/**
+﻿/**
  * src/services/courseService.js
  * API service for the Courses / LMS module.
  * Maps to backend endpoints under /api/v1/courses/
  */
 import api from './api';
 
+const resolveCourseId = (course) =>
+    course?.course_id
+    ?? course?.id
+    ?? course?.course
+    ?? course;
+
 const courseService = {
-    // ── Catalog ──────────────────────────────────────────────────────────────
     listCourses: (params) => api.get('/courses/', { params }),
-    getCourse: (id) => api.get(`/courses/${id}/`),
+    getCourse: (slug) => api.get(`/courses/${slug}/`),
 
-    // ── Categories & Instructors ─────────────────────────────────────────────
     listCategories: () => api.get('/courses/categories/'),
-    getCategory: (id) => api.get(`/courses/categories/${id}/`),
+    getCategory: (slug) => api.get(`/courses/categories/${slug}/`),
     listInstructors: () => api.get('/courses/instructors/'),
-    getInstructor: (id) => api.get(`/courses/instructors/${id}/`),
+    getInstructor: (slug) => api.get(`/courses/instructors/${slug}/`),
 
-    // ── Enrollments ──────────────────────────────────────────────────────────
     listEnrollments: (params) => api.get('/courses/enrollments/', { params }),
-    createEnrollment: (courseId) => api.post('/courses/enrollments/create/', { course: courseId }),
+    createEnrollment: (course) => api.post('/courses/enrollments/create/', { course_id: resolveCourseId(course) }),
     getEnrollment: (id) => api.get(`/courses/enrollments/${id}/`),
     dropEnrollment: (id) => api.post(`/courses/enrollments/${id}/drop/`),
 
-    // ── Lessons & Progress ───────────────────────────────────────────────────
-    getLesson: (courseId, lessonId) =>
-        api.get(`/courses/${courseId}/lessons/${lessonId}/`),
-    updateLessonProgress: (courseId, lessonId, data) =>
-        api.post(`/courses/${courseId}/lessons/${lessonId}/progress/`, data),
-    getCourseProgress: (courseId) =>
-        api.get(`/courses/${courseId}/progress/`),
+    getLesson: (courseSlug, lessonSlug) =>
+        api.get(`/courses/${courseSlug}/lessons/${lessonSlug}/`),
+    updateLessonProgress: (courseSlug, lessonSlug, data) =>
+        api.post(`/courses/${courseSlug}/lessons/${lessonSlug}/progress/`, data),
+    getCourseProgress: (courseSlug) =>
+        api.get(`/courses/${courseSlug}/progress/`),
 
-    // ── Reviews ──────────────────────────────────────────────────────────────
-    listReviews: (courseId, params) =>
-        api.get(`/courses/${courseId}/reviews/`, { params }),
-    createReview: (courseId, data) =>
-        api.post(`/courses/${courseId}/reviews/create/`, data),
-    voteReview: (reviewId, vote) =>
-        api.post(`/courses/reviews/${reviewId}/vote/`, { vote }),
+    listReviews: (courseSlug, params) =>
+        api.get(`/courses/${courseSlug}/reviews/`, { params }),
+    createReview: (courseSlug, data) =>
+        api.post(`/courses/${courseSlug}/reviews/create/`, data),
+    voteReview: (reviewId, helpful) =>
+        api.post(`/courses/reviews/${reviewId}/vote/`, { helpful }),
 
-    // ── Certificates ─────────────────────────────────────────────────────────
     myCertificates: () => api.get('/courses/certificates/'),
-    verifyCertificate: (uuid) => api.get(`/courses/certificates/${uuid}/verify/`),
+    verifyCertificate: (certificateId) => api.get(`/courses/certificates/verify/${certificateId}/`),
 };
 
 export default courseService;

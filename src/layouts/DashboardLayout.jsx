@@ -21,7 +21,7 @@ const DashboardLayout = ({
                                 {pageTitleLine1}<br />{pageTitleLine2}
                             </h1>
                             {headerRightContent && (
-                                <div>
+                                <div className="content-header__aside">
                                     {headerRightContent}
                                 </div>
                             )}

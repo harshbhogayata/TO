@@ -35,7 +35,7 @@ class ErrorBoundary extends Component {
             return (
                 <div style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    justifyContent: 'center', height: '100vh', padding: '48px',
+                    justifyContent: 'center', width: '100%', minHeight: '100vh', minHeight: '100dvh', padding: '48px',
                     fontFamily: 'var(--font-sans, monospace)', background: '#f9f9f9'
                 }}>
                     <div style={{ maxWidth: '560px', width: '100%', border: '1px solid #000', padding: '48px' }}>

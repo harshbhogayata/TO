@@ -52,7 +52,9 @@ const VerifyEmail = () => {
     return (
         <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            height: '100vh', width: '100vw',
+            width: '100%',
+            minHeight: '100vh',
+            minHeight: '100dvh',
             background: 'var(--bg-cream, #f5f0eb)', color: 'var(--text-black, #1a1a1a)',
             fontFamily: 'var(--font-sans, monospace)',
         }}>

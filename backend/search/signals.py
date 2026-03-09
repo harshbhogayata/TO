@@ -7,22 +7,34 @@ Updates the stored SearchVectorField and bumps the Redis cache version.
 """
 import logging
 
-from django.db.models.signals import post_save, post_delete
+from django.db import connections
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from accounts.models import CompanyProfile, TalentProfile
 from jobs.models import JobPost
-from accounts.models import TalentProfile, CompanyProfile
-from search.cache import invalidate_entity_cache
+
+from search.cache import invalidate_entity_cache, invalidate_trending_cache
+from search.models import SearchAnalytics
 
 logger = logging.getLogger(__name__)
 
 
+def _supports_postgres_search(using: str | None) -> bool:
+    alias = using or 'default'
+    return connections[alias].vendor == 'postgresql'
+
+
 @receiver(post_save, sender=JobPost)
-def update_job_search_vector(sender, instance, **kwargs):
+def update_job_search_vector(sender, instance, using=None, **kwargs):
     """
     Recompute the search_vector for a JobPost after save.
     Uses .update() to avoid triggering another post_save (infinite loop).
     """
+    if not _supports_postgres_search(using):
+        invalidate_entity_cache('jobs')
+        return
+
     from django.contrib.postgres.search import SearchVector
     from django.db.models import Value
 
@@ -33,7 +45,6 @@ def update_job_search_vector(sender, instance, **kwargs):
         except Exception:
             company_name = instance.company.full_name or ''
 
-        # Update via queryset to avoid re-triggering signal
         JobPost.objects.filter(pk=instance.pk).update(
             search_vector=(
                 SearchVector('title', weight='A', config='english')
@@ -57,8 +68,12 @@ def invalidate_job_cache_on_delete(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=TalentProfile)
-def update_talent_search_vector(sender, instance, **kwargs):
+def update_talent_search_vector(sender, instance, using=None, **kwargs):
     """Recompute the search_vector for a TalentProfile after save."""
+    if not _supports_postgres_search(using):
+        invalidate_entity_cache('talent')
+        return
+
     from django.contrib.postgres.search import SearchVector
     from django.db.models import Value
 
@@ -86,8 +101,12 @@ def invalidate_talent_cache_on_delete(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=CompanyProfile)
-def update_company_search_vector(sender, instance, **kwargs):
+def update_company_search_vector(sender, instance, using=None, **kwargs):
     """Recompute the search_vector for a CompanyProfile after save."""
+    if not _supports_postgres_search(using):
+        invalidate_entity_cache('companies')
+        return
+
     from django.contrib.postgres.search import SearchVector
 
     try:
@@ -108,3 +127,15 @@ def update_company_search_vector(sender, instance, **kwargs):
 def invalidate_company_cache_on_delete(sender, instance, **kwargs):
     """Invalidate company search cache on profile deletion."""
     invalidate_entity_cache('companies')
+
+@receiver(post_save, sender=SearchAnalytics)
+def invalidate_trending_on_search_analytics_save(sender, instance, **kwargs):
+    """Keep trending results fresh when analytics rows are written."""
+    invalidate_trending_cache(instance.entity_type)
+
+
+@receiver(post_delete, sender=SearchAnalytics)
+def invalidate_trending_on_search_analytics_delete(sender, instance, **kwargs):
+    """Keep trending results fresh when analytics rows are removed."""
+    invalidate_trending_cache(instance.entity_type)
+

@@ -370,6 +370,9 @@ class CourseEnrollmentSerializer(serializers.ModelSerializer):
     last_lesson_title = serializers.CharField(
         source='last_lesson.title', read_only=True, default=None,
     )
+    last_lesson_slug = serializers.CharField(
+        source='last_lesson.slug', read_only=True, default=None,
+    )
     has_certificate = serializers.SerializerMethodField()
 
     class Meta:
@@ -378,7 +381,7 @@ class CourseEnrollmentSerializer(serializers.ModelSerializer):
             'id', 'user', 'course', 'course_title', 'course_slug',
             'status', 'progress_percentage', 'lessons_completed',
             'total_time_spent_seconds', 'last_lesson', 'last_lesson_title',
-            'last_accessed_at', 'enrolled_at', 'completed_at',
+            'last_lesson_slug', 'last_accessed_at', 'enrolled_at', 'completed_at',
             'has_certificate',
         ]
         read_only_fields = [

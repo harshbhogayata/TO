@@ -1,5 +1,5 @@
-﻿"""
-Test settings â€” forces SQLite + disables Sentry for fast local test runs.
+"""
+Test settings - forces SQLite + disables Sentry for fast local test runs.
 Usage: python manage.py test --settings=talentorbit.test_settings
 """
 import os
@@ -28,7 +28,7 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
-# Disable throttling in tests â€” set rates to None or keep compliance rates
+# Disable throttling in tests - set rates to None or keep per-view scopes high enough.
 REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
 REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
     'anon': None,
@@ -50,6 +50,7 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
     'resume_public': '999/minute',
     'ai_resume_authenticated': '999/minute',
     'ai_resume_public': '999/minute',
+    'assessment_invite': '999/minute',
     'developer_key_create': '999/minute',
     'developer_key_rotate': '999/minute',
     'developer_webhook_create': '999/minute',
@@ -68,20 +69,27 @@ CACHES = {
 # In-memory email
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
-# Celery â€” run tasks synchronously in tests (no broker needed)
+# Force local media storage in tests even when R2 env vars exist
+STORAGES['default'] = {
+    'BACKEND': 'django.core.files.storage.FileSystemStorage',
+}
+MEDIA_ROOT = BASE_DIR / 'test-media'
+MEDIA_URL = '/media/'
+
+# Celery - run tasks synchronously in tests (no broker needed)
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_RESULT_BACKEND = 'django-db'
 
-# Channel layer â€” in-memory for tests
+# Channel layer - in-memory for tests
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
+    }
 }
 
 
-# Skip migrations entirely â€” create tables from models so SQLite works
+# Skip migrations entirely - create tables from models so SQLite works
 # (avoids pg_trgm CREATE EXTENSION in search.0002_gin_indexes).
 class _DisableMigrations:
     def __contains__(self, item):
@@ -92,4 +100,3 @@ class _DisableMigrations:
 
 
 MIGRATION_MODULES = _DisableMigrations()
-

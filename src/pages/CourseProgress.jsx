@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import courseService from '../services/courseService';
@@ -6,10 +6,11 @@ import { useCourseStore } from '../store/courseStore';
 import { getApiErrorMessage } from '../services/api';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
+import { getCourseRoute, getLessonRoute, normaliseCourseDetail, normaliseCourseProgress } from '../utils/learningContracts';
 import './CourseProgress.css';
 
 const CourseProgress = () => {
-    const { courseId } = useParams();
+    const { courseId: courseSlug } = useParams();
     const navigate = useNavigate();
     const { activeCourse, setActiveCourse, courseProgress, setCourseProgress } = useCourseStore();
     const [loading, setLoading] = useState(true);
@@ -21,36 +22,39 @@ const CourseProgress = () => {
         setLoading(true);
         setError(null);
         try {
-            const [courseRes, progressRes] = await Promise.all([
-                courseService.getCourse(courseId),
-                courseService.getCourseProgress(courseId),
+            const [courseResponse, progressResponse] = await Promise.all([
+                courseService.getCourse(courseSlug),
+                courseService.getCourseProgress(courseSlug),
             ]);
-            setActiveCourse(courseRes.data);
-            setCourseProgress(progressRes.data);
+            const course = normaliseCourseDetail(courseResponse.data);
+            const progress = normaliseCourseProgress(progressResponse.data, course);
+            setActiveCourse(course);
+            setCourseProgress(progress);
         } catch (err) {
             setError(getApiErrorMessage(err, 'Failed to load progress data.'));
         } finally {
             setLoading(false);
         }
-    }, [courseId, setActiveCourse, setCourseProgress]);
+    }, [courseSlug, setActiveCourse, setCourseProgress]);
 
-    useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const course = activeCourse;
     const progress = courseProgress;
-    const modules = course?.modules || course?.curriculum || [];
-    const overallPct = progress?.overall_progress ?? progress?.progress_pct ?? 0;
+    const modules = progress?.modules || [];
+    const overallPct = progress?.overall_progress ?? 0;
     const completedLessons = progress?.completed_lessons ?? 0;
-    const totalLessons = progress?.total_lessons ?? modules.reduce((s, m) => s + (m.lessons?.length || 0), 0);
-    const lessonStatusMap = progress?.lesson_statuses || {};
+    const totalLessons = progress?.total_lessons ?? 0;
 
     if (loading) {
         return (
             <DashboardLayout pageTitleLine1="Course" pageTitleLine2="Progress">
                 <div className="cp-skeleton">
                     <Skeleton style={{ width: '100%', height: '60px', borderRadius: '8px', marginBottom: '24px' }} />
-                    {Array.from({ length: 4 }).map((_, i) => (
-                        <Skeleton key={i} style={{ width: '100%', height: '44px', marginBottom: '12px', borderRadius: '6px' }} />
+                    {Array.from({ length: 4 }).map((_, index) => (
+                        <Skeleton key={index} style={{ width: '100%', height: '44px', marginBottom: '12px', borderRadius: '6px' }} />
                     ))}
                 </div>
             </DashboardLayout>
@@ -70,7 +74,7 @@ const CourseProgress = () => {
             tapeBarProps={{
                 title: 'Course Progress',
                 status: `${overallPct}% Complete`,
-                info: `Course #${courseId}`,
+                info: course?.slug ? `Course: ${course.slug}` : `Course: ${courseSlug}`,
             }}
             pageTitleLine1="Course"
             pageTitleLine2="Progress"
@@ -84,60 +88,50 @@ const CourseProgress = () => {
             <div className="cp-page">
                 <h2 className="cp-course-title">{course?.title}</h2>
 
-                {/* Overall progress bar */}
                 <div className="cp-overall">
                     <div className="cp-overall__bar">
                         <div className="cp-overall__fill" style={{ width: `${overallPct}%` }} />
                     </div>
-                    <span className="cp-overall__label">{overallPct}% complete — {completedLessons} of {totalLessons} lessons</span>
+                    <span className="cp-overall__label">{overallPct}% complete - {completedLessons} of {totalLessons} lessons</span>
                 </div>
 
-                {/* Module breakdowns */}
                 <div className="cp-modules">
-                    {modules.map((mod, mi) => {
-                        const lessons = mod.lessons || [];
-                        const modCompleted = lessons.filter((l) => lessonStatusMap[l.id]?.completed).length;
-                        const modPct = lessons.length ? Math.round((modCompleted / lessons.length) * 100) : 0;
-
-                        return (
-                            <div key={mod.id || mi} className="cp-module">
-                                <div className="cp-module__header">
-                                    <span className="cp-module__num">{String(mi + 1).padStart(2, '0')}</span>
-                                    <h3 className="cp-module__title">{mod.title}</h3>
-                                    <span className="cp-module__pct">{modPct}%</span>
-                                </div>
-                                <div className="cp-module__bar">
-                                    <div className="cp-module__bar-fill" style={{ width: `${modPct}%` }} />
-                                </div>
-                                <ul className="cp-lesson-list">
-                                    {lessons.map((lesson, li) => {
-                                        const status = lessonStatusMap[lesson.id] || {};
-                                        const isDone = status.completed;
-                                        return (
-                                            <li key={lesson.id || li} className={`cp-lesson ${isDone ? 'done' : ''}`}>
-                                                <span className="cp-lesson__check">{isDone ? '✓' : '○'}</span>
-                                                <Link
-                                                    to={`/courses/${courseId}/lessons/${lesson.id}`}
-                                                    className="cp-lesson__link"
-                                                >
-                                                    {lesson.title}
-                                                </Link>
-                                                {status.progress_pct != null && !isDone && (
-                                                    <span className="cp-lesson__partial">{status.progress_pct}%</span>
-                                                )}
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
+                    {modules.map((module, moduleIndex) => (
+                        <div key={module.id || moduleIndex} className="cp-module">
+                            <div className="cp-module__header">
+                                <span className="cp-module__num">{String(moduleIndex + 1).padStart(2, '0')}</span>
+                                <h3 className="cp-module__title">{module.title}</h3>
+                                <span className="cp-module__pct">{module.percentage}%</span>
                             </div>
-                        );
-                    })}
+                            <div className="cp-module__bar">
+                                <div className="cp-module__bar-fill" style={{ width: `${module.percentage}%` }} />
+                            </div>
+                            <ul className="cp-lesson-list">
+                                {module.lessons.map((lesson, lessonIndex) => {
+                                    const isDone = Boolean(lesson.is_completed);
+                                    return (
+                                        <li key={lesson.id || lessonIndex} className={`cp-lesson ${isDone ? 'done' : ''}`}>
+                                            <span className="cp-lesson__check">{isDone ? 'Done' : 'Open'}</span>
+                                            <Link
+                                                to={getLessonRoute(course || { slug: courseSlug }, lesson)}
+                                                className="cp-lesson__link"
+                                            >
+                                                {lesson.title}
+                                            </Link>
+                                            {lesson.progress?.progress_pct != null && !isDone && (
+                                                <span className="cp-lesson__partial">{lesson.progress.progress_pct}%</span>
+                                            )}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    ))}
                 </div>
 
-                {/* Actions */}
                 <div className="cp-actions">
-                    <button className="cp-back-btn" onClick={() => navigate(`/courses/${courseId}`)}>
-                        ← Back to Course
+                    <button className="cp-back-btn" onClick={() => navigate(getCourseRoute(course || { slug: courseSlug }))}>
+                        Back to Course
                     </button>
                     {overallPct === 100 && (
                         <button className="cp-cert-btn" onClick={() => navigate('/my-learning?tab=certificates')}>

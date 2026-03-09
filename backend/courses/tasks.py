@@ -152,9 +152,9 @@ def generate_certificate(self, enrollment_id: int):
     user = enrollment.user
 
     # Gather instructor names
-    instructor_names = ', '.join(
+    instructor_names = list(
         course.instructors.values_list('display_name', flat=True),
-    ) or 'TalentOrbit Staff'
+    ) or ['TalentOrbit Staff']
 
     # Calculate total hours
     total_seconds = enrollment.total_time_spent_seconds or 0
@@ -165,13 +165,12 @@ def generate_certificate(self, enrollment_id: int):
         holder_name=user.full_name or user.email,
         holder_email=user.email,
         course_title=course.title,
-        course_version=course.version or '1.0',
+        course_version=str(course.version or '1.0'),
         instructor_names=instructor_names,
         completion_date=enrollment.completed_at.date() if enrollment.completed_at else timezone.now().date(),
         total_hours=total_hours,
         skills_earned=course.skills or [],
     )
-    certificate.generate_signature()
     certificate.save()
 
     logger.info(
@@ -310,3 +309,4 @@ def cleanup_stale_enrollments(inactive_days: int = 180):
         logger.info('Marked %d stale enrollments as dropped (inactive > %d days)', count, inactive_days)
     else:
         logger.debug('No stale enrollments found (threshold: %d days)', inactive_days)
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import assessmentService from '../services/assessmentService';
@@ -6,6 +6,7 @@ import { useAssessmentStore } from '../store/assessmentStore';
 import { getApiErrorMessage } from '../services/api';
 import usePageTitle from '../hooks/usePageTitle';
 import Skeleton from '../components/Skeleton';
+import { normaliseAssessmentListItem } from '../utils/learningContracts';
 import './AssessmentCatalog.css';
 
 const difficultyColors = {
@@ -22,19 +23,19 @@ const AssessmentCard = ({ assessment, onView }) => (
                 className="ac-card__difficulty"
                 style={{ backgroundColor: difficultyColors[assessment.difficulty] || '#888' }}
             >
-                {assessment.difficulty || 'Medium'}
+                {assessment.difficulty || 'medium'}
             </span>
-            <span className="ac-card__type">{assessment.assessment_type || 'Skill Test'}</span>
+            <span className="ac-card__type">{assessment.assessment_type || 'skill_test'}</span>
         </div>
         <h3 className="ac-card__title">{assessment.title}</h3>
-        <p className="ac-card__desc">{assessment.description?.slice(0, 120)}{assessment.description?.length > 120 ? '…' : ''}</p>
+        <p className="ac-card__desc">{assessment.description?.slice(0, 120)}{assessment.description?.length > 120 ? '...' : ''}</p>
         <div className="ac-card__meta">
-            <span>⏱ {assessment.time_limit_minutes || assessment.duration || '—'} min</span>
-            <span>❓ {assessment.question_count || assessment.total_questions || '—'} questions</span>
+            <span>Time {assessment.time_limit_minutes || '-'} min</span>
+            <span>{assessment.question_count || '-'} questions</span>
         </div>
         <div className="ac-card__tags">
-            {(assessment.skills || assessment.tags || []).slice(0, 3).map((tag, i) => (
-                <span key={i} className="ac-card__tag">{typeof tag === 'string' ? tag : tag.name}</span>
+            {assessment.skills.slice(0, 3).map((tag) => (
+                <span key={tag} className="ac-card__tag">{tag}</span>
             ))}
         </div>
         <button className="ac-card__btn" onClick={() => onView(assessment.id)}>
@@ -42,6 +43,20 @@ const AssessmentCard = ({ assessment, onView }) => (
         </button>
     </div>
 );
+
+const difficultyOptions = [
+    { value: '2', label: 'Easy' },
+    { value: '3', label: 'Medium' },
+    { value: '4', label: 'Hard' },
+    { value: '5', label: 'Expert' },
+];
+
+const typeOptions = ['skill_test', 'certification', 'practice', 'interview'];
+const sortOptions = [
+    { value: 'newest', label: 'Newest' },
+    { value: 'popular', label: 'Popular' },
+    { value: 'pass_rate', label: 'Pass Rate' },
+];
 
 const AssessmentCatalog = () => {
     const navigate = useNavigate();
@@ -60,12 +75,13 @@ const AssessmentCatalog = () => {
             const params = {};
             if (filters.search) params.search = filters.search;
             if (filters.difficulty) params.difficulty = filters.difficulty;
-            if (filters.type) params.assessment_type = filters.type;
+            if (filters.type) params.type = filters.type;
             if (filters.skill) params.skill = filters.skill;
             if (filters.sort) params.ordering = filters.sort;
             const { data } = await assessmentService.listAssessments(params);
-            setAssessments(data.results || data);
-            setTotalCount(data.count ?? (data.results || data).length);
+            const items = (data.results || data).map(normaliseAssessmentListItem);
+            setAssessments(items);
+            setTotalCount(data.count ?? items.length);
         } catch (err) {
             setAssessmentsError(getApiErrorMessage(err, 'Failed to load assessments.'));
         } finally {
@@ -74,19 +90,11 @@ const AssessmentCatalog = () => {
     }, [filters, setAssessments, setAssessmentsLoading, setAssessmentsError]);
 
     useEffect(() => {
-        const t = setTimeout(fetchAssessments, 300);
-        return () => clearTimeout(t);
+        const timeoutId = setTimeout(fetchAssessments, 300);
+        return () => clearTimeout(timeoutId);
     }, [fetchAssessments]);
 
     const handleView = (id) => navigate(`/assessments/${id}`);
-
-    const difficultyOptions = ['easy', 'medium', 'hard', 'expert'];
-    const typeOptions = ['skill_test', 'certification', 'practice', 'interview'];
-    const sortOptions = [
-        { value: '-created_at', label: 'Newest' },
-        { value: '-popularity', label: 'Popular' },
-        { value: 'difficulty', label: 'Difficulty' },
-    ];
 
     return (
         <DashboardLayout
@@ -110,43 +118,43 @@ const AssessmentCatalog = () => {
                 <aside className="ac-filters-panel">
                     <div className="ac-filter-group">
                         <h4 className="ac-filter-title">Sort By</h4>
-                        {sortOptions.map((opt) => (
-                            <label key={opt.value} className="ac-filter-option">
+                        {sortOptions.map((option) => (
+                            <label key={option.value} className="ac-filter-option">
                                 <input
                                     type="radio"
                                     name="sort"
-                                    checked={filters.sort === opt.value}
-                                    onChange={() => setFilter('sort', opt.value)}
+                                    checked={filters.sort === option.value}
+                                    onChange={() => setFilter('sort', option.value)}
                                 />
-                                {opt.label}
+                                {option.label}
                             </label>
                         ))}
                     </div>
 
                     <div className="ac-filter-group">
                         <h4 className="ac-filter-title">Difficulty</h4>
-                        {difficultyOptions.map((d) => (
-                            <label key={d} className="ac-filter-option">
+                        {difficultyOptions.map((difficulty) => (
+                            <label key={difficulty.value} className="ac-filter-option">
                                 <input
                                     type="checkbox"
-                                    checked={filters.difficulty === d}
-                                    onChange={() => setFilter('difficulty', filters.difficulty === d ? '' : d)}
+                                    checked={filters.difficulty === difficulty.value}
+                                    onChange={() => setFilter('difficulty', filters.difficulty === difficulty.value ? '' : difficulty.value)}
                                 />
-                                {d.charAt(0).toUpperCase() + d.slice(1)}
+                                {difficulty.label}
                             </label>
                         ))}
                     </div>
 
                     <div className="ac-filter-group">
                         <h4 className="ac-filter-title">Type</h4>
-                        {typeOptions.map((t) => (
-                            <label key={t} className="ac-filter-option">
+                        {typeOptions.map((type) => (
+                            <label key={type} className="ac-filter-option">
                                 <input
                                     type="checkbox"
-                                    checked={filters.type === t}
-                                    onChange={() => setFilter('type', filters.type === t ? '' : t)}
+                                    checked={filters.type === type}
+                                    onChange={() => setFilter('type', filters.type === type ? '' : type)}
                                 />
-                                {t.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                                {type.replace('_', ' ').replace(/\b\w/g, (char) => char.toUpperCase())}
                             </label>
                         ))}
                     </div>
@@ -159,7 +167,7 @@ const AssessmentCatalog = () => {
                             className="ac-search-input"
                             placeholder="Search assessments, skills, topics..."
                             value={filters.search}
-                            onChange={(e) => setFilter('search', e.target.value)}
+                            onChange={(event) => setFilter('search', event.target.value)}
                         />
                         <span className="ac-results-count">
                             {assessments.length} of {totalCount} results
@@ -170,16 +178,16 @@ const AssessmentCatalog = () => {
 
                     {assessmentsLoading ? (
                         <div className="ac-grid">
-                            {Array.from({ length: 6 }).map((_, i) => (
-                                <div key={i} className="ac-card">
+                            {Array.from({ length: 6 }).map((_, index) => (
+                                <div key={index} className="ac-card">
                                     <Skeleton style={{ width: '100%', height: '180px' }} />
                                 </div>
                             ))}
                         </div>
                     ) : (
                         <div className="ac-grid">
-                            {assessments.map((a) => (
-                                <AssessmentCard key={a.id} assessment={a} onView={handleView} />
+                            {assessments.map((assessment) => (
+                                <AssessmentCard key={assessment.id} assessment={assessment} onView={handleView} />
                             ))}
                             {assessments.length === 0 && !assessmentsError && (
                                 <p className="ac-empty">No assessments match your filters.</p>

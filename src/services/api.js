@@ -278,8 +278,8 @@ export const paymentsService = {
         api.get('/payments/referrals/rewards/'),
 
     // Sponsored Campaigns
-    getSponsoredCampaigns: () =>
-        api.get('/payments/sponsored/'),
+    getSponsoredCampaigns: (config) =>
+        api.get('/payments/sponsored/', config),
     createSponsoredCampaign: (data) =>
         api.post('/payments/sponsored/', data),
     getSponsoredCampaign: (id) =>
@@ -517,5 +517,6 @@ export const searchService = {
     getFeaturedEmployers: () => api.get('/search/companies/featured/'),
     getTalentProfiles: (params) => api.get('/search/talent/', { params }),
 };
+
 
 

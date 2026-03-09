@@ -146,7 +146,7 @@ const Sidebar = () => {
                 />
             )}
 
-            <aside className={`sidebar ${mobileOpen ? 'sidebar-mobile-open' : ''}`} role="navigation" aria-label="Main navigation" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <aside className={`sidebar ${mobileOpen ? 'sidebar-mobile-open' : ''}`} role="navigation" aria-label="Main navigation" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div
                     className="brand"
                     style={{ cursor: 'pointer' }}
@@ -204,7 +204,7 @@ const Sidebar = () => {
                     </div>
                 )}
 
-                <div style={{ flex: 1, overflowY: 'auto' }}>
+                <div className="sidebar-nav-shell">
                     {activeNav && activeNav.map((group, gIndex) => (
                         <nav key={gIndex} className="nav-group" role="list">
                             {group.map((item, index) => {

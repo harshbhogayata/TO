@@ -2,58 +2,117 @@ import React, { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import usePageTitle from '../hooks/usePageTitle';
 import { usePaymentStore } from '../store/paymentStore';
+import { useAuthStore } from '../store/authStore';
 import { useToast } from '../contexts/ToastContext';
-import { getApiErrorMessage } from '../services/api';
+import { getApiErrorMessage, paymentsService } from '../services/api';
 import Skeleton from '../components/Skeleton';
 
-/* ─── fallback data used when the API hasn't returned plans yet ─── */
-const FALLBACK_PLANS = [
-  {
-    id: 'free',
-    name: 'Free',
-    monthly_price: 0,
-    annual_price: 0,
-    is_current: false,
-    cta: 'Downgrade',
-    cta_style: 'secondary',
-    features: [
-      { label: 'Basic Analytics', included: true },
-      { label: 'Up to 3 Active Jobs', included: true },
-      { label: 'Standard Support', included: true },
-      { label: 'Custom Branding', included: false },
-    ],
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    monthly_price: 186,
-    annual_price: 149,
-    is_current: true,
-    cta: 'Manage Billing',
-    cta_style: 'dashed',
-    features: [
-      { label: 'Advanced Analytics', included: true },
-      { label: 'Unlimited Jobs', included: true },
-      { label: 'Priority Support', included: true },
-      { label: 'Custom Branding', included: true },
-    ],
-  },
-  {
-    id: 'scale',
-    name: 'Scale',
-    monthly_price: null,
-    annual_price: null,
-    is_current: false,
-    cta: 'Contact Sales',
-    cta_style: 'primary',
-    features: [
-      { label: 'Dedicated Account Mgr', included: true },
-      { label: 'SSO & Security Suite', included: true },
-      { label: 'Custom Workflows', included: true },
-      { label: 'API Access', included: true },
-    ],
-  },
-];
+/* ????????? fallback data used when the API hasn't returned plans yet ????????? */
+const getFallbackPlans = (role) => {
+  if (role === 'COMPANY') {
+    return [
+      {
+        id: 'company-starter',
+        name: 'Starter',
+        checkout_plan: 'Starter',
+        monthly_price: 99,
+        annual_price: 99,
+        is_current: false,
+        cta: 'Select Plan',
+        cta_style: 'secondary',
+        features: [
+          { label: 'Basic Analytics', included: true },
+          { label: 'Up to 3 Active Jobs', included: true },
+          { label: 'Standard Support', included: true },
+          { label: 'Custom Branding', included: false },
+        ],
+      },
+      {
+        id: 'company-professional',
+        name: 'Professional',
+        checkout_plan: 'Professional',
+        monthly_price: 299,
+        annual_price: 299,
+        is_current: false,
+        cta: 'Select Plan',
+        cta_style: 'dashed',
+        features: [
+          { label: 'Advanced Analytics', included: true },
+          { label: 'Unlimited Jobs', included: true },
+          { label: 'Priority Support', included: true },
+          { label: 'Custom Branding', included: true },
+        ],
+      },
+      {
+        id: 'company-enterprise',
+        name: 'Enterprise',
+        checkout_plan: 'Enterprise',
+        monthly_price: null,
+        annual_price: null,
+        is_current: false,
+        cta: 'Contact Sales',
+        cta_style: 'primary',
+        features: [
+          { label: 'Dedicated Account Manager', included: true },
+          { label: 'SSO & Security Suite', included: true },
+          { label: 'Custom Workflows', included: true },
+          { label: 'API Access', included: true },
+        ],
+      },
+    ];
+  }
+
+  return [
+    {
+      id: 'talent-free-agent',
+      name: 'Free Agent',
+      checkout_plan: 'Free Agent',
+      monthly_price: 0,
+      annual_price: 0,
+      is_current: false,
+      cta: 'Select Plan',
+      cta_style: 'secondary',
+      features: [
+        { label: 'Basic Profile Visibility', included: true },
+        { label: 'Apply to core job listings', included: true },
+        { label: 'Standard Support', included: true },
+        { label: 'Priority matching', included: false },
+      ],
+    },
+    {
+      id: 'talent-premium-pro',
+      name: 'Premium Pro',
+      checkout_plan: 'Premium Pro',
+      monthly_price: 19,
+      annual_price: 19,
+      is_current: false,
+      cta: 'Select Plan',
+      cta_style: 'dashed',
+      features: [
+        { label: 'Priority profile visibility', included: true },
+        { label: 'Advanced job matching', included: true },
+        { label: 'Priority support', included: true },
+        { label: 'Resume AI assist', included: true },
+      ],
+    },
+    {
+      id: 'talent-enterprise',
+      name: 'Enterprise',
+      checkout_plan: 'Enterprise',
+      monthly_price: null,
+      annual_price: null,
+      is_current: false,
+      cta: 'Contact Sales',
+      cta_style: 'primary',
+      features: [
+        { label: 'Dedicated Account Manager', included: true },
+        { label: 'Custom career services', included: true },
+        { label: 'Priority support SLA', included: true },
+        { label: 'Concierge onboarding', included: true },
+      ],
+    },
+  ];
+};
 
 /* ─── inline styles (CSS‑variable aware) ─── */
 const customStyles = {
@@ -337,7 +396,8 @@ const SubscriptionPlans = () => {
   usePageTitle('Subscription Plans', 'Choose the plan that fits your needs.');
 
   const { plans, plansLoading, fetchPlans } = usePaymentStore();
-  const { showToast } = useToast();
+  const user = useAuthStore((state) => state.user);
+  const { addToast } = useToast();
   const [billing, setBilling] = useState('annual');
   const [fetchError, setFetchError] = useState(null);
   const [manageBillingHover, setManageBillingHover] = useState(false);
@@ -349,23 +409,25 @@ const SubscriptionPlans = () => {
   // Zod schema
   const { planSelectionSchema } = require('../utils/schemas');
 
+  const planAudience = user?.role === 'TALENT' || user?.role === 'COMPANY' ? user.role : undefined;
+
   const loadPlans = useCallback(async () => {
     try {
       setFetchError(null);
-      await fetchPlans();
+      await fetchPlans(planAudience);
     } catch (err) {
-      const msg = getApiErrorMessage(err);
+      const msg = getApiErrorMessage(err, 'Failed to load plans.');
       setFetchError(msg);
-      showToast?.({ type: 'error', message: msg });
+      addToast?.(msg, 'error');
     }
-  }, [fetchPlans, showToast]);
+  }, [fetchPlans, planAudience, addToast]);
 
   useEffect(() => {
     loadPlans();
   }, [loadPlans]);
 
-  /* Use API plans when available, otherwise fall back to hardcoded data */
-  const displayPlans = plans && plans.length > 0 ? plans : FALLBACK_PLANS;
+  /* Use API plans when available, otherwise fall back to audience-aligned defaults */
+  const displayPlans = plans && plans.length > 0 ? plans : getFallbackPlans(planAudience);
 
   /* ─── helpers ─── */
   const formatPrice = (plan) => {
@@ -438,11 +500,34 @@ const SubscriptionPlans = () => {
         setSubmitting(false);
         return;
       }
-      // TODO: Call API to select plan
-      showToast?.({ type: 'success', message: 'Plan selected successfully!' });
-      setSubmitting(false);
+
+      const selectedPlan = displayPlans.find((plan) => plan.id === selectedPlanId);
+      if (!selectedPlan) {
+        throw new Error('Selected plan is no longer available.');
+      }
+
+      const intervalPlanId = billing === 'annual'
+        ? (selectedPlan.annual_plan_id ?? selectedPlan.monthly_plan_id)
+        : (selectedPlan.monthly_plan_id ?? selectedPlan.annual_plan_id);
+      const legacyPlanName = selectedPlan.checkout_plan ?? selectedPlan.name;
+      const coupon = couponCode.trim();
+
+      const { data } = await paymentsService.createCheckoutSession(
+        intervalPlanId ? undefined : legacyPlanName,
+        intervalPlanId,
+        coupon || undefined,
+      );
+
+      if (!data?.url) {
+        throw new Error('Checkout session did not return a redirect URL.');
+      }
+
+      addToast?.('Redirecting to secure checkout.', 'info');
+      window.location.assign(data.url);
     } catch (err) {
-      setFormError('Unexpected error. Please try again.');
+      const msg = getApiErrorMessage(err, 'Unexpected error. Please try again.');
+      setFormError(msg);
+      addToast?.(msg, 'error');
       setSubmitting(false);
     }
   };

@@ -1,4 +1,4 @@
-﻿"""
+"""
 developer/views.py
 REST API views for the Developer Platform.
 
@@ -163,6 +163,8 @@ def portal_stats(request):
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class APIKeyListCreateView(generics.ListCreateAPIView):
+    pagination_class = None
+
     """
     GET  â€” List all API keys for the company.
     POST â€” Create a new API key (throttled, audited).
@@ -312,6 +314,8 @@ def rotate_api_key(request, id):
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class WebhookListCreateView(generics.ListCreateAPIView):
+    pagination_class = None
+
     """
     GET  â€” List webhook endpoints for the company.
     POST â€” Register a new webhook endpoint (throttled, audited).
@@ -441,6 +445,8 @@ class WebhookDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class WebhookDeliveryListView(generics.ListAPIView):
+    pagination_class = None
+
     """GET â€” Delivery log for a specific webhook endpoint."""
     permission_classes = [permissions.IsAuthenticated, IsCompanyUser]
     serializer_class = WebhookDeliverySerializer
@@ -569,6 +575,8 @@ def webhook_test_ping(request, id):
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class OAuthAppListCreateView(generics.ListCreateAPIView):
+    pagination_class = None
+
     """
     GET  â€” List company OAuth applications.
     POST â€” Register a new OAuth application (throttled, audited).

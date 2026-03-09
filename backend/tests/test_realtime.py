@@ -16,6 +16,7 @@ Usage:
     python manage.py test tests.test_realtime --settings=talentorbit.test_settings -v2
 """
 
+import asyncio
 import json
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock
@@ -85,6 +86,16 @@ def _make_application(consumer_class, user, path='/testws/'):
             return await self.inner(scope, receive, send)
 
     return TestApp(app)
+
+
+async def _drain_json_messages(communicator, limit=10):
+    """Consume queued JSON frames without timing out and cancelling the app."""
+    drained = []
+    for _ in range(limit):
+        if await communicator.receive_nothing(timeout=0.05):
+            break
+        drained.append(await communicator.receive_json_from(timeout=1))
+    return drained
 
 
 # ─── ChatConsumer Tests ───────────────────────────────────────────────────────
@@ -222,8 +233,7 @@ class ChatConsumerTest(TransactionTestCase):
 
         # Consume any presence events from connecting
         for comm in (c_company, c_talent):
-            while not await comm.receive_nothing(timeout=0.5):
-                pass
+            await _drain_json_messages(comm)
 
         await c_company.send_json_to({
             'type': 'chat.typing',
@@ -279,8 +289,7 @@ class ChatConsumerTest(TransactionTestCase):
 
         # Consume any presence events from connecting
         for comm in (c_company, c_talent):
-            while not await comm.receive_nothing(timeout=0.5):
-                pass
+            await _drain_json_messages(comm)
 
         # Talent sends read receipt
         await c_talent.send_json_to({
@@ -340,8 +349,7 @@ class ChatConsumerTest(TransactionTestCase):
 
         # Consume any presence events from connecting
         for comm in (c_company, c_talent):
-            while not await comm.receive_nothing(timeout=0.5):
-                pass
+            await _drain_json_messages(comm)
 
         await c_company.send_json_to({
             'type': 'chat.message',

@@ -36,6 +36,11 @@ const UserProfile = () => {
     const initials = (user?.full_name || user?.email || '?').charAt(0).toUpperCase();
 
     useEffect(() => {
+        if (!avatarPreview) return undefined;
+        return () => URL.revokeObjectURL(avatarPreview);
+    }, [avatarPreview]);
+
+    useEffect(() => {
         authService.getMe().then(({ data }) => {
             setProfile(data.profile);
             setForm({

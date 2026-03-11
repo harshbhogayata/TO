@@ -22,6 +22,9 @@ import api from '../services/api';
 /** @type {WebSocketManager|null} */
 let _chatWs = null;
 
+/** Invalidate stale async initialization after unmount/navigation */
+let _chatInitVersion = 0;
+
 /** Typing indicator debounce timers per thread */
 const _typingTimers = new Map();
 
@@ -51,23 +54,26 @@ export const useChatStore = create((set, get) => ({
      * Load all threads from the REST API and start WebSocket connection.
      */
     initialize: async () => {
+        const initVersion = ++_chatInitVersion;
         set({ isLoadingThreads: true });
         try {
             const { data } = await messagingService.myThreads();
             const threads = data.results || data;
-            set({ threads, isLoadingThreads: false });
+            if (initVersion !== _chatInitVersion) return;
 
             // Calculate total unread
             const totalUnread = threads.reduce((sum, t) => sum + (t.unread_count || 0), 0);
-            set({ totalUnread });
+            set({ threads, isLoadingThreads: false, totalUnread });
 
             // Connect WebSocket
             get().connectWebSocket();
 
             // Fetch initial presence for all participants
-            get()._fetchInitialPresence(threads);
+            get()._fetchInitialPresence(threads, initVersion);
         } catch {
-            set({ isLoadingThreads: false });
+            if (initVersion === _chatInitVersion) {
+                set({ isLoadingThreads: false });
+            }
         }
     },
 
@@ -268,6 +274,7 @@ export const useChatStore = create((set, get) => ({
     },
 
     disconnectWebSocket: () => {
+        _chatInitVersion++;
         _chatWs?.disconnect();
         _chatWs = null;
         set({ wsConnected: false });
@@ -331,7 +338,7 @@ export const useChatStore = create((set, get) => ({
 
             case 'chat.ack': {
                 // Server acknowledged message delivery
-                const { message_id, thread_id, sent_at } = data;
+                const { message_id } = data;
                 set(state => ({
                     pendingAcks: (() => {
                         const next = new Set(state.pendingAcks);
@@ -455,7 +462,7 @@ export const useChatStore = create((set, get) => ({
      * Fetch initial presence for all unique participants across threads.
      * @param {Array} threads
      */
-    _fetchInitialPresence: async (threads) => {
+    _fetchInitialPresence: async (threads, initVersion = _chatInitVersion) => {
         const userIds = new Set();
         const currentUserId = useAuthStore.getState().user?.id;
         for (const thread of threads) {
@@ -472,6 +479,7 @@ export const useChatStore = create((set, get) => ({
             const { data } = await api.post('/push/presence/', {
                 user_ids: [...userIds],
             });
+            if (initVersion !== _chatInitVersion) return;
             const presenceMap = {};
             for (const [uid, info] of Object.entries(data.presence || {})) {
                 presenceMap[Number(uid)] = info;
@@ -516,6 +524,7 @@ export const useChatStore = create((set, get) => ({
 
     // ── Cleanup ───────────────────────────────────────────────────────────
     reset: () => {
+        _chatInitVersion++;
         _chatWs?.disconnect();
         _chatWs = null;
         _lastMessageTimestamp = null;

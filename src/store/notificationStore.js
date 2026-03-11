@@ -18,6 +18,9 @@ import api from '../services/api';
 /** @type {WebSocketManager|null} */
 let _notifWs = null;
 
+/** Invalidate stale async initialization after unmount/navigation */
+let _notificationInitVersion = 0;
+
 /** Track whether this is a reconnect (not the first connect) */
 let _hasConnectedOnce = false;
 
@@ -36,15 +39,21 @@ export const useNotificationStore = create((set, get) => ({
      * Load notifications from REST API and start WebSocket connection.
      */
     initialize: async () => {
+        const initVersion = ++_notificationInitVersion;
         set({ isLoading: true });
         try {
             const { data } = await notificationsService.myNotifications();
             const notifications = data.results || data;
             const unreadCount = notifications.filter(n => !n.is_read).length;
+            if (initVersion !== _notificationInitVersion) return;
             set({ notifications, unreadCount, isLoading: false });
         } catch {
-            set({ isLoading: false });
+            if (initVersion === _notificationInitVersion) {
+                set({ isLoading: false });
+            }
         }
+
+        if (initVersion !== _notificationInitVersion) return;
 
         // Connect WebSocket
         get().connectWebSocket();
@@ -198,6 +207,7 @@ export const useNotificationStore = create((set, get) => ({
     },
 
     disconnectWebSocket: () => {
+        _notificationInitVersion++;
         _notifWs?.disconnect();
         _notifWs = null;
         set({ wsConnected: false });
@@ -276,6 +286,7 @@ export const useNotificationStore = create((set, get) => ({
 
     // ── Cleanup ───────────────────────────────────────────────────────────
     reset: () => {
+        _notificationInitVersion++;
         _notifWs?.disconnect();
         _notifWs = null;
         _hasConnectedOnce = false;
